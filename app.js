@@ -85,7 +85,7 @@ class AppController {
             });
         }
         
-        // ✅ FIXED: Profile avatar upload click
+        // Profile avatar upload click
         const profileAvatarUpload = document.getElementById('profileAvatarUpload');
         if (profileAvatarUpload) {
             profileAvatarUpload.addEventListener('click', () => {
@@ -93,7 +93,7 @@ class AppController {
             });
         }
         
-        // ✅ FIXED: Upload photo button
+        // Upload photo button
         const uploadProfilePhoto = document.getElementById('uploadProfilePhoto');
         if (uploadProfilePhoto) {
             uploadProfilePhoto.addEventListener('click', (e) => {
@@ -103,7 +103,7 @@ class AppController {
             });
         }
         
-        // ✅ FIXED: Avatar file input change
+        // Avatar file input change - IMGBB VERSION
         const avatarUploadInput = document.getElementById('avatarUploadInput');
         if (avatarUploadInput) {
             avatarUploadInput.addEventListener('change', (e) => {
@@ -298,8 +298,7 @@ class AppController {
         await this.loadUserStats();
         this.openModal('profileModal');
     }
-    
-    // ✅ FIXED: Upload Profile Avatar - WORKING VERSION
+
     async uploadProfileAvatar(file) {
         const user = auth.currentUser;
         if (!user) {
@@ -313,9 +312,9 @@ class AppController {
             return;
         }
         
-        // Check file size (max 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            alert('File is too large. Maximum size is 5MB');
+        // Check file size (max 32MB for ImgBB)
+        if (file.size > 32 * 1024 * 1024) {
+            alert('File is too large. Maximum size is 32MB');
             return;
         }
         
@@ -324,116 +323,79 @@ class AppController {
         progressDiv.className = 'upload-progress';
         progressDiv.id = 'uploadProgress';
         progressDiv.innerHTML = `
-            <div><i class="fas fa-cloud-upload-alt"></i> Uploading profile picture...</div>
+            <div><i class="fas fa-cloud-upload-alt"></i> Uploading to ImgBB...</div>
             <div class="progress-bar">
-                <div class="progress-fill" style="width: 0%"></div>
+                <div class="progress-fill" style="width: 50%"></div>
             </div>
         `;
         document.body.appendChild(progressDiv);
         
         try {
-            // Create unique filename
-            const timestamp = Date.now();
-            const fileExtension = file.name.split('.').pop();
-            const fileName = `avatar_${timestamp}.${fileExtension}`;
+            const formData = new FormData();
+            formData.append('image', file);
+         
+            const IMGBB_API_KEY = '87b58d438e0cbe5226c1df0a8071621e'; 
             
-            // Create storage reference
-            const storageRef = storage.ref();
-            const avatarRef = storageRef.child(`avatars/${user.uid}/${fileName}`);
+            console.log('Uploading to ImgBB...');
+
+            const response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+                method: 'POST',
+                body: formData
+            });
             
-            console.log('Uploading to:', `avatars/${user.uid}/${fileName}`);
+            const result = await response.json();
             
-            // Upload with metadata
-            const metadata = {
-                contentType: file.type,
-                customMetadata: {
-                    uploadedBy: user.uid,
-                    uploadedAt: new Date().toISOString()
-                }
-            };
+            if (!result.success) {
+                throw new Error(result.error?.message || 'Failed to upload to ImgBB');
+            }
             
-            const uploadTask = avatarRef.put(file, metadata);
+            // Get the image URL from ImgBB
+            const downloadURL = result.data.url;
+            console.log('ImgBB URL:', downloadURL);
             
-            // Monitor upload progress
-            uploadTask.on('state_changed', 
-                (snapshot) => {
-                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    const progressFill = document.querySelector('#uploadProgress .progress-fill');
-                    if (progressFill) {
-                        progressFill.style.width = progress + '%';
-                    }
-                    console.log('Upload progress:', progress + '%');
-                },
-                (error) => {
-                    console.error('Upload error:', error);
-                    this.removeUploadProgress();
-                    
-                    let errorMessage = 'Failed to upload image: ';
-                    switch (error.code) {
-                        case 'storage/unauthorized':
-                            errorMessage += 'Permission denied. Check Firebase Storage rules.';
-                            break;
-                        case 'storage/canceled':
-                            errorMessage += 'Upload canceled.';
-                            break;
-                        case 'storage/unknown':
-                            errorMessage += 'Unknown error occurred.';
-                            break;
-                        default:
-                            errorMessage += error.message;
-                    }
-                    
-                    alert(errorMessage);
-                },
-                async () => {
-                    try {
-                        // Get download URL
-                        const downloadURL = await uploadTask.snapshot.ref.getDownloadURL();
-                        console.log('Download URL:', downloadURL);
-                        
-                        // Update Firebase Auth profile
-                        await user.updateProfile({
-                            photoURL: downloadURL
-                        });
-                        
-                        // Update Firestore user document
-                        await db.collection('users').doc(user.uid).update({
-                            photoURL: downloadURL,
-                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                        
-                        // Force refresh user
-                        await user.reload();
-                        
-                        // Update all UI elements
-                        this.updateAllAvatars(downloadURL);
-                        
-                        this.removeUploadProgress();
-                        alert('Profile picture updated successfully!');
-                        
-                        // Refresh profile modal
-                        const profileImg = document.getElementById('profileAvatarImg');
-                        const profileIcon = document.getElementById('profileAvatarIcon');
-                        profileImg.src = downloadURL;
-                        profileImg.style.display = 'block';
-                        profileIcon.style.display = 'none';
-                        
-                    } catch (error) {
-                        console.error('Error updating profile:', error);
-                        this.removeUploadProgress();
-                        alert('Failed to update profile: ' + error.message);
-                    }
-                }
-            );
+            // Update progress
+            const progressFill = document.querySelector('#uploadProgress .progress-fill');
+            if (progressFill) {
+                progressFill.style.width = '100%';
+            }
+            
+            // Update Firebase Auth profile
+            await user.updateProfile({
+                photoURL: downloadURL
+            });
+            
+            // Update Firestore user document
+            await db.collection('users').doc(user.uid).update({
+                photoURL: downloadURL,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            
+            // Force refresh user
+            await user.reload();
+            
+            // Remove progress
+            this.removeUploadProgress();
+            
+            // Update all UI elements
+            this.updateAllAvatars(downloadURL);
+            
+            alert('Profile picture updated successfully!');
+            
+            // Refresh profile modal
+            const profileImg = document.getElementById('profileAvatarImg');
+            const profileIcon = document.getElementById('profileAvatarIcon');
+            profileImg.src = downloadURL;
+            profileImg.style.display = 'block';
+            profileIcon.style.display = 'none';
             
         } catch (error) {
-            console.error('Error in upload:', error);
+            console.error('Error uploading to ImgBB:', error);
             this.removeUploadProgress();
-            alert('Failed to upload: ' + error.message);
+            alert('Failed to upload image: ' + error.message);
         }
     }
     
-    // ✅ NEW: Update all avatars in the UI
+    // Update all avatars in the UI
     updateAllAvatars(photoURL) {
         // Update sidebar avatar
         const avatarImg = document.getElementById('avatarImg');
@@ -461,7 +423,7 @@ class AppController {
         }));
     }
     
-    // ✅ NEW: Remove upload progress
+    // Remove upload progress
     removeUploadProgress() {
         const progressDiv = document.getElementById('uploadProgress');
         if (progressDiv) {
@@ -530,7 +492,7 @@ class AppController {
         div.innerHTML = `
             <div class="friend-avatar">
                 ${friendData.photoURL ? 
-                    `<img src="${friendData.photoURL}" alt="${displayName}">` : 
+                    `<img src="${friendData.photoURL}" alt="${this.escapeHtml(displayName)}">` : 
                     `<span>${initial}</span>`
                 }
             </div>
