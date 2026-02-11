@@ -1,4 +1,3 @@
-// Chat Module - PERFECT VERSION - NO DOUBLE MESSAGES, ULTRA SMOOTH!
 class ChatManager {
     constructor() {
         this.currentChat = null;
@@ -180,13 +179,14 @@ class ChatManager {
         
         const isGroup = type === 'group';
         let name, avatar, lastMessage, time;
+        let otherParticipant = null;
         
         if (isGroup) {
             name = chatData.name || 'Unnamed Group';
             avatar = chatData.avatar || null;
             lastMessage = chatData.lastMessage || 'No messages yet';
         } else {
-            const otherParticipant = await this.getOtherParticipant(chatData.participants);
+            otherParticipant = await this.getOtherParticipant(chatData.participants);
             name = otherParticipant?.displayName || otherParticipant?.email?.split('@')[0] || 'User';
             avatar = otherParticipant?.photoURL || null;
             lastMessage = chatData.lastMessage || 'No messages yet';
@@ -229,7 +229,7 @@ class ChatManager {
         return div;
     }
     
-    // ============ REAL-TIME UPDATES ============
+    // ============ REAL-TIME UPDATES - FIXED! WALANG KISAP! ============
     listenToChats() {
         const user = auth.currentUser;
         if (!user) return;
@@ -247,14 +247,16 @@ class ChatManager {
                 setTimeout(() => this.listenToChats(), 3000);
             });
         
+        // ✅ FIXED: Wala nang duplicate loadGroupsList() - WALANG KISAP!
         this.groupsListener = db.collection('groupChats')
             .where('members', 'array-contains', user.uid)
             .orderBy('lastMessageTime', 'desc')
             .onSnapshot((snapshot) => {
                 this.handleChatUpdates(snapshot, 'group');
-                if (window.appController) {
-                    window.appController.loadGroupsList();
-                }
+                // ❌ TANGGALIN ITO - ITO ANG PANGIT NA KISAP!
+                // if (window.appController) {
+                //     window.appController.loadGroupsList();
+                // }
             }, (error) => {
                 console.error('❌ Error listening to group chats:', error);
                 setTimeout(() => this.listenToChats(), 3000);
@@ -266,6 +268,7 @@ class ChatManager {
         if (!chatsList) return;
         
         const promises = [];
+        let hasChanges = false;
         
         snapshot.docChanges().forEach((change) => {
             const chatData = change.doc.data();
@@ -273,6 +276,7 @@ class ChatManager {
             
             if (change.type === 'added') {
                 if (!document.querySelector(`[data-chat-id="${chatId}"]`)) {
+                    hasChanges = true;
                     promises.push(
                         this.createChatElement(chatData, chatId, type)
                             .then(element => {
@@ -283,6 +287,7 @@ class ChatManager {
             } else if (change.type === 'modified') {
                 const oldElement = document.querySelector(`[data-chat-id="${chatId}"]`);
                 if (oldElement) {
+                    hasChanges = true;
                     promises.push(
                         this.createChatElement(chatData, chatId, type)
                             .then(newElement => {
@@ -292,12 +297,19 @@ class ChatManager {
                 }
             } else if (change.type === 'removed') {
                 const element = document.querySelector(`[data-chat-id="${chatId}"]`);
-                if (element) element.remove();
+                if (element) {
+                    hasChanges = true;
+                    element.remove();
+                }
             }
         });
         
         await Promise.all(promises);
-        this.sortChats();
+        
+        // ✅ SORT LANG KUNG MAY BINAGO
+        if (hasChanges) {
+            this.sortChats();
+        }
     }
     
     sortChats() {
