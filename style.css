@@ -1424,3 +1424,209 @@ body {
 .chat-btn:hover {
     transform: scale(1.1);
 }
+
+/* ===== EMPTY STATES ===== */
+.no-data {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-gray);
+}
+
+.no-data i {
+    font-size: 48px;
+    margin-bottom: 15px;
+    color: var(--primary-color);
+    opacity: 0.5;
+}
+
+.no-data p {
+    font-size: 16px;
+    margin-bottom: 5px;
+}
+
+.no-data small {
+    font-size: 14px;
+    opacity: 0.7;
+}
+
+/* ===== EMPTY STATE SA MESSAGES ===== */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-gray);
+}
+
+.empty-state i {
+    font-size: 64px;
+    margin-bottom: 20px;
+    color: var(--primary-color);
+    opacity: 0.5;
+}
+
+.empty-state p {
+    font-size: 18px;
+    margin-bottom: 10px;
+}
+
+.empty-state small {
+    font-size: 14px;
+    opacity: 0.7;
+}
+
+/* ===== STATUS INDICATOR ===== */
+.status-indicator {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid var(--darker-bg);
+}
+
+.status-indicator.online {
+    background-color: #4caf50;
+}
+
+.status-indicator.offline {
+    background-color: #9e9e9e;
+}
+
+.chat-avatar {
+    position: relative;
+}
+
+.member-item {
+    padding: 10px;
+    margin-bottom: 8px;
+    background: var(--card-bg);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.member-item:hover {
+    background: rgba(102, 126, 234, 0.2);
+}
+
+.member-item label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    width: 100%;
+}
+
+.member-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--primary-color);
+}
+
+.member-item span {
+    flex: 1;
+    color: var(--text-light);
+}
+
+.upload-progress {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--darker-bg);
+    border-radius: 10px;
+    padding: 15px 20px;
+    box-shadow: var(--shadow-xl);
+    z-index: 9999;
+    min-width: 250px;
+    animation: slideInRight 0.3s ease;
+}
+
+.upload-progress div:first-child {
+    margin-bottom: 10px;
+    color: var(--text-light);
+}
+
+.upload-progress i {
+    color: var(--primary-color);
+    margin-right: 8px;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 6px;
+    background: var(--card-bg);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--primary-gradient);
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+/* ===== CHAT META ===== */
+.chat-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+}
+
+.unread-badge {
+    background: var(--primary-gradient);
+    color: white;
+    border-radius: 50%;
+    min-width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    padding: 0 5px;
+}
+
+/* ===== SYSTEM MESSAGE ===== */
+.system-message {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-gray);
+    font-style: italic;
+    text-align: center;
+    width: 100%;
+}
+
+.message-wrapper {
+    display: flex;
+    flex-direction: column;
+}
+
+.message-sender {
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--primary-color);
+}
+
+.chat-header .chat-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin-right: 12px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary-gradient);
+    color: white;
+}
+
+.chat-header .chat-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.chat-header .chat-avatar i {
+    font-size: 20px;
+}
