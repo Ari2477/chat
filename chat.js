@@ -19,11 +19,49 @@ class ChatManager {
             if (user) {
                 this.setupChatListeners();
                 this.loadUserCache();
+                this.setupImageUploadListeners(); 
             } else {
                 this.cleanupListeners();
                 this.clearCache();
             }
         });
+    }
+    
+    // ============ NEW: SETUP IMAGE UPLOAD LISTENERS ============
+    setupImageUploadListeners() {
+        // Wait for DOM to be ready
+        setTimeout(() => {
+            const attachBtn = document.getElementById('attachBtn');
+            const imageUploadInput = document.getElementById('imageUploadInput');
+            
+            if (attachBtn && imageUploadInput) {
+                // Remove existing listeners by cloning
+                const newAttachBtn = attachBtn.cloneNode(true);
+                attachBtn.parentNode.replaceChild(newAttachBtn, attachBtn);
+                
+                // Add fresh event listener
+                newAttachBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('📸 Attach button clicked');
+                    imageUploadInput.click();
+                });
+                
+                imageUploadInput.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        console.log('📸 File selected:', file.name);
+                        this.showImagePreview(file);
+                    }
+                });
+                
+                console.log('✅ Image upload listeners setup complete');
+            } else {
+                console.warn('⚠️ Attach button or image input not found, retrying...');
+                // Retry after 500ms
+                setTimeout(() => this.setupImageUploadListeners(), 500);
+            }
+        }, 300);
     }
     
     // ============ CACHE MANAGEMENT ============
@@ -615,31 +653,49 @@ class ChatManager {
             
             // Hide message input container
             const messageInputContainer = document.querySelector('.message-input-container');
-            messageInputContainer.style.display = 'none';
+            if (messageInputContainer) {
+                messageInputContainer.style.display = 'none';
+            }
             
             // Insert preview after messages container
             const mainContent = document.querySelector('.main-content');
-            mainContent.insertBefore(previewContainer, document.querySelector('.messages-container').nextSibling);
+            const messagesContainer = document.querySelector('.messages-container');
+            if (mainContent && messagesContainer) {
+                mainContent.insertBefore(previewContainer, messagesContainer.nextSibling);
+            }
             
             // Close preview
-            document.getElementById('closePreviewBtn').addEventListener('click', () => {
-                this.removeImagePreview();
-                messageInputContainer.style.display = 'flex';
-            });
-            
-            // Send image with optional message
-            document.getElementById('sendImageBtn').addEventListener('click', () => {
-                const caption = document.getElementById('imageCaptionInput').value;
-                this.sendImageMessage(file, caption);
-            });
-            
-            // Enter key to send
-            document.getElementById('imageCaptionInput').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    const caption = document.getElementById('imageCaptionInput').value;
-                    this.sendImageMessage(file, caption);
+            setTimeout(() => {
+                const closeBtn = document.getElementById('closePreviewBtn');
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', () => {
+                        this.removeImagePreview();
+                        if (messageInputContainer) {
+                            messageInputContainer.style.display = 'flex';
+                        }
+                    });
                 }
-            });
+                
+                // Send image with optional message
+                const sendBtn = document.getElementById('sendImageBtn');
+                if (sendBtn) {
+                    sendBtn.addEventListener('click', () => {
+                        const caption = document.getElementById('imageCaptionInput')?.value || '';
+                        this.sendImageMessage(file, caption);
+                    });
+                }
+                
+                // Enter key to send
+                const captionInput = document.getElementById('imageCaptionInput');
+                if (captionInput) {
+                    captionInput.addEventListener('keypress', (e) => {
+                        if (e.key === 'Enter') {
+                            const caption = document.getElementById('imageCaptionInput')?.value || '';
+                            this.sendImageMessage(file, caption);
+                        }
+                    });
+                }
+            }, 100);
         };
         reader.readAsDataURL(file);
     }
@@ -658,7 +714,10 @@ class ChatManager {
     }
 
     async sendImageMessage(file, caption = '') {
-        if (!this.currentChat || !file) return;
+        if (!this.currentChat || !file) {
+            alert('Please select a chat first');
+            return;
+        }
         
         const user = auth.currentUser;
         if (!user) {
@@ -694,8 +753,10 @@ class ChatManager {
             tempElement.dataset.messageId = tempId;
             
             const messagesList = document.getElementById('messagesList');
-            messagesList.appendChild(tempElement);
-            this.scrollToBottom(true);
+            if (messagesList) {
+                messagesList.appendChild(tempElement);
+                this.scrollToBottom(true);
+            }
             
             // Remove preview
             this.removeImagePreview();
@@ -800,12 +861,14 @@ class ChatManager {
             document.body.style.overflow = 'hidden';
             
             const downloadBtn = document.getElementById('downloadImageBtn');
-            downloadBtn.onclick = () => {
-                const link = document.createElement('a');
-                link.href = imageUrl;
-                link.download = 'image_' + Date.now() + '.jpg';
-                link.click();
-            };
+            if (downloadBtn) {
+                downloadBtn.onclick = () => {
+                    const link = document.createElement('a');
+                    link.href = imageUrl;
+                    link.download = 'image_' + Date.now() + '.jpg';
+                    link.click();
+                };
+            }
         }
     }
     
@@ -935,11 +998,13 @@ class ChatManager {
         tempElement.dataset.messageId = tempId;
         
         const messagesList = document.getElementById('messagesList');
-        const emptyState = messagesList.querySelector('.empty-state');
+        const emptyState = messagesList?.querySelector('.empty-state');
         if (emptyState) emptyState.remove();
         
-        messagesList.appendChild(tempElement);
-        this.scrollToBottom(true);
+        if (messagesList) {
+            messagesList.appendChild(tempElement);
+            this.scrollToBottom(true);
+        }
         
         const collection = this.currentChatType === 'group' ? 'groupMessages' : 'privateMessages';
         const chatCollection = this.currentChatType === 'group' ? 'groupChats' : 'privateChats';
