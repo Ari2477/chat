@@ -4,8 +4,7 @@ const firebaseConfig = {
   projectId: "for-nothing-lastforever",
   storageBucket: "for-nothing-lastforever.firebasestorage.app",
   messagingSenderId: "737440293237",
-  appId: "1:737440293237:web:0acc447e43696f04a9733c",
-  measurementId: "G-8S4F7CCNQ9"
+  appId: "1:737440293237:web:0acc447e43696f04a9733c"
 };
 
 // Initialize Firebase
