@@ -191,7 +191,6 @@ class ChatManager {
             avatar = otherParticipant?.photoURL || null;
             lastMessage = chatData.lastMessage || 'No messages yet';
             
-            // Store initial for avatar
             if (otherParticipant) {
                 div.dataset.initial = name[0].toUpperCase();
             }
@@ -229,7 +228,7 @@ class ChatManager {
         return div;
     }
     
-    // ============ REAL-TIME UPDATES - FIXED! WALANG KISAP! ============
+    // ============ REAL-TIME UPDATES ============
     listenToChats() {
         const user = auth.currentUser;
         if (!user) return;
@@ -247,16 +246,11 @@ class ChatManager {
                 setTimeout(() => this.listenToChats(), 3000);
             });
         
-        // ✅ FIXED: Wala nang duplicate loadGroupsList() - WALANG KISAP!
         this.groupsListener = db.collection('groupChats')
             .where('members', 'array-contains', user.uid)
             .orderBy('lastMessageTime', 'desc')
             .onSnapshot((snapshot) => {
                 this.handleChatUpdates(snapshot, 'group');
-                // ❌ TANGGALIN ITO - ITO ANG PANGIT NA KISAP!
-                // if (window.appController) {
-                //     window.appController.loadGroupsList();
-                // }
             }, (error) => {
                 console.error('❌ Error listening to group chats:', error);
                 setTimeout(() => this.listenToChats(), 3000);
@@ -306,7 +300,6 @@ class ChatManager {
         
         await Promise.all(promises);
         
-        // ✅ SORT LANG KUNG MAY BINAGO
         if (hasChanges) {
             this.sortChats();
         }
@@ -332,7 +325,6 @@ class ChatManager {
             return;
         }
         
-        // Clear processed message IDs when switching chats
         this.processedMessageIds.clear();
         
         this.currentChat = chatId;
@@ -454,7 +446,7 @@ class ChatManager {
         `;
     }
     
-    // ============ REAL-TIME MESSAGES - ULTIMATE ANTI-DOUBLE! ============
+    // ============ REAL-TIME MESSAGES ============
     listenToMessages(chatId, type) {
         if (this.messagesListener) {
             this.messagesListener();
@@ -472,20 +464,16 @@ class ChatManager {
                         const message = change.doc.data();
                         const messageId = change.doc.id;
                         
-                        // ✅ ULTIMATE ANTI-DOUBLE CHECK
                         if (this.processedMessageIds.has(messageId)) {
                             return;
                         }
                         
-                        // Check if message already exists in DOM
                         if (document.querySelector(`[data-message-id="${messageId}"]`)) {
                             return;
                         }
                         
-                        // Add to processed set
                         this.processedMessageIds.add(messageId);
                         
-                        // Clear after 1 minute para hindi lumaki masyado
                         setTimeout(() => {
                             this.processedMessageIds.delete(messageId);
                         }, 60000);
@@ -495,7 +483,6 @@ class ChatManager {
                         
                         const messagesList = document.getElementById('messagesList');
                         
-                        // ✅ Remove temp message if this is the same message
                         if (message.senderId === auth.currentUser?.uid) {
                             const tempMessages = messagesList.querySelectorAll('.message-sending');
                             tempMessages.forEach(temp => {
@@ -511,7 +498,6 @@ class ChatManager {
                         
                         messagesList.appendChild(messageElement);
                         
-                        // Auto scroll for new messages from others
                         if (message.senderId !== auth.currentUser?.uid) {
                             this.scrollToBottom(true);
                         }
@@ -525,7 +511,265 @@ class ChatManager {
             });
     }
     
+    // ============ 📸 IMAGE MESSAGES - ADDED! ============
+    
+    async uploadImage(file) {
+        if (!file) return null;
+        
+        if (!file.type.startsWith('image/')) {
+            throw new Error('Please select an image file');
+        }
+        
+        if (file.size > 32 * 1024 * 1024) {
+            throw new Error('Image is too large. Maximum size is 32MB');
+        }
+        
+        const progressDiv = this.showImageUploadProgress('Uploading image...');
+        
+        try {
+            const formData = new FormData();
+            formData.append('image', file);
+            
+            const IMGBB_API_KEY = '87b58d438e0cbe5226c1df0a8071621e';
+            
+            const response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (!result.success) {
+                throw new Error(result.error?.message || 'Failed to upload image');
+            }
+            
+            this.removeUploadProgress(progressDiv.id);
+            
+            return {
+                url: result.data.url,
+                medium: result.data.medium?.url || result.data.url,
+                thumb: result.data.thumb?.url || result.data.url,
+                name: file.name,
+                size: file.size,
+                type: file.type
+            };
+            
+        } catch (error) {
+            console.error('❌ Error uploading image:', error);
+            this.removeUploadProgress(progressDiv.id);
+            throw error;
+        }
+    }
+    
+    showImageUploadProgress(message) {
+        const id = 'imageUploadProgress_' + Date.now();
+        const progressDiv = document.createElement('div');
+        progressDiv.className = 'upload-progress';
+        progressDiv.id = id;
+        progressDiv.innerHTML = `
+            <div><i class="fas fa-cloud-upload-alt"></i> ${message}</div>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: 50%"></div>
+            </div>
+        `;
+        document.body.appendChild(progressDiv);
+        return { id, element: progressDiv };
+    }
+    
+    removeUploadProgress(id) {
+        const element = document.getElementById(id);
+        if (element) element.remove();
+    }
+    
+    async sendImageMessage(file) {
+        if (!this.currentChat || !file) return;
+        
+        const user = auth.currentUser;
+        if (!user) {
+            alert('You must be logged in');
+            return;
+        }
+        
+        const sendBtn = document.getElementById('sendBtn');
+        if (sendBtn) {
+            sendBtn.disabled = true;
+            sendBtn.style.opacity = '0.6';
+        }
+        
+        try {
+            this.showImagePreview(file);
+            
+            const imageData = await this.uploadImage(file);
+            
+            this.removeImagePreview();
+            
+            const messageKey = `${this.currentChat}_image_${Date.now()}`;
+            this.pendingMessages.add(messageKey);
+            
+            const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const tempMessage = {
+                chatId: this.currentChat,
+                senderId: user.uid,
+                senderName: user.displayName || user.email,
+                text: '',
+                image: imageData,
+                timestamp: new Date(),
+                type: 'image'
+            };
+            
+            const tempElement = this.createImageMessageElement(tempMessage);
+            tempElement.classList.add('message-sending');
+            tempElement.dataset.messageId = tempId;
+            
+            const messagesList = document.getElementById('messagesList');
+            messagesList.appendChild(tempElement);
+            this.scrollToBottom(true);
+            
+            const collection = this.currentChatType === 'group' ? 'groupMessages' : 'privateMessages';
+            const chatCollection = this.currentChatType === 'group' ? 'groupChats' : 'privateChats';
+            
+            const docRef = await db.collection(collection).add({
+                chatId: this.currentChat,
+                senderId: user.uid,
+                senderName: user.displayName || user.email,
+                text: '',
+                image: imageData,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                type: 'image'
+            });
+            
+            tempElement.dataset.messageId = docRef.id;
+            tempElement.classList.remove('message-sending');
+            this.processedMessageIds.add(docRef.id);
+            
+            await db.collection(chatCollection).doc(this.currentChat).update({
+                lastMessage: '📸 Sent an image',
+                lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
+                lastSenderId: user.uid
+            });
+            
+            this.updateLastMessage(this.currentChat, '📸 Sent an image');
+            
+        } catch (error) {
+            console.error('❌ Error sending image:', error);
+            alert('Failed to send image: ' + error.message);
+        } finally {
+            if (sendBtn) {
+                sendBtn.disabled = false;
+                sendBtn.style.opacity = '1';
+            }
+        }
+    }
+    
+    showImagePreview(file) {
+        this.removeImagePreview();
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const previewContainer = document.createElement('div');
+            previewContainer.className = 'image-preview-container';
+            previewContainer.id = 'imagePreviewContainer';
+            previewContainer.innerHTML = `
+                <img src="${e.target.result}" class="image-preview" alt="Preview">
+                <div class="image-preview-info">
+                    <div class="image-preview-name">${file.name}</div>
+                    <div class="image-preview-size">${(file.size / 1024).toFixed(1)} KB</div>
+                </div>
+                <button class="cancel-image-btn" id="cancelImageBtn">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            
+            const messageInputContainer = document.querySelector('.message-input-container');
+            messageInputContainer.insertBefore(previewContainer, messageInputContainer.firstChild);
+            
+            document.getElementById('cancelImageBtn').addEventListener('click', () => {
+                this.removeImagePreview();
+            });
+        };
+        reader.readAsDataURL(file);
+    }
+    
+    removeImagePreview() {
+        const preview = document.getElementById('imagePreviewContainer');
+        if (preview) preview.remove();
+        
+        const imageInput = document.getElementById('imageUploadInput');
+        if (imageInput) imageInput.value = '';
+    }
+    
+    createImageMessageElement(message) {
+        const user = auth.currentUser;
+        const isSentByMe = message.senderId === user.uid;
+        
+        const messageElement = document.createElement('div');
+        messageElement.className = `message ${isSentByMe ? 'sent' : 'received'}`;
+        
+        let senderAvatar = '';
+        let senderName = '';
+        
+        if (!isSentByMe && message.senderId !== 'system') {
+            const senderData = this.userCache.get(message.senderId);
+            const displayName = senderData?.displayName || senderData?.email?.split('@')[0] || 'User';
+            senderName = displayName;
+            
+            if (senderData?.photoURL) {
+                senderAvatar = `<img src="${senderData.photoURL}" alt="${this.escapeHtml(displayName)}" loading="lazy">`;
+            } else {
+                senderAvatar = `<span>${displayName[0].toUpperCase()}</span>`;
+            }
+        }
+        
+        const time = message.timestamp ? this.formatTime(message.timestamp) : '';
+        const imageUrl = message.image?.medium || message.image?.url;
+        
+        messageElement.innerHTML = `
+            ${!isSentByMe ? `
+                <div class="message-avatar">
+                    ${senderAvatar}
+                </div>
+                <div class="message-wrapper">
+                    <div class="message-sender">${this.escapeHtml(senderName)}</div>
+            ` : ''}
+            <div class="message-content">
+                <img src="${imageUrl}" 
+                     class="message-image" 
+                     alt="Image" 
+                     loading="lazy"
+                     onclick="chatManager.openImageViewer('${imageUrl}')">
+                <div class="message-time">${time}</div>
+            </div>
+            ${!isSentByMe ? '</div>' : ''}
+        `;
+        
+        return messageElement;
+    }
+    
+    openImageViewer(imageUrl) {
+        const modal = document.getElementById('imageViewerModal');
+        const img = document.getElementById('imageViewerImg');
+        
+        if (modal && img) {
+            img.src = imageUrl;
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            
+            const downloadBtn = document.getElementById('downloadImageBtn');
+            downloadBtn.onclick = () => {
+                const link = document.createElement('a');
+                link.href = imageUrl;
+                link.download = 'image_' + Date.now() + '.jpg';
+                link.click();
+            };
+        }
+    }
+    
+    // ============ UPDATE createMessageElement TO HANDLE IMAGES ============
     createMessageElement(message) {
+        if (message.type === 'image') {
+            return this.createImageMessageElement(message);
+        }
+        
         const user = auth.currentUser;
         const isSentByMe = message.senderId === user.uid;
         
@@ -594,7 +838,7 @@ class ChatManager {
         }
     }
     
-    // ============ MESSAGE ACTIONS - PERFECT SEND! ============
+    // ============ MESSAGE ACTIONS ============
     async sendMessage(text) {
         if (!this.currentChat || !text || !text.trim()) return;
         
@@ -606,10 +850,8 @@ class ChatManager {
         
         const messageText = text.trim();
         
-        // ✅ ULTIMATE ANTI-DOUBLE SEND
         const messageKey = `${this.currentChat}_${messageText}_${user.uid}`;
         
-        // Check if same message sent in last 2 seconds
         if (this.pendingMessages.has(messageKey)) {
             console.log('⏳ Duplicate message prevented');
             return;
@@ -617,7 +859,6 @@ class ChatManager {
         
         this.pendingMessages.add(messageKey);
         
-        // ✅ DISABLE SEND BUTTON AGAD
         const sendBtn = document.getElementById('sendBtn');
         const messageInput = document.getElementById('messageInput');
         
@@ -627,13 +868,11 @@ class ChatManager {
             sendBtn.style.cursor = 'not-allowed';
         }
         
-        // ✅ CLEAR INPUT AGAD
         if (messageInput) {
             messageInput.value = '';
             messageInput.style.height = 'auto';
         }
         
-        // ✅ OPTIMISTIC UPDATE - Date object
         const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         const optimisticTimestamp = new Date();
         
@@ -661,7 +900,6 @@ class ChatManager {
         const chatCollection = this.currentChatType === 'group' ? 'groupChats' : 'privateChats';
         
         try {
-            // ✅ SEND TO FIRESTORE
             const docRef = await db.collection(collection).add({
                 chatId: this.currentChat,
                 senderId: user.uid,
@@ -671,22 +909,18 @@ class ChatManager {
                 type: 'text'
             });
             
-            // ✅ UPDATE MESSAGE WITH REAL ID
             tempElement.dataset.messageId = docRef.id;
             tempElement.classList.remove('message-sending');
             tempElement.classList.add('message-sent');
             
-            // ✅ ADD TO PROCESSED SET PARA HINDI MADOUBLE
             this.processedMessageIds.add(docRef.id);
             
-            // ✅ UPDATE LAST MESSAGE
             await db.collection(chatCollection).doc(this.currentChat).update({
                 lastMessage: messageText,
                 lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
                 lastSenderId: user.uid
             });
             
-            // ✅ UPDATE CHAT LIST
             this.updateLastMessage(this.currentChat, messageText);
             
         } catch (error) {
@@ -704,7 +938,6 @@ class ChatManager {
             alert('Failed to send message. Please try again.');
             
         } finally {
-            // ✅ RE-ENABLE SEND BUTTON AFTER DELAY
             setTimeout(() => {
                 if (sendBtn) {
                     sendBtn.disabled = false;
@@ -712,7 +945,6 @@ class ChatManager {
                     sendBtn.style.cursor = 'pointer';
                 }
                 
-                // Remove from pending after 3 seconds
                 setTimeout(() => {
                     this.pendingMessages.delete(messageKey);
                 }, 3000);
@@ -968,13 +1200,15 @@ class ChatManager {
     }
 }
 
-// ============ INITIALIZATION ============
 let chatManager;
 if (typeof window !== 'undefined') {
     if (!window.chatManagerInstance) {
         chatManager = new ChatManager();
         window.chatManager = chatManager;
         window.chatManagerInstance = chatManager;
+        
+        
+        window.chatManager.openImageViewer = window.chatManager.openImageViewer.bind(window.chatManager);
     } else {
         chatManager = window.chatManagerInstance;
     }
