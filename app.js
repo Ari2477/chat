@@ -84,16 +84,25 @@ class AppController {
             });
         }
         
-        // Mobile menu toggle
+        // ============ MOBILE MENU TOGGLE - FIXED! ============
         const mobileMenuBtn = document.getElementById('mobileMenuBtn');
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebarOverlay');
         
-        if (mobileMenuBtn) {
+        if (mobileMenuBtn && sidebar && overlay) {
             mobileMenuBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
+                e.preventDefault();
+                
                 sidebar.classList.toggle('active');
-                if (overlay) overlay.classList.toggle('active');
+                overlay.classList.toggle('active');
+                
+                // ✅ HIDE menu button when sidebar is open
+                if (sidebar.classList.contains('active')) {
+                    mobileMenuBtn.style.display = 'none';
+                } else {
+                    mobileMenuBtn.style.display = 'flex';
+                }
             });
         }
         
@@ -101,6 +110,11 @@ class AppController {
             overlay.addEventListener('click', () => {
                 sidebar.classList.remove('active');
                 overlay.classList.remove('active');
+                
+                // ✅ SHOW menu button again when sidebar closes
+                if (mobileMenuBtn) {
+                    mobileMenuBtn.style.display = 'flex';
+                }
             });
         }
         
@@ -165,40 +179,6 @@ class AppController {
                 }
             });
         }
-        
-        // ============ 📸 IMAGE UPLOAD BUTTON - ADDED! ============
-        const attachBtn = document.getElementById('attachBtn');
-        const imageUploadInput = document.getElementById('imageUploadInput');
-        
-        if (attachBtn && imageUploadInput) {
-            attachBtn.addEventListener('click', () => {
-                imageUploadInput.click();
-            });
-            
-            imageUploadInput.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    chatManager.sendImageMessage(file);
-                }
-            });
-        }
-
-        // ============ 📸 IMAGE VIEWER CLOSE - ADDED! ============
-        const closeImageViewerBtns = document.querySelectorAll('#imageViewerModal .close-modal');
-        closeImageViewerBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.getElementById('imageViewerModal').classList.remove('active');
-                document.body.style.overflow = '';
-            });
-        });
-
-        window.addEventListener('click', (e) => {
-            const modal = document.getElementById('imageViewerModal');
-            if (e.target === modal) {
-                modal.classList.remove('active');
-                document.body.style.overflow = '';
-            }
-        });
         
         // Send message
         const sendBtn = document.getElementById('sendBtn');
@@ -375,12 +355,22 @@ class AppController {
     }
     
     setupSidebar() {
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        
         window.addEventListener('resize', () => {
             if (window.innerWidth > 768) {
-                const sidebar = document.getElementById('sidebar');
-                const overlay = document.getElementById('sidebarOverlay');
                 sidebar.classList.remove('active');
                 if (overlay) overlay.classList.remove('active');
+                if (mobileMenuBtn) {
+                    mobileMenuBtn.style.display = 'none'; // Desktop - hide mobile button
+                }
+            } else {
+                // Mobile - show button only if sidebar is closed
+                if (mobileMenuBtn && sidebar && !sidebar.classList.contains('active')) {
+                    mobileMenuBtn.style.display = 'flex';
+                }
             }
         });
         
@@ -388,11 +378,29 @@ class AppController {
             if (window.innerWidth <= 768) {
                 const sidebar = document.getElementById('sidebar');
                 const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+                const overlay = document.getElementById('sidebarOverlay');
                 
+                // Close sidebar when clicking outside
                 if (sidebar && mobileMenuBtn && !sidebar.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
                     sidebar.classList.remove('active');
-                    const overlay = document.getElementById('sidebarOverlay');
                     if (overlay) overlay.classList.remove('active');
+                    if (mobileMenuBtn) {
+                        mobileMenuBtn.style.display = 'flex'; // Show button when sidebar closes
+                    }
+                }
+                
+                // Close sidebar when clicking on chat/group/friend item
+                const chatItem = e.target.closest('.chat-item');
+                const groupItem = e.target.closest('.group-item');
+                const friendItem = e.target.closest('.friend-item');
+                const chatBtn = e.target.closest('.chat-btn');
+                
+                if ((chatItem || groupItem || friendItem || chatBtn) && sidebar.classList.contains('active')) {
+                    sidebar.classList.remove('active');
+                    if (overlay) overlay.classList.remove('active');
+                    if (mobileMenuBtn) {
+                        mobileMenuBtn.style.display = 'flex';
+                    }
                 }
             }
         });
@@ -1334,8 +1342,11 @@ class AppController {
             if (window.innerWidth <= 768) {
                 const sidebar = document.getElementById('sidebar');
                 const overlay = document.getElementById('sidebarOverlay');
+                const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+                
                 if (sidebar) sidebar.classList.remove('active');
                 if (overlay) overlay.classList.remove('active');
+                if (mobileMenuBtn) mobileMenuBtn.style.display = 'flex';
             }
         } catch (error) {
             console.error('❌ Error starting private chat:', error);
