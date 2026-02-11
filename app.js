@@ -13,6 +13,7 @@ class AppController {
         this.setupSidebar();
         this.setupModals();
         this.setupProfileFeatures();
+        this.setupGroupDropdown();
         this.checkAuth();
     }
     
@@ -46,8 +47,7 @@ class AppController {
         this.loadUserData();
         this.setupRealtimeListeners();
         this.updateUserOnlineStatus(true);
-        
-        // Set user as offline when tab closes
+
         window.addEventListener('beforeunload', () => {
             this.updateUserOnlineStatus(false);
         });
@@ -71,6 +71,7 @@ class AppController {
         this.listenForFriendRequests();
         this.listenForUserStatus();
         this.listenForFriendRequestResponses();
+        this.listenForGroupUpdates();
     }
     
     setupEventListeners() {
@@ -151,7 +152,6 @@ class AppController {
         // Group avatar upload
         const uploadGroupAvatarBtn = document.getElementById('uploadGroupAvatarBtn');
         const groupAvatarInput = document.getElementById('groupAvatarInput');
-        const groupAvatarPreview = document.getElementById('groupAvatarPreview');
         
         if (uploadGroupAvatarBtn && groupAvatarInput) {
             uploadGroupAvatarBtn.addEventListener('click', () => {
@@ -322,6 +322,22 @@ class AppController {
                 }
             });
         }
+        
+        // Add Members Submit
+        const addMembersSubmit = document.getElementById('addMembersSubmit');
+        if (addMembersSubmit) {
+            addMembersSubmit.addEventListener('click', () => {
+                this.addMembersToGroup();
+            });
+        }
+        
+        // Add Members Search
+        const addMembersSearch = document.getElementById('addMembersSearch');
+        if (addMembersSearch) {
+            addMembersSearch.addEventListener('input', (e) => {
+                this.searchAddMembers(e.target.value);
+            });
+        }
     }
     
     setupSidebar() {
@@ -358,6 +374,25 @@ class AppController {
     
     setupProfileFeatures() {
         this.loadUserStats();
+    }
+    
+    setupGroupDropdown() {
+        const groupMenuBtn = document.getElementById('groupMenuBtn');
+        const groupDropdown = document.getElementById('groupDropdown');
+        
+        if (groupMenuBtn) {
+            groupMenuBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                groupDropdown.classList.toggle('show');
+            });
+        }
+        
+        // Close dropdown when clicking outside
+        window.addEventListener('click', () => {
+            if (groupDropdown) {
+                groupDropdown.classList.remove('show');
+            }
+        });
     }
     
     openModal(modalId) {
@@ -780,7 +815,6 @@ class AppController {
         const user = auth.currentUser;
         if (!user) return;
         
-        // Remove existing listener
         if (this.friendRequestListener) {
             this.friendRequestListener();
         }
@@ -838,11 +872,23 @@ class AppController {
                 console.error('❌ Error listening to user status:', error);
             });
     }
+    
+    listenForGroupUpdates() {
+        const user = auth.currentUser;
+        if (!user) return;
+        
+        db.collection('groupChats')
+            .where('members', 'array-contains', user.uid)
+            .onSnapshot(() => {
+                if (this.activeTab === 'groups') {
+                    this.loadGroupsList();
+                }
+            });
+    }
 
     showFriendRequestNotification(request) {
         const fromName = request.fromName || 'Someone';
         
-        // Create notification element
         const notification = document.createElement('div');
         notification.className = 'notification';
         notification.innerHTML = `
@@ -862,7 +908,6 @@ class AppController {
         
         document.body.appendChild(notification);
         
-        // Auto remove after 10 seconds
         setTimeout(() => {
             if (notification.parentNode) {
                 notification.remove();
@@ -921,6 +966,307 @@ class AppController {
         }, 3000);
     }
 
+    // ============ GROUP CHAT MANAGEMENT ============
+    
+    showGroupMenu(isGroup) {
+        const menuContainer = document.getElementById('groupMenuContainer');
+        if (menuContainer) {
+            menuContainer.style.display = isGroup ? 'block' : 'none';
+        }
+    }
+    
+    async showAddMembersModal() {
+        if (!chatManager.currentChat || chatManager.currentChatType !== 'group') {
+            alert('No group selected');
+            return;
+        }
+        
+        const groupId = chatManager.currentChat;
+        const groupData = chatManager.currentChatData;
+        
+        await this.loadAvailableFriendsForGroup(groupId, groupData.members || []);
+        this.openModal('addMembersModal');
+    }
+    
+    async loadAvailableFriendsForGroup(groupId, existingMembers) {
+        const user = auth.currentUser;
+        if (!user) return;
+        
+        const membersList = document.getElementById('addMembersList');
+        if (!membersList) return;
+        
+        try {
+            const snapshot = await db.collection('friendRequests')
+                .where('status', '==', 'accepted')
+                .where('participants', 'array-contains', user.uid)
+                .get();
+            
+            membersList.innerHTML = '';
+            
+            if (snapshot.empty) {
+                membersList.innerHTML = '<div class="no-data"><p>No friends available</p></div>';
+                return;
+            }
+            
+            for (const doc of snapshot.docs) {
+                const request = doc.data();
+                const friendId = request.from === user.uid ? request.to : request.from;
+                
+                if (existingMembers.includes(friendId)) {
+                    continue;
+                }
+                
+                const friendDoc = await db.collection('users').doc(friendId).get();
+                const friendData = friendDoc.data();
+                
+                if (friendData) {
+                    const memberElement = document.createElement('div');
+                    memberElement.className = 'member-item';
+                    memberElement.dataset.friendId = friendId;
+                    memberElement.dataset.friendName = friendData.displayName || friendData.email;
+                    memberElement.innerHTML = `
+                        <label>
+                            <input type="checkbox" value="${friendId}">
+                            <span>${this.escapeHtml(friendData.displayName || friendData.email)}</span>
+                        </label>
+                    `;
+                    membersList.appendChild(memberElement);
+                }
+            }
+            
+            window.currentGroupId = groupId;
+            
+        } catch (error) {
+            console.error('❌ Error loading friends for group:', error);
+        }
+    }
+    
+    searchAddMembers(query) {
+        const membersList = document.getElementById('addMembersList');
+        if (!membersList) return;
+        
+        const items = membersList.querySelectorAll('.member-item');
+        const searchTerm = query.toLowerCase();
+        
+        items.forEach(item => {
+            const name = item.dataset.friendName?.toLowerCase() || '';
+            if (name.includes(searchTerm)) {
+                item.style.display = 'block';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+    
+    async addMembersToGroup() {
+        const groupId = window.currentGroupId;
+        if (!groupId) {
+            alert('No group selected');
+            return;
+        }
+        
+        const selectedMembers = Array.from(document.querySelectorAll('#addMembersList input:checked'))
+            .map(input => input.value);
+        
+        if (selectedMembers.length === 0) {
+            alert('Please select at least one member');
+            return;
+        }
+        
+        const submitBtn = document.getElementById('addMembersSubmit');
+        
+        try {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
+            
+            const groupRef = db.collection('groupChats').doc(groupId);
+            const groupDoc = await groupRef.get();
+            const groupData = groupDoc.data();
+            
+            const currentMembers = groupData.members || [];
+            const newMembers = [...new Set([...currentMembers, ...selectedMembers])];
+            
+            await groupRef.update({
+                members: newMembers,
+                memberCount: newMembers.length,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            
+            const user = auth.currentUser;
+            const addedNames = selectedMembers.map(id => {
+                const element = document.querySelector(`#addMembersList .member-item[data-friend-id="${id}"]`);
+                return element?.dataset?.friendName || id;
+            }).join(', ');
+            
+            await db.collection('groupMessages').add({
+                chatId: groupId,
+                senderId: 'system',
+                senderName: 'System',
+                text: `${user.displayName || user.email} added ${addedNames} to the group`,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                type: 'system'
+            });
+            
+            this.closeAllModals();
+            this.showNotification('Members added successfully!', 'success');
+            
+            if (chatManager.currentChat === groupId) {
+                await chatManager.loadMessages(groupId, 'group');
+            }
+            
+            window.currentGroupId = null;
+            
+        } catch (error) {
+            console.error('❌ Error adding members:', error);
+            alert('Failed to add members: ' + error.message);
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Add Members';
+        }
+    }
+    
+    async showGroupInfo() {
+        if (!chatManager.currentChat || chatManager.currentChatType !== 'group') {
+            return;
+        }
+        
+        const groupId = chatManager.currentChat;
+        const groupData = chatManager.currentChatData;
+        
+        let membersList = '';
+        
+        for (const memberId of groupData.members || []) {
+            try {
+                const userDoc = await db.collection('users').doc(memberId).get();
+                const userData = userDoc.data();
+                const isAdmin = groupData.admins?.includes(memberId);
+                const isCreator = groupData.createdBy === memberId;
+                
+                membersList += `
+                    <div class="member-info">
+                        <div class="member-avatar">
+                            ${userData?.photoURL ? 
+                                `<img src="${userData.photoURL}" alt="${userData.displayName || 'User'}">` : 
+                                `<span>${(userData?.displayName || 'U')[0].toUpperCase()}</span>`
+                            }
+                        </div>
+                        <div class="member-details">
+                            <span class="member-name">${this.escapeHtml(userData?.displayName || userData?.email || 'User')}</span>
+                            ${isCreator ? '<span class="member-badge creator">Creator</span>' : ''}
+                            ${isAdmin && !isCreator ? '<span class="member-badge admin">Admin</span>' : ''}
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading member:', error);
+            }
+        }
+        
+        const existingModal = document.getElementById('groupInfoModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        const infoModal = document.createElement('div');
+        infoModal.className = 'modal';
+        infoModal.id = 'groupInfoModal';
+        infoModal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>${this.escapeHtml(groupData.name)}</h3>
+                    <button class="close-modal"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body">
+                    <div class="group-info-header">
+                        <div class="group-avatar-large">
+                            ${groupData.avatar ? 
+                                `<img src="${groupData.avatar}" alt="${this.escapeHtml(groupData.name)}">` : 
+                                `<i class="fas fa-users"></i>`
+                            }
+                        </div>
+                        <div class="group-stats">
+                            <div class="stat-item">
+                                <div class="stat-value">${groupData.members?.length || 0}</div>
+                                <div class="stat-label">Members</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">${groupData.admins?.length || 1}</div>
+                                <div class="stat-label">Admins</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="group-members-section">
+                        <h4>Members</h4>
+                        <div class="members-list-detailed">
+                            ${membersList}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="cancel-btn">Close</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(infoModal);
+        this.openModal('groupInfoModal');
+    }
+    
+    async leaveGroup() {
+        if (!chatManager.currentChat || chatManager.currentChatType !== 'group') {
+            return;
+        }
+        
+        if (!confirm('Are you sure you want to leave this group?')) {
+            return;
+        }
+        
+        const groupId = chatManager.currentChat;
+        const user = auth.currentUser;
+        
+        try {
+            const groupRef = db.collection('groupChats').doc(groupId);
+            const groupDoc = await groupRef.get();
+            const groupData = groupDoc.data();
+            
+            const updatedMembers = (groupData.members || []).filter(id => id !== user.uid);
+            const updatedAdmins = (groupData.admins || []).filter(id => id !== user.uid);
+            
+            await groupRef.update({
+                members: updatedMembers,
+                admins: updatedAdmins,
+                memberCount: updatedMembers.length
+            });
+            
+            await db.collection('groupMessages').add({
+                chatId: groupId,
+                senderId: 'system',
+                senderName: 'System',
+                text: `${user.displayName || user.email} left the group`,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                type: 'system'
+            });
+            
+            this.showNotification('You left the group', 'info');
+            
+            document.getElementById('welcomeMessage').style.display = 'block';
+            document.getElementById('messageInputContainer').style.display = 'none';
+            document.getElementById('chatTitle').textContent = 'Welcome to ChatBuddy';
+            document.getElementById('chatStatus').textContent = 'Select a conversation to start chatting';
+            this.showGroupMenu(false);
+            
+            chatManager.currentChat = null;
+            chatManager.currentChatType = null;
+            
+            this.loadGroupsList();
+            chatManager.loadChats();
+            
+        } catch (error) {
+            console.error('❌ Error leaving group:', error);
+            alert('Failed to leave group: ' + error.message);
+        }
+    }
+
     searchConversations(query) {
         if (!query.trim()) {
             chatManager.loadChats();
@@ -971,7 +1317,6 @@ class AppController {
     }
 }
 
-// Global instance
 let appController;
 if (typeof window !== 'undefined') {
     appController = new AppController();
