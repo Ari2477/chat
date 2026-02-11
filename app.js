@@ -166,6 +166,40 @@ class AppController {
             });
         }
         
+        // ============ 📸 IMAGE UPLOAD BUTTON - ADDED! ============
+        const attachBtn = document.getElementById('attachBtn');
+        const imageUploadInput = document.getElementById('imageUploadInput');
+        
+        if (attachBtn && imageUploadInput) {
+            attachBtn.addEventListener('click', () => {
+                imageUploadInput.click();
+            });
+            
+            imageUploadInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    chatManager.sendImageMessage(file);
+                }
+            });
+        }
+
+        // ============ 📸 IMAGE VIEWER CLOSE - ADDED! ============
+        const closeImageViewerBtns = document.querySelectorAll('#imageViewerModal .close-modal');
+        closeImageViewerBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.getElementById('imageViewerModal').classList.remove('active');
+                document.body.style.overflow = '';
+            });
+        });
+
+        window.addEventListener('click', (e) => {
+            const modal = document.getElementById('imageViewerModal');
+            if (e.target === modal) {
+                modal.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        });
+        
         // Send message
         const sendBtn = document.getElementById('sendBtn');
         const messageInput = document.getElementById('messageInput');
