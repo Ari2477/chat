@@ -2780,3 +2780,18 @@ body {
         max-height: 300px;
     }
 }
+
+@media (max-width: 768px) {
+    
+    .sidebar.active ~ .main-content .mobile-menu-btn {
+        display: none !important;
+    }
+    
+    .main-content .mobile-menu-btn {
+        display: flex !important;
+    }
+    
+    .sidebar:not(.active) ~ .main-content .mobile-menu-btn {
+        display: flex !important;
+    }
+}
