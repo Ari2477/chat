@@ -5,16 +5,11 @@ class AppController {
     }
     
     async init() {
-        // Wait for Firebase to be ready
         await this.waitForFirebase();
-        
-        // Initialize components
         this.setupEventListeners();
         this.setupSidebar();
         this.setupModals();
         this.setupProfileFeatures();
-        
-        // Check authentication
         this.checkAuth();
     }
     
@@ -35,6 +30,7 @@ class AppController {
         auth.onAuthStateChanged((user) => {
             if (user) {
                 this.initializeApp();
+                document.body.style.display = 'block';
             } else {
                 window.location.href = 'login.html';
             }
@@ -53,7 +49,7 @@ class AppController {
             logoutBtn.addEventListener('click', () => authManager.logout());
         }
         
-        // Mobile menu toggle - FIXED!
+        // Mobile menu toggle
         const mobileMenuBtn = document.getElementById('mobileMenuBtn');
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebarOverlay');
@@ -62,25 +58,14 @@ class AppController {
             mobileMenuBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 sidebar.classList.toggle('active');
-                if (overlay) {
-                    overlay.classList.toggle('active');
-                }
+                if (overlay) overlay.classList.toggle('active');
             });
         }
         
-        // Close sidebar when clicking overlay
         if (overlay) {
             overlay.addEventListener('click', () => {
                 sidebar.classList.remove('active');
                 overlay.classList.remove('active');
-            });
-        }
-        
-        // Sidebar toggle (desktop)
-        const toggleBtn = document.getElementById('toggleSidebar');
-        if (toggleBtn) {
-            toggleBtn.addEventListener('click', () => {
-                sidebar.classList.toggle('collapsed');
             });
         }
         
@@ -92,7 +77,7 @@ class AppController {
             });
         }
         
-        // User avatar click to open profile
+        // User avatar click
         const userAvatar = document.getElementById('userAvatar');
         if (userAvatar) {
             userAvatar.addEventListener('click', () => {
@@ -100,7 +85,7 @@ class AppController {
             });
         }
         
-        // Profile avatar upload click
+        // ✅ FIXED: Profile avatar upload click
         const profileAvatarUpload = document.getElementById('profileAvatarUpload');
         if (profileAvatarUpload) {
             profileAvatarUpload.addEventListener('click', () => {
@@ -108,15 +93,17 @@ class AppController {
             });
         }
         
-        // Upload photo button
+        // ✅ FIXED: Upload photo button
         const uploadProfilePhoto = document.getElementById('uploadProfilePhoto');
         if (uploadProfilePhoto) {
-            uploadProfilePhoto.addEventListener('click', () => {
+            uploadProfilePhoto.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 document.getElementById('avatarUploadInput').click();
             });
         }
         
-        // Avatar file input change
+        // ✅ FIXED: Avatar file input change
         const avatarUploadInput = document.getElementById('avatarUploadInput');
         if (avatarUploadInput) {
             avatarUploadInput.addEventListener('change', (e) => {
@@ -240,7 +227,6 @@ class AppController {
     }
     
     setupSidebar() {
-        // Check if mobile on resize
         window.addEventListener('resize', () => {
             if (window.innerWidth > 768) {
                 const sidebar = document.getElementById('sidebar');
@@ -250,7 +236,6 @@ class AppController {
             }
         });
         
-        // Close sidebar when clicking outside on mobile
         document.addEventListener('click', (e) => {
             if (window.innerWidth <= 768) {
                 const sidebar = document.getElementById('sidebar');
@@ -273,7 +258,6 @@ class AppController {
     }
     
     setupProfileFeatures() {
-        // Initialize profile features
         this.loadUserStats();
     }
     
@@ -296,11 +280,9 @@ class AppController {
         const user = auth.currentUser;
         if (!user) return;
         
-        // Set profile data
         document.getElementById('profileName').textContent = user.displayName || user.email.split('@')[0];
         document.getElementById('profileEmail').textContent = user.email;
         
-        // Load profile image
         const profileImg = document.getElementById('profileAvatarImg');
         const profileIcon = document.getElementById('profileAvatarIcon');
         
@@ -313,21 +295,36 @@ class AppController {
             profileIcon.style.display = 'block';
         }
         
-        // Load stats
         await this.loadUserStats();
-        
         this.openModal('profileModal');
     }
     
+    // ✅ FIXED: Upload Profile Avatar - WORKING VERSION
     async uploadProfileAvatar(file) {
         const user = auth.currentUser;
-        if (!user) return;
+        if (!user) {
+            alert('You must be logged in');
+            return;
+        }
         
-        // Show upload progress
+        // Check file type
+        if (!file.type.startsWith('image/')) {
+            alert('Please select an image file');
+            return;
+        }
+        
+        // Check file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('File is too large. Maximum size is 5MB');
+            return;
+        }
+        
+        // Show progress
         const progressDiv = document.createElement('div');
         progressDiv.className = 'upload-progress';
+        progressDiv.id = 'uploadProgress';
         progressDiv.innerHTML = `
-            <div>Uploading profile picture...</div>
+            <div><i class="fas fa-cloud-upload-alt"></i> Uploading profile picture...</div>
             <div class="progress-bar">
                 <div class="progress-fill" style="width: 0%"></div>
             </div>
@@ -335,53 +332,146 @@ class AppController {
         document.body.appendChild(progressDiv);
         
         try {
-            // Upload to Firebase Storage
+            // Create unique filename
+            const timestamp = Date.now();
+            const fileExtension = file.name.split('.').pop();
+            const fileName = `avatar_${timestamp}.${fileExtension}`;
+            
+            // Create storage reference
             const storageRef = storage.ref();
-            const avatarRef = storageRef.child(`avatars/${user.uid}/${Date.now()}_${file.name}`);
+            const avatarRef = storageRef.child(`avatars/${user.uid}/${fileName}`);
             
-            const uploadTask = avatarRef.put(file);
+            console.log('Uploading to:', `avatars/${user.uid}/${fileName}`);
             
+            // Upload with metadata
+            const metadata = {
+                contentType: file.type,
+                customMetadata: {
+                    uploadedBy: user.uid,
+                    uploadedAt: new Date().toISOString()
+                }
+            };
+            
+            const uploadTask = avatarRef.put(file, metadata);
+            
+            // Monitor upload progress
             uploadTask.on('state_changed', 
                 (snapshot) => {
                     const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    progressDiv.querySelector('.progress-fill').style.width = progress + '%';
+                    const progressFill = document.querySelector('#uploadProgress .progress-fill');
+                    if (progressFill) {
+                        progressFill.style.width = progress + '%';
+                    }
+                    console.log('Upload progress:', progress + '%');
                 },
                 (error) => {
                     console.error('Upload error:', error);
-                    progressDiv.remove();
-                    alert('Failed to upload image: ' + error.message);
+                    this.removeUploadProgress();
+                    
+                    let errorMessage = 'Failed to upload image: ';
+                    switch (error.code) {
+                        case 'storage/unauthorized':
+                            errorMessage += 'Permission denied. Check Firebase Storage rules.';
+                            break;
+                        case 'storage/canceled':
+                            errorMessage += 'Upload canceled.';
+                            break;
+                        case 'storage/unknown':
+                            errorMessage += 'Unknown error occurred.';
+                            break;
+                        default:
+                            errorMessage += error.message;
+                    }
+                    
+                    alert(errorMessage);
                 },
                 async () => {
-                    // Get download URL
-                    const downloadURL = await uploadTask.snapshot.ref.getDownloadURL();
-                    
-                    // Update user profile
-                    await user.updateProfile({
-                        photoURL: downloadURL
-                    });
-                    
-                    // Update Firestore
-                    await db.collection('users').doc(user.uid).update({
-                        photoURL: downloadURL
-                    });
-                    
-                    // Update UI
-                    document.getElementById('avatarImg').src = downloadURL;
-                    document.getElementById('avatarImg').style.display = 'block';
-                    document.getElementById('avatarInitial').style.display = 'none';
-                    
-                    document.getElementById('profileAvatarImg').src = downloadURL;
-                    document.getElementById('profileAvatarImg').style.display = 'block';
-                    document.getElementById('profileAvatarIcon').style.display = 'none';
-                    
-                    progressDiv.remove();
-                    alert('Profile picture updated successfully!');
+                    try {
+                        // Get download URL
+                        const downloadURL = await uploadTask.snapshot.ref.getDownloadURL();
+                        console.log('Download URL:', downloadURL);
+                        
+                        // Update Firebase Auth profile
+                        await user.updateProfile({
+                            photoURL: downloadURL
+                        });
+                        
+                        // Update Firestore user document
+                        await db.collection('users').doc(user.uid).update({
+                            photoURL: downloadURL,
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        
+                        // Force refresh user
+                        await user.reload();
+                        
+                        // Update all UI elements
+                        this.updateAllAvatars(downloadURL);
+                        
+                        this.removeUploadProgress();
+                        alert('Profile picture updated successfully!');
+                        
+                        // Refresh profile modal
+                        const profileImg = document.getElementById('profileAvatarImg');
+                        const profileIcon = document.getElementById('profileAvatarIcon');
+                        profileImg.src = downloadURL;
+                        profileImg.style.display = 'block';
+                        profileIcon.style.display = 'none';
+                        
+                    } catch (error) {
+                        console.error('Error updating profile:', error);
+                        this.removeUploadProgress();
+                        alert('Failed to update profile: ' + error.message);
+                    }
                 }
             );
+            
         } catch (error) {
-            console.error('Error uploading avatar:', error);
+            console.error('Error in upload:', error);
+            this.removeUploadProgress();
+            alert('Failed to upload: ' + error.message);
+        }
+    }
+    
+    // ✅ NEW: Update all avatars in the UI
+    updateAllAvatars(photoURL) {
+        // Update sidebar avatar
+        const avatarImg = document.getElementById('avatarImg');
+        const avatarInitial = document.getElementById('avatarInitial');
+        
+        if (avatarImg) {
+            avatarImg.src = photoURL;
+            avatarImg.style.display = 'block';
+            avatarInitial.style.display = 'none';
+        }
+        
+        // Update profile modal avatar
+        const profileAvatarImg = document.getElementById('profileAvatarImg');
+        const profileAvatarIcon = document.getElementById('profileAvatarIcon');
+        
+        if (profileAvatarImg) {
+            profileAvatarImg.src = photoURL;
+            profileAvatarImg.style.display = 'block';
+            profileAvatarIcon.style.display = 'none';
+        }
+        
+        // Dispatch event for other components
+        window.dispatchEvent(new CustomEvent('avatarUpdated', { 
+            detail: { photoURL: photoURL } 
+        }));
+    }
+    
+    // ✅ NEW: Remove upload progress
+    removeUploadProgress() {
+        const progressDiv = document.getElementById('uploadProgress');
+        if (progressDiv) {
             progressDiv.remove();
-            alert('Failed to upload profile picture: ' + error.message);
+        }
+        
+        // Reset file input
+        const fileInput = document.getElementById('avatarUploadInput');
+        if (fileInput) {
+            fileInput.value = '';
         }
     }
     
@@ -392,6 +482,11 @@ class AppController {
         await this.loadFriendsList();
         await this.loadGroupsList();
         await this.loadUserStats();
+        
+        // Load user avatar
+        if (user.photoURL) {
+            this.updateAllAvatars(user.photoURL);
+        }
     }
     
     async loadFriendsList() {
@@ -440,7 +535,7 @@ class AppController {
                 }
             </div>
             <div class="friend-info">
-                <div class="friend-name">${displayName}</div>
+                <div class="friend-name">${this.escapeHtml(displayName)}</div>
                 <div class="friend-status ${friendData.online ? 'online' : 'offline'}">
                     <i class="fas fa-circle"></i> ${friendData.online ? 'Online' : 'Offline'}
                 </div>
@@ -487,15 +582,15 @@ class AppController {
         div.innerHTML = `
             <div class="chat-avatar">
                 ${groupData.avatar ? 
-                    `<img src="${groupData.avatar}" alt="${groupData.name}">` : 
+                    `<img src="${groupData.avatar}" alt="${this.escapeHtml(groupData.name)}">` : 
                     `<i class="fas fa-users"></i>`
                 }
             </div>
             <div class="chat-info">
-                <div class="chat-name">${groupData.name}</div>
-                <div class="chat-last-message">${groupData.lastMessage || 'No messages yet'}</div>
+                <div class="chat-name">${this.escapeHtml(groupData.name)}</div>
+                <div class="chat-last-message">${this.escapeHtml(groupData.lastMessage || 'No messages yet')}</div>
             </div>
-            <div class="chat-time">${groupData.members.length} members</div>
+            <div class="chat-time">${groupData.members?.length || 0} members</div>
         `;
         
         return div;
@@ -528,7 +623,7 @@ class AppController {
                 memberElement.innerHTML = `
                     <label>
                         <input type="checkbox" value="${friendId}">
-                        <span>${friendData.displayName || friendData.email}</span>
+                        <span>${this.escapeHtml(friendData.displayName || friendData.email)}</span>
                     </label>
                 `;
                 
@@ -544,69 +639,82 @@ class AppController {
         if (!user) return;
         
         try {
-            // Count friends
             const friendsSnapshot = await db.collection('friendRequests')
                 .where('status', '==', 'accepted')
                 .where('participants', 'array-contains', user.uid)
                 .get();
             
-            // Count groups
             const groupsSnapshot = await db.collection('groupChats')
                 .where('members', 'array-contains', user.uid)
                 .get();
             
-            // Count private chats
             const chatsSnapshot = await db.collection('privateChats')
                 .where('participants', 'array-contains', user.uid)
                 .get();
             
-            document.getElementById('profileFriendsCount').textContent = friendsSnapshot.size;
-            document.getElementById('profileGroupsCount').textContent = groupsSnapshot.size;
-            document.getElementById('profileChatsCount').textContent = chatsSnapshot.size;
+            const friendsCount = document.getElementById('profileFriendsCount');
+            const groupsCount = document.getElementById('profileGroupsCount');
+            const chatsCount = document.getElementById('profileChatsCount');
+            
+            if (friendsCount) friendsCount.textContent = friendsSnapshot.size;
+            if (groupsCount) groupsCount.textContent = groupsSnapshot.size;
+            if (chatsCount) chatsCount.textContent = chatsSnapshot.size;
             
         } catch (error) {
             console.error('Error loading stats:', error);
         }
+    }
+    
+    escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 }
 
 // Global functions
 window.startPrivateChat = async function(friendId) {
     const user = auth.currentUser;
+    if (!user) return;
     
-    const snapshot = await db.collection('privateChats')
-        .where('participants', 'array-contains', user.uid)
-        .get();
-    
-    let existingChat = null;
-    snapshot.forEach(doc => {
-        const data = doc.data();
-        if (data.participants.includes(friendId)) {
-            existingChat = { id: doc.id, data };
+    try {
+        const snapshot = await db.collection('privateChats')
+            .where('participants', 'array-contains', user.uid)
+            .get();
+        
+        let existingChat = null;
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            if (data.participants && data.participants.includes(friendId)) {
+                existingChat = { id: doc.id, data };
+            }
+        });
+        
+        if (existingChat) {
+            chatManager.openChat(existingChat.id, existingChat.data, 'private');
+        } else {
+            const friendDoc = await db.collection('users').doc(friendId).get();
+            const friendData = friendDoc.data();
+            
+            const chatData = {
+                participants: [user.uid, friendId],
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
+                lastMessage: 'Start a conversation'
+            };
+            
+            const docRef = await db.collection('privateChats').add(chatData);
+            chatManager.openChat(docRef.id, chatData, 'private');
         }
-    });
-    
-    if (existingChat) {
-        chatManager.openChat(existingChat.id, existingChat.data, 'private');
-    } else {
-        const friendDoc = await db.collection('users').doc(friendId).get();
-        const friendData = friendDoc.data();
         
-        const chatData = {
-            participants: [user.uid, friendId],
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
-            lastMessage: 'Start a conversation'
-        };
-        
-        const docRef = await db.collection('privateChats').add(chatData);
-        chatManager.openChat(docRef.id, chatData, 'private');
-    }
-    
-    // Close sidebar on mobile
-    if (window.innerWidth <= 768) {
-        document.getElementById('sidebar').classList.remove('active');
-        document.getElementById('sidebarOverlay').classList.remove('active');
+        if (window.innerWidth <= 768) {
+            document.getElementById('sidebar').classList.remove('active');
+            document.getElementById('sidebarOverlay').classList.remove('active');
+        }
+    } catch (error) {
+        console.error('Error starting private chat:', error);
+        alert('Failed to start chat: ' + error.message);
     }
 };
 
