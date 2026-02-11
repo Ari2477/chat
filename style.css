@@ -1151,7 +1151,7 @@ body {
     }
     
     .mobile-menu-btn {
-        display: block !important;
+        display: flex !important;
         background: var(--primary-gradient);
         color: white;
         border: none;
@@ -1160,6 +1160,17 @@ body {
         border-radius: 50%;
         cursor: pointer;
         z-index: 1001;
+        position: absolute;  
+        left: 15px;         
+        top: 15px;          
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+
+    .sidebar.active ~ .main-content .mobile-menu-btn,
+    .mobile-menu-btn.hide {
+        display: none !important;
     }
     
     /* Overlay when sidebar is open */
