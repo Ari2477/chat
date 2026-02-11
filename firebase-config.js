@@ -1,11 +1,12 @@
-// Firebase configuration
+// Firebase configuration - YOUR ACTUAL CONFIG
 const firebaseConfig = {
-  apiKey: "AIzaSyDDU4V-_QV3M8GyhC9SVieRTDM4dbiT0E4",
-  authDomain: "mini-messenger-demo.firebaseapp.com",
-  projectId: "mini-messenger-demo",
-  storageBucket: "mini-messenger-demo.firebasestorage.app",
-  messagingSenderId: "123456789012",
-  appId: "1:123456789012:web:abcd1234efgh5678ijkl90"
+  apiKey: "AIzaSyClPGh1yxz6qT6iYKvuuyHVvMo-bcrv4fo",
+  authDomain: "for-nothing-lastforever.firebaseapp.com",
+  projectId: "for-nothing-lastforever",
+  storageBucket: "for-nothing-lastforever.firebasestorage.app",
+  messagingSenderId: "737440293237",
+  appId: "1:737440293237:web:3daf7b3ae2e2bbeba9733c",
+  measurementId: "G-T651SFSVWK"
 };
 
 // Initialize Firebase
