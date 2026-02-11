@@ -19,49 +19,11 @@ class ChatManager {
             if (user) {
                 this.setupChatListeners();
                 this.loadUserCache();
-                this.setupImageUploadListeners(); 
             } else {
                 this.cleanupListeners();
                 this.clearCache();
             }
         });
-    }
-    
-    // ============ NEW: SETUP IMAGE UPLOAD LISTENERS ============
-    setupImageUploadListeners() {
-        // Wait for DOM to be ready
-        setTimeout(() => {
-            const attachBtn = document.getElementById('attachBtn');
-            const imageUploadInput = document.getElementById('imageUploadInput');
-            
-            if (attachBtn && imageUploadInput) {
-                // Remove existing listeners by cloning
-                const newAttachBtn = attachBtn.cloneNode(true);
-                attachBtn.parentNode.replaceChild(newAttachBtn, attachBtn);
-                
-                // Add fresh event listener
-                newAttachBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log('📸 Attach button clicked');
-                    imageUploadInput.click();
-                });
-                
-                imageUploadInput.addEventListener('change', (e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                        console.log('📸 File selected:', file.name);
-                        this.showImagePreview(file);
-                    }
-                });
-                
-                console.log('✅ Image upload listeners setup complete');
-            } else {
-                console.warn('⚠️ Attach button or image input not found, retrying...');
-                // Retry after 500ms
-                setTimeout(() => this.setupImageUploadListeners(), 500);
-            }
-        }, 300);
     }
     
     // ============ CACHE MANAGEMENT ============
@@ -483,7 +445,8 @@ class ChatManager {
             </div>
         `;
     }
-
+    
+    // ============ REAL-TIME MESSAGES ============
     listenToMessages(chatId, type) {
         if (this.messagesListener) {
             this.messagesListener();
@@ -547,7 +510,8 @@ class ChatManager {
                 setTimeout(() => this.listenToMessages(chatId, type), 3000);
             });
     }
-
+    
+    // ============ 📸 IMAGE MESSAGES - ADDED! ============
     
     async uploadImage(file) {
         if (!file) return null;
@@ -617,107 +581,8 @@ class ChatManager {
         if (element) element.remove();
     }
     
-    showImagePreview(file) {
-        this.removeImagePreview();
-        
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const previewContainer = document.createElement('div');
-            previewContainer.className = 'image-preview-container';
-            previewContainer.id = 'imagePreviewContainer';
-            previewContainer.innerHTML = `
-                <div class="image-preview-header">
-                    <span class="image-preview-title"><i class="fas fa-image"></i> Send Image</span>
-                    <button class="close-preview-btn" id="closePreviewBtn">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="image-preview-body">
-                    <img src="${e.target.result}" class="image-preview-img" alt="Preview">
-                    <div class="image-preview-details">
-                        <div class="image-preview-name">${file.name}</div>
-                        <div class="image-preview-size">${(file.size / 1024).toFixed(1)} KB</div>
-                    </div>
-                </div>
-                <div class="image-preview-footer">
-                    <input type="text" 
-                           id="imageCaptionInput" 
-                           class="image-caption-input" 
-                           placeholder="Add a message (optional)..." 
-                           autocomplete="off">
-                    <button class="send-image-btn" id="sendImageBtn">
-                        <i class="fas fa-paper-plane"></i> Send
-                    </button>
-                </div>
-            `;
-            
-            // Hide message input container
-            const messageInputContainer = document.querySelector('.message-input-container');
-            if (messageInputContainer) {
-                messageInputContainer.style.display = 'none';
-            }
-            
-            // Insert preview after messages container
-            const mainContent = document.querySelector('.main-content');
-            const messagesContainer = document.querySelector('.messages-container');
-            if (mainContent && messagesContainer) {
-                mainContent.insertBefore(previewContainer, messagesContainer.nextSibling);
-            }
-            
-            // Close preview
-            setTimeout(() => {
-                const closeBtn = document.getElementById('closePreviewBtn');
-                if (closeBtn) {
-                    closeBtn.addEventListener('click', () => {
-                        this.removeImagePreview();
-                        if (messageInputContainer) {
-                            messageInputContainer.style.display = 'flex';
-                        }
-                    });
-                }
-                
-                // Send image with optional message
-                const sendBtn = document.getElementById('sendImageBtn');
-                if (sendBtn) {
-                    sendBtn.addEventListener('click', () => {
-                        const caption = document.getElementById('imageCaptionInput')?.value || '';
-                        this.sendImageMessage(file, caption);
-                    });
-                }
-                
-                // Enter key to send
-                const captionInput = document.getElementById('imageCaptionInput');
-                if (captionInput) {
-                    captionInput.addEventListener('keypress', (e) => {
-                        if (e.key === 'Enter') {
-                            const caption = document.getElementById('imageCaptionInput')?.value || '';
-                            this.sendImageMessage(file, caption);
-                        }
-                    });
-                }
-            }, 100);
-        };
-        reader.readAsDataURL(file);
-    }
-
-    removeImagePreview() {
-        const preview = document.getElementById('imagePreviewContainer');
-        if (preview) preview.remove();
-        
-        const messageInputContainer = document.querySelector('.message-input-container');
-        if (messageInputContainer) {
-            messageInputContainer.style.display = 'flex';
-        }
-        
-        const imageInput = document.getElementById('imageUploadInput');
-        if (imageInput) imageInput.value = '';
-    }
-
-    async sendImageMessage(file, caption = '') {
-        if (!this.currentChat || !file) {
-            alert('Please select a chat first');
-            return;
-        }
+    async sendImageMessage(file) {
+        if (!this.currentChat || !file) return;
         
         const user = auth.currentUser;
         if (!user) {
@@ -725,14 +590,18 @@ class ChatManager {
             return;
         }
         
-        const sendBtn = document.getElementById('sendImageBtn');
+        const sendBtn = document.getElementById('sendBtn');
         if (sendBtn) {
             sendBtn.disabled = true;
-            sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+            sendBtn.style.opacity = '0.6';
         }
         
         try {
+            this.showImagePreview(file);
+            
             const imageData = await this.uploadImage(file);
+            
+            this.removeImagePreview();
             
             const messageKey = `${this.currentChat}_image_${Date.now()}`;
             this.pendingMessages.add(messageKey);
@@ -742,7 +611,7 @@ class ChatManager {
                 chatId: this.currentChat,
                 senderId: user.uid,
                 senderName: user.displayName || user.email,
-                text: caption || '',
+                text: '',
                 image: imageData,
                 timestamp: new Date(),
                 type: 'image'
@@ -753,13 +622,8 @@ class ChatManager {
             tempElement.dataset.messageId = tempId;
             
             const messagesList = document.getElementById('messagesList');
-            if (messagesList) {
-                messagesList.appendChild(tempElement);
-                this.scrollToBottom(true);
-            }
-            
-            // Remove preview
-            this.removeImagePreview();
+            messagesList.appendChild(tempElement);
+            this.scrollToBottom(true);
             
             const collection = this.currentChatType === 'group' ? 'groupMessages' : 'privateMessages';
             const chatCollection = this.currentChatType === 'group' ? 'groupChats' : 'privateChats';
@@ -768,7 +632,7 @@ class ChatManager {
                 chatId: this.currentChat,
                 senderId: user.uid,
                 senderName: user.displayName || user.email,
-                text: caption || '',
+                text: '',
                 image: imageData,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                 type: 'image'
@@ -778,16 +642,13 @@ class ChatManager {
             tempElement.classList.remove('message-sending');
             this.processedMessageIds.add(docRef.id);
             
-            // Update last message with caption if exists
-            const lastMessageText = caption ? `📸 ${caption.substring(0, 20)}${caption.length > 20 ? '...' : ''}` : '📸 Sent an image';
-            
             await db.collection(chatCollection).doc(this.currentChat).update({
-                lastMessage: lastMessageText,
+                lastMessage: '📸 Sent an image',
                 lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
                 lastSenderId: user.uid
             });
             
-            this.updateLastMessage(this.currentChat, lastMessageText);
+            this.updateLastMessage(this.currentChat, '📸 Sent an image');
             
         } catch (error) {
             console.error('❌ Error sending image:', error);
@@ -795,11 +656,48 @@ class ChatManager {
         } finally {
             if (sendBtn) {
                 sendBtn.disabled = false;
-                sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Send';
+                sendBtn.style.opacity = '1';
             }
         }
     }
-
+    
+    showImagePreview(file) {
+        this.removeImagePreview();
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const previewContainer = document.createElement('div');
+            previewContainer.className = 'image-preview-container';
+            previewContainer.id = 'imagePreviewContainer';
+            previewContainer.innerHTML = `
+                <img src="${e.target.result}" class="image-preview" alt="Preview">
+                <div class="image-preview-info">
+                    <div class="image-preview-name">${file.name}</div>
+                    <div class="image-preview-size">${(file.size / 1024).toFixed(1)} KB</div>
+                </div>
+                <button class="cancel-image-btn" id="cancelImageBtn">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            
+            const messageInputContainer = document.querySelector('.message-input-container');
+            messageInputContainer.insertBefore(previewContainer, messageInputContainer.firstChild);
+            
+            document.getElementById('cancelImageBtn').addEventListener('click', () => {
+                this.removeImagePreview();
+            });
+        };
+        reader.readAsDataURL(file);
+    }
+    
+    removeImagePreview() {
+        const preview = document.getElementById('imagePreviewContainer');
+        if (preview) preview.remove();
+        
+        const imageInput = document.getElementById('imageUploadInput');
+        if (imageInput) imageInput.value = '';
+    }
+    
     createImageMessageElement(message) {
         const user = auth.currentUser;
         const isSentByMe = message.senderId === user.uid;
@@ -825,9 +723,6 @@ class ChatManager {
         const time = message.timestamp ? this.formatTime(message.timestamp) : '';
         const imageUrl = message.image?.medium || message.image?.url;
         
-        // Show caption if exists
-        const captionHtml = message.text ? `<div class="message-caption">${this.escapeHtml(message.text)}</div>` : '';
-        
         messageElement.innerHTML = `
             ${!isSentByMe ? `
                 <div class="message-avatar">
@@ -842,7 +737,6 @@ class ChatManager {
                      alt="Image" 
                      loading="lazy"
                      onclick="chatManager.openImageViewer('${imageUrl}')">
-                ${captionHtml}
                 <div class="message-time">${time}</div>
             </div>
             ${!isSentByMe ? '</div>' : ''}
@@ -861,14 +755,12 @@ class ChatManager {
             document.body.style.overflow = 'hidden';
             
             const downloadBtn = document.getElementById('downloadImageBtn');
-            if (downloadBtn) {
-                downloadBtn.onclick = () => {
-                    const link = document.createElement('a');
-                    link.href = imageUrl;
-                    link.download = 'image_' + Date.now() + '.jpg';
-                    link.click();
-                };
-            }
+            downloadBtn.onclick = () => {
+                const link = document.createElement('a');
+                link.href = imageUrl;
+                link.download = 'image_' + Date.now() + '.jpg';
+                link.click();
+            };
         }
     }
     
@@ -998,13 +890,11 @@ class ChatManager {
         tempElement.dataset.messageId = tempId;
         
         const messagesList = document.getElementById('messagesList');
-        const emptyState = messagesList?.querySelector('.empty-state');
+        const emptyState = messagesList.querySelector('.empty-state');
         if (emptyState) emptyState.remove();
         
-        if (messagesList) {
-            messagesList.appendChild(tempElement);
-            this.scrollToBottom(true);
-        }
+        messagesList.appendChild(tempElement);
+        this.scrollToBottom(true);
         
         const collection = this.currentChatType === 'group' ? 'groupMessages' : 'privateMessages';
         const chatCollection = this.currentChatType === 'group' ? 'groupChats' : 'privateChats';
@@ -1316,6 +1206,8 @@ if (typeof window !== 'undefined') {
         chatManager = new ChatManager();
         window.chatManager = chatManager;
         window.chatManagerInstance = chatManager;
+        
+        
         window.chatManager.openImageViewer = window.chatManager.openImageViewer.bind(window.chatManager);
     } else {
         chatManager = window.chatManagerInstance;
