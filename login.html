@@ -16,30 +16,6 @@
     
     <!-- Custom Styles -->
     <link rel="stylesheet" href="style.css">
-    
-    <!-- Firebase Config -->
-    <script src="firebase-config.json"></script>
-    <script>
-        // Load Firebase config
-        fetch('firebase-config.json')
-            .then(response => response.json())
-            .then(config => {
-                firebase.initializeApp(config.firebaseConfig);
-                window.auth = firebase.auth();
-                window.db = firebase.firestore();
-                window.storage = firebase.storage();
-                
-                // Initialize Google Auth Provider
-                window.googleProvider = new firebase.auth.GoogleAuthProvider();
-                
-                // Check if user is already logged in
-                auth.onAuthStateChanged((user) => {
-                    if (user) {
-                        window.location.href = 'index.html';
-                    }
-                });
-            });
-    </script>
 </head>
 <body class="login-body">
     <div class="login-container">
@@ -82,9 +58,19 @@
             </div>
         </div>
     </div>
-    
+
+    <!-- SCRIPTS - Load in correct order -->
+    <script src="firebase-config.js"></script>
     <script src="auth.js"></script>
     <script>
+        // Check if user is already logged in
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                window.location.href = 'index.html';
+            }
+        });
+
+        // Google login button handler
         document.addEventListener('DOMContentLoaded', function() {
             const googleBtn = document.getElementById('googleLoginBtn');
             
@@ -93,7 +79,6 @@
                 
                 auth.signInWithPopup(provider)
                     .then((result) => {
-                        // Successfully logged in
                         window.location.href = 'index.html';
                     })
                     .catch((error) => {
