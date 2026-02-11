@@ -445,8 +445,7 @@ class ChatManager {
             </div>
         `;
     }
-    
-    // ============ REAL-TIME MESSAGES ============
+
     listenToMessages(chatId, type) {
         if (this.messagesListener) {
             this.messagesListener();
@@ -510,8 +509,7 @@ class ChatManager {
                 setTimeout(() => this.listenToMessages(chatId, type), 3000);
             });
     }
-    
-    // ============ 📸 IMAGE MESSAGES - ADDED! ============
+
     
     async uploadImage(file) {
         if (!file) return null;
@@ -581,7 +579,85 @@ class ChatManager {
         if (element) element.remove();
     }
     
-    async sendImageMessage(file) {
+    showImagePreview(file) {
+        this.removeImagePreview();
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const previewContainer = document.createElement('div');
+            previewContainer.className = 'image-preview-container';
+            previewContainer.id = 'imagePreviewContainer';
+            previewContainer.innerHTML = `
+                <div class="image-preview-header">
+                    <span class="image-preview-title"><i class="fas fa-image"></i> Send Image</span>
+                    <button class="close-preview-btn" id="closePreviewBtn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="image-preview-body">
+                    <img src="${e.target.result}" class="image-preview-img" alt="Preview">
+                    <div class="image-preview-details">
+                        <div class="image-preview-name">${file.name}</div>
+                        <div class="image-preview-size">${(file.size / 1024).toFixed(1)} KB</div>
+                    </div>
+                </div>
+                <div class="image-preview-footer">
+                    <input type="text" 
+                           id="imageCaptionInput" 
+                           class="image-caption-input" 
+                           placeholder="Add a message (optional)..." 
+                           autocomplete="off">
+                    <button class="send-image-btn" id="sendImageBtn">
+                        <i class="fas fa-paper-plane"></i> Send
+                    </button>
+                </div>
+            `;
+            
+            // Hide message input container
+            const messageInputContainer = document.querySelector('.message-input-container');
+            messageInputContainer.style.display = 'none';
+            
+            // Insert preview after messages container
+            const mainContent = document.querySelector('.main-content');
+            mainContent.insertBefore(previewContainer, document.querySelector('.messages-container').nextSibling);
+            
+            // Close preview
+            document.getElementById('closePreviewBtn').addEventListener('click', () => {
+                this.removeImagePreview();
+                messageInputContainer.style.display = 'flex';
+            });
+            
+            // Send image with optional message
+            document.getElementById('sendImageBtn').addEventListener('click', () => {
+                const caption = document.getElementById('imageCaptionInput').value;
+                this.sendImageMessage(file, caption);
+            });
+            
+            // Enter key to send
+            document.getElementById('imageCaptionInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    const caption = document.getElementById('imageCaptionInput').value;
+                    this.sendImageMessage(file, caption);
+                }
+            });
+        };
+        reader.readAsDataURL(file);
+    }
+
+    removeImagePreview() {
+        const preview = document.getElementById('imagePreviewContainer');
+        if (preview) preview.remove();
+        
+        const messageInputContainer = document.querySelector('.message-input-container');
+        if (messageInputContainer) {
+            messageInputContainer.style.display = 'flex';
+        }
+        
+        const imageInput = document.getElementById('imageUploadInput');
+        if (imageInput) imageInput.value = '';
+    }
+
+    async sendImageMessage(file, caption = '') {
         if (!this.currentChat || !file) return;
         
         const user = auth.currentUser;
@@ -590,18 +666,14 @@ class ChatManager {
             return;
         }
         
-        const sendBtn = document.getElementById('sendBtn');
+        const sendBtn = document.getElementById('sendImageBtn');
         if (sendBtn) {
             sendBtn.disabled = true;
-            sendBtn.style.opacity = '0.6';
+            sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
         }
         
         try {
-            this.showImagePreview(file);
-            
             const imageData = await this.uploadImage(file);
-            
-            this.removeImagePreview();
             
             const messageKey = `${this.currentChat}_image_${Date.now()}`;
             this.pendingMessages.add(messageKey);
@@ -611,7 +683,7 @@ class ChatManager {
                 chatId: this.currentChat,
                 senderId: user.uid,
                 senderName: user.displayName || user.email,
-                text: '',
+                text: caption || '',
                 image: imageData,
                 timestamp: new Date(),
                 type: 'image'
@@ -625,6 +697,9 @@ class ChatManager {
             messagesList.appendChild(tempElement);
             this.scrollToBottom(true);
             
+            // Remove preview
+            this.removeImagePreview();
+            
             const collection = this.currentChatType === 'group' ? 'groupMessages' : 'privateMessages';
             const chatCollection = this.currentChatType === 'group' ? 'groupChats' : 'privateChats';
             
@@ -632,7 +707,7 @@ class ChatManager {
                 chatId: this.currentChat,
                 senderId: user.uid,
                 senderName: user.displayName || user.email,
-                text: '',
+                text: caption || '',
                 image: imageData,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                 type: 'image'
@@ -642,13 +717,16 @@ class ChatManager {
             tempElement.classList.remove('message-sending');
             this.processedMessageIds.add(docRef.id);
             
+            // Update last message with caption if exists
+            const lastMessageText = caption ? `📸 ${caption.substring(0, 20)}${caption.length > 20 ? '...' : ''}` : '📸 Sent an image';
+            
             await db.collection(chatCollection).doc(this.currentChat).update({
-                lastMessage: '📸 Sent an image',
+                lastMessage: lastMessageText,
                 lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
                 lastSenderId: user.uid
             });
             
-            this.updateLastMessage(this.currentChat, '📸 Sent an image');
+            this.updateLastMessage(this.currentChat, lastMessageText);
             
         } catch (error) {
             console.error('❌ Error sending image:', error);
@@ -656,48 +734,11 @@ class ChatManager {
         } finally {
             if (sendBtn) {
                 sendBtn.disabled = false;
-                sendBtn.style.opacity = '1';
+                sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Send';
             }
         }
     }
-    
-    showImagePreview(file) {
-        this.removeImagePreview();
-        
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const previewContainer = document.createElement('div');
-            previewContainer.className = 'image-preview-container';
-            previewContainer.id = 'imagePreviewContainer';
-            previewContainer.innerHTML = `
-                <img src="${e.target.result}" class="image-preview" alt="Preview">
-                <div class="image-preview-info">
-                    <div class="image-preview-name">${file.name}</div>
-                    <div class="image-preview-size">${(file.size / 1024).toFixed(1)} KB</div>
-                </div>
-                <button class="cancel-image-btn" id="cancelImageBtn">
-                    <i class="fas fa-times"></i>
-                </button>
-            `;
-            
-            const messageInputContainer = document.querySelector('.message-input-container');
-            messageInputContainer.insertBefore(previewContainer, messageInputContainer.firstChild);
-            
-            document.getElementById('cancelImageBtn').addEventListener('click', () => {
-                this.removeImagePreview();
-            });
-        };
-        reader.readAsDataURL(file);
-    }
-    
-    removeImagePreview() {
-        const preview = document.getElementById('imagePreviewContainer');
-        if (preview) preview.remove();
-        
-        const imageInput = document.getElementById('imageUploadInput');
-        if (imageInput) imageInput.value = '';
-    }
-    
+
     createImageMessageElement(message) {
         const user = auth.currentUser;
         const isSentByMe = message.senderId === user.uid;
@@ -723,6 +764,9 @@ class ChatManager {
         const time = message.timestamp ? this.formatTime(message.timestamp) : '';
         const imageUrl = message.image?.medium || message.image?.url;
         
+        // Show caption if exists
+        const captionHtml = message.text ? `<div class="message-caption">${this.escapeHtml(message.text)}</div>` : '';
+        
         messageElement.innerHTML = `
             ${!isSentByMe ? `
                 <div class="message-avatar">
@@ -737,6 +781,7 @@ class ChatManager {
                      alt="Image" 
                      loading="lazy"
                      onclick="chatManager.openImageViewer('${imageUrl}')">
+                ${captionHtml}
                 <div class="message-time">${time}</div>
             </div>
             ${!isSentByMe ? '</div>' : ''}
@@ -1206,8 +1251,6 @@ if (typeof window !== 'undefined') {
         chatManager = new ChatManager();
         window.chatManager = chatManager;
         window.chatManagerInstance = chatManager;
-        
-        
         window.chatManager.openImageViewer = window.chatManager.openImageViewer.bind(window.chatManager);
     } else {
         chatManager = window.chatManagerInstance;
