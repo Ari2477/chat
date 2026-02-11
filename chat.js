@@ -1,4 +1,3 @@
-// Chat Module
 class ChatManager {
     constructor() {
         this.currentChat = null;
@@ -62,7 +61,6 @@ class ChatManager {
         });
     }
     
-    // ✅ UPDATED: createChatElement with proper avatar display
     async createChatElement(chatData, chatId, type) {
         const div = document.createElement('div');
         div.className = 'chat-item';
@@ -89,7 +87,7 @@ class ChatManager {
         // Create avatar HTML
         let avatarHtml = '';
         if (avatar) {
-            avatarHtml = `<img src="${avatar}" alt="${name}">`;
+            avatarHtml = `<img src="${avatar}" alt="${this.escapeHtml(name)}">`;
         } else {
             avatarHtml = `<i class="fas ${isGroup ? 'fa-users' : 'fa-user'}"></i>`;
         }
@@ -110,7 +108,6 @@ class ChatManager {
         return div;
     }
     
-    // ✅ NEW: Get other participant data with caching
     async getOtherParticipant(participants) {
         const user = auth.currentUser;
         if (!user) return null;
@@ -127,8 +124,8 @@ class ChatManager {
         }
     }
     
-    // ✅ NEW: Escape HTML to prevent XSS
     escapeHtml(text) {
+        if (!text) return '';
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
@@ -144,6 +141,8 @@ class ChatManager {
             .orderBy('lastMessageTime', 'desc')
             .onSnapshot((snapshot) => {
                 this.handleChatUpdates(snapshot, 'private');
+            }, (error) => {
+                console.error('Error listening to private chats:', error);
             });
         
         // Listen to group chats
@@ -152,6 +151,8 @@ class ChatManager {
             .orderBy('lastMessageTime', 'desc')
             .onSnapshot((snapshot) => {
                 this.handleChatUpdates(snapshot, 'group');
+            }, (error) => {
+                console.error('Error listening to group chats:', error);
             });
     }
     
@@ -193,8 +194,10 @@ class ChatManager {
         if (activeChat) activeChat.classList.add('active');
         
         // Show message input
-        document.getElementById('welcomeMessage').style.display = 'none';
-        document.getElementById('messageInputContainer').style.display = 'flex';
+        const welcomeMessage = document.getElementById('welcomeMessage');
+        const messageInputContainer = document.getElementById('messageInputContainer');
+        if (welcomeMessage) welcomeMessage.style.display = 'none';
+        if (messageInputContainer) messageInputContainer.style.display = 'flex';
         
         // Update chat header
         await this.updateChatHeader(chatData, type);
@@ -209,6 +212,8 @@ class ChatManager {
     async updateChatHeader(chatData, type) {
         const chatTitle = document.getElementById('chatTitle');
         const chatStatus = document.getElementById('chatStatus');
+        
+        if (!chatTitle || !chatStatus) return;
         
         if (type === 'group') {
             chatTitle.textContent = chatData.name || 'Unnamed Group';
@@ -228,6 +233,8 @@ class ChatManager {
     
     async loadMessages(chatId, type) {
         const messagesList = document.getElementById('messagesList');
+        if (!messagesList) return;
+        
         messagesList.innerHTML = '';
         
         const collection = type === 'group' ? 'groupMessages' : 'privateMessages';
@@ -239,11 +246,13 @@ class ChatManager {
                 .limit(50)
                 .get();
             
+            const promises = [];
             snapshot.forEach((doc) => {
                 const message = doc.data();
-                this.displayMessage(message);
+                promises.push(this.displayMessage(message));
             });
             
+            await Promise.all(promises);
             this.scrollToBottom();
             
         } catch (error) {
@@ -262,18 +271,22 @@ class ChatManager {
             .where('chatId', '==', chatId)
             .orderBy('timestamp', 'asc')
             .onSnapshot((snapshot) => {
-                snapshot.docChanges().forEach((change) => {
+                snapshot.docChanges().forEach(async (change) => {
                     if (change.type === 'added') {
                         const message = change.doc.data();
-                        this.displayMessage(message);
+                        await this.displayMessage(message);
                         this.scrollToBottom();
                     }
                 });
+            }, (error) => {
+                console.error('Error listening to messages:', error);
             });
     }
     
     async displayMessage(message) {
         const messagesList = document.getElementById('messagesList');
+        if (!messagesList) return;
+        
         const user = auth.currentUser;
         const isSentByMe = message.senderId === user.uid;
         
@@ -291,7 +304,7 @@ class ChatManager {
                 senderName = displayName;
                 
                 if (senderData?.photoURL) {
-                    senderAvatar = `<img src="${senderData.photoURL}" alt="${displayName}">`;
+                    senderAvatar = `<img src="${senderData.photoURL}" alt="${this.escapeHtml(displayName)}">`;
                 } else {
                     senderAvatar = `<span>${displayName[0].toUpperCase()}</span>`;
                 }
@@ -316,7 +329,7 @@ class ChatManager {
                         ${senderAvatar}
                     </div>
                     <div class="message-info">
-                        <div class="message-sender">${senderName}</div>
+                        <div class="message-sender">${this.escapeHtml(senderName)}</div>
                 ` : ''}
                 <div class="message-content">
                     <div class="message-text">${this.escapeHtml(message.text)}</div>
@@ -333,6 +346,11 @@ class ChatManager {
         if (!this.currentChat || !text.trim()) return;
         
         const user = auth.currentUser;
+        if (!user) {
+            alert('You must be logged in');
+            return;
+        }
+        
         const message = {
             chatId: this.currentChat,
             senderId: user.uid,
@@ -356,27 +374,40 @@ class ChatManager {
             
         } catch (error) {
             console.error('Error sending message:', error);
-            alert('Failed to send message');
+            alert('Failed to send message: ' + error.message);
         }
     }
-    
+
     async createGroup(name, members, avatar = null) {
         const user = auth.currentUser;
+        if (!user) throw new Error('Not authenticated');
+        
+        // Filter out empty or invalid members
+        const validMembers = members.filter(id => id && id !== user.uid);
+        const allMembers = [user.uid, ...validMembers];
+        
+        // Remove duplicates
+        const uniqueMembers = [...new Set(allMembers)];
         
         const groupData = {
-            name: name,
-            members: [user.uid, ...members],
+            name: name.trim(),
+            members: uniqueMembers,
             admins: [user.uid],
             createdBy: user.uid,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
             lastMessage: 'Group created',
-            avatar: avatar || null
+            avatar: avatar || null,
+            memberCount: uniqueMembers.length
         };
         
         try {
-            const docRef = await db.collection('groupChats').add(groupData);
+            console.log('Creating group with data:', groupData);
             
+            const docRef = await db.collection('groupChats').add(groupData);
+            console.log('Group created with ID:', docRef.id);
+            
+            // Add system message
             await db.collection('groupMessages').add({
                 chatId: docRef.id,
                 senderId: 'system',
@@ -390,16 +421,23 @@ class ChatManager {
             
         } catch (error) {
             console.error('Error creating group:', error);
-            throw error;
+            throw new Error(error.message || 'Failed to create group');
         }
     }
-    
+
     async addFriend(email) {
         const user = auth.currentUser;
+        if (!user) throw new Error('Not authenticated');
+        
+        if (!email || !email.includes('@')) {
+            throw new Error('Please enter a valid email address');
+        }
         
         try {
+            // Find user by email
             const userSnapshot = await db.collection('users')
                 .where('email', '==', email)
+                .limit(1)
                 .get();
             
             if (userSnapshot.empty) {
@@ -408,30 +446,56 @@ class ChatManager {
             
             const friendDoc = userSnapshot.docs[0];
             const friendId = friendDoc.id;
+            const friendData = friendDoc.data();
             
             if (friendId === user.uid) {
                 throw new Error('You cannot add yourself as a friend');
             }
             
-            // Check if request already exists
-            const existingRequests = await db.collection('friendRequests')
+            // Check if already friends
+            const acceptedSnapshot = await db.collection('friendRequests')
+                .where('status', '==', 'accepted')
+                .where('participants', 'array-contains', user.uid)
+                .get();
+            
+            let alreadyFriends = false;
+            acceptedSnapshot.forEach(doc => {
+                const data = doc.data();
+                if (data.participants.includes(friendId)) {
+                    alreadyFriends = true;
+                }
+            });
+            
+            if (alreadyFriends) {
+                throw new Error('You are already friends');
+            }
+            
+            // Check for pending request
+            const pendingSnapshot = await db.collection('friendRequests')
+                .where('status', '==', 'pending')
                 .where('from', 'in', [user.uid, friendId])
                 .where('to', 'in', [user.uid, friendId])
                 .get();
             
-            if (!existingRequests.empty) {
+            if (!pendingSnapshot.empty) {
                 throw new Error('Friend request already sent');
             }
             
-            const friendRequestRef = db.collection('friendRequests').doc();
-            
-            await friendRequestRef.set({
+            // Create friend request
+            const friendRequest = {
                 from: user.uid,
                 to: friendId,
                 status: 'pending',
                 participants: [user.uid, friendId],
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            });
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                fromName: user.displayName || user.email,
+                toName: friendData.displayName || friendData.email,
+                fromPhoto: user.photoURL || null,
+                toPhoto: friendData.photoURL || null
+            };
+            
+            await db.collection('friendRequests').add(friendRequest);
+            console.log('Friend request sent to:', email);
             
             return true;
             
@@ -442,6 +506,8 @@ class ChatManager {
     }
     
     formatTime(date) {
+        if (!date) return '';
+        
         const now = new Date();
         const diff = now - date;
         const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -461,11 +527,17 @@ class ChatManager {
     
     scrollToBottom() {
         const messagesContainer = document.getElementById('messagesContainer');
-        setTimeout(() => {
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }, 100);
+        if (messagesContainer) {
+            setTimeout(() => {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }, 100);
+        }
     }
 }
 
 // Initialize Chat Manager
-const chatManager = new ChatManager();
+let chatManager;
+if (typeof window !== 'undefined') {
+    chatManager = new ChatManager();
+    window.chatManager = chatManager;
+}
