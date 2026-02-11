@@ -1,6 +1,7 @@
-// Main Application Controller
 class AppController {
     constructor() {
+        this.currentUser = null;
+        this.activeTab = 'chats';
         this.init();
     }
     
@@ -29,6 +30,7 @@ class AppController {
     checkAuth() {
         auth.onAuthStateChanged((user) => {
             if (user) {
+                this.currentUser = user;
                 this.initializeApp();
                 document.body.style.display = 'block';
             } else {
@@ -38,8 +40,17 @@ class AppController {
     }
     
     initializeApp() {
-        console.log('App initialized');
+        console.log('App initialized for:', this.currentUser?.email);
         this.loadUserData();
+        this.setupRealtimeListeners();
+    }
+    
+    setupRealtimeListeners() {
+        // Listen for friend request updates
+        this.listenForFriendRequests();
+        
+        // Listen for user status changes
+        this.listenForUserStatus();
     }
     
     setupEventListeners() {
@@ -103,13 +114,30 @@ class AppController {
             });
         }
         
-        // Avatar file input change - IMGBB VERSION
+        // Avatar file input change
         const avatarUploadInput = document.getElementById('avatarUploadInput');
         if (avatarUploadInput) {
             avatarUploadInput.addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 if (file) {
                     this.uploadProfileAvatar(file);
+                }
+            });
+        }
+        
+        // Group avatar upload
+        const uploadGroupAvatarBtn = document.getElementById('uploadGroupAvatarBtn');
+        const groupAvatarInput = document.getElementById('groupAvatarInput');
+        
+        if (uploadGroupAvatarBtn && groupAvatarInput) {
+            uploadGroupAvatarBtn.addEventListener('click', () => {
+                groupAvatarInput.click();
+            });
+            
+            groupAvatarInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    this.previewGroupAvatar(file);
                 }
             });
         }
@@ -132,6 +160,14 @@ class AppController {
             });
         }
         
+        // Search functionality
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                this.searchConversations(e.target.value);
+            });
+        }
+        
         // Tab switching
         const tabBtns = document.querySelectorAll('.tab-btn');
         tabBtns.forEach(btn => {
@@ -140,12 +176,15 @@ class AppController {
                 btn.classList.add('active');
                 
                 const tabName = btn.dataset.tab;
+                this.activeTab = tabName;
+                
                 document.querySelectorAll('.tab-pane').forEach(pane => {
                     pane.classList.remove('active');
                 });
                 
                 if (tabName === 'chats') {
                     document.getElementById('chatsTab').classList.add('active');
+                    chatManager.loadChats();
                 } else if (tabName === 'groups') {
                     document.getElementById('groupsTab').classList.add('active');
                     this.loadGroupsList();
@@ -194,12 +233,32 @@ class AppController {
                     .map(input => input.value);
                 
                 try {
-                    await chatManager.createGroup(groupName, selectedMembers);
+                    createGroupSubmit.disabled = true;
+                    createGroupSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+                    
+                    let groupAvatar = null;
+                    if (window.selectedGroupAvatar) {
+                        groupAvatar = await this.uploadGroupAvatar(window.selectedGroupAvatar);
+                    }
+                    
+                    const groupId = await chatManager.createGroup(groupName, selectedMembers, groupAvatar);
+                    
+                    window.selectedGroupAvatar = null;
                     this.closeAllModals();
-                    alert('Group created successfully!');
+                    
+                    document.getElementById('groupNameInput').value = '';
+                    document.getElementById('groupAvatarPreview').innerHTML = '<i class="fas fa-users"></i>';
+                    
                     document.querySelector('[data-tab="groups"]').click();
+                    await this.loadGroupsList();
+                    
+                    alert('Group created successfully!');
+                    
                 } catch (error) {
                     alert('Failed to create group: ' + error.message);
+                } finally {
+                    createGroupSubmit.disabled = false;
+                    createGroupSubmit.innerHTML = 'Create Group';
                 }
             });
         }
@@ -215,12 +274,21 @@ class AppController {
                 }
                 
                 try {
+                    addFriendSubmit.disabled = true;
+                    addFriendSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+                    
                     await chatManager.addFriend(email);
+                    
                     this.closeAllModals();
-                    alert('Friend request sent successfully!');
                     document.getElementById('friendEmailInput').value = '';
+                    
+                    alert('Friend request sent successfully!');
+                    
                 } catch (error) {
                     alert('Failed to add friend: ' + error.message);
+                } finally {
+                    addFriendSubmit.disabled = false;
+                    addFriendSubmit.innerHTML = 'Add Friend';
                 }
             });
         }
@@ -306,38 +374,24 @@ class AppController {
             return;
         }
         
-        // Check file type
         if (!file.type.startsWith('image/')) {
             alert('Please select an image file');
             return;
         }
         
-        // Check file size (max 32MB for ImgBB)
         if (file.size > 32 * 1024 * 1024) {
             alert('File is too large. Maximum size is 32MB');
             return;
         }
         
-        // Show progress
-        const progressDiv = document.createElement('div');
-        progressDiv.className = 'upload-progress';
-        progressDiv.id = 'uploadProgress';
-        progressDiv.innerHTML = `
-            <div><i class="fas fa-cloud-upload-alt"></i> Uploading to ImgBB...</div>
-            <div class="progress-bar">
-                <div class="progress-fill" style="width: 50%"></div>
-            </div>
-        `;
-        document.body.appendChild(progressDiv);
+        const progressDiv = this.showUploadProgress('Uploading profile picture...');
         
         try {
             const formData = new FormData();
             formData.append('image', file);
-         
-            const IMGBB_API_KEY = '87b58d438e0cbe5226c1df0a8071621e'; 
             
-            console.log('Uploading to ImgBB...');
-
+            const IMGBB_API_KEY = '87b58d438e0cbe5226c1df0a8071621e';
+            
             const response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
                 method: 'POST',
                 body: formData
@@ -346,42 +400,27 @@ class AppController {
             const result = await response.json();
             
             if (!result.success) {
-                throw new Error(result.error?.message || 'Failed to upload to ImgBB');
+                throw new Error(result.error?.message || 'Failed to upload');
             }
             
-            // Get the image URL from ImgBB
             const downloadURL = result.data.url;
-            console.log('ImgBB URL:', downloadURL);
             
-            // Update progress
-            const progressFill = document.querySelector('#uploadProgress .progress-fill');
-            if (progressFill) {
-                progressFill.style.width = '100%';
-            }
-            
-            // Update Firebase Auth profile
             await user.updateProfile({
                 photoURL: downloadURL
             });
             
-            // Update Firestore user document
             await db.collection('users').doc(user.uid).update({
                 photoURL: downloadURL,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
             
-            // Force refresh user
             await user.reload();
             
-            // Remove progress
-            this.removeUploadProgress();
-            
-            // Update all UI elements
             this.updateAllAvatars(downloadURL);
+            this.removeUploadProgress(progressDiv.id);
             
             alert('Profile picture updated successfully!');
             
-            // Refresh profile modal
             const profileImg = document.getElementById('profileAvatarImg');
             const profileIcon = document.getElementById('profileAvatarIcon');
             profileImg.src = downloadURL;
@@ -389,15 +428,82 @@ class AppController {
             profileIcon.style.display = 'none';
             
         } catch (error) {
-            console.error('Error uploading to ImgBB:', error);
-            this.removeUploadProgress();
+            console.error('Error uploading:', error);
+            this.removeUploadProgress(progressDiv.id);
             alert('Failed to upload image: ' + error.message);
         }
     }
     
-    // Update all avatars in the UI
+    async uploadGroupAvatar(file) {
+        if (!file) return null;
+        
+        const progressDiv = this.showUploadProgress('Uploading group avatar...');
+        
+        try {
+            const formData = new FormData();
+            formData.append('image', file);
+            
+            const IMGBB_API_KEY = '87b58d438e0cbe5226c1df0a8071621e';
+            
+            const response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (!result.success) {
+                throw new Error(result.error?.message || 'Failed to upload');
+            }
+            
+            const downloadURL = result.data.url;
+            
+            this.removeUploadProgress(progressDiv.id);
+            return downloadURL;
+            
+        } catch (error) {
+            console.error('Error uploading group avatar:', error);
+            this.removeUploadProgress(progressDiv.id);
+            return null;
+        }
+    }
+    
+    previewGroupAvatar(file) {
+        const preview = document.getElementById('groupAvatarPreview');
+        if (preview) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                preview.innerHTML = `<img src="${e.target.result}" alt="Preview" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+            };
+            reader.readAsDataURL(file);
+            window.selectedGroupAvatar = file;
+        }
+    }
+    
+    showUploadProgress(message) {
+        const id = 'uploadProgress_' + Date.now();
+        const progressDiv = document.createElement('div');
+        progressDiv.className = 'upload-progress';
+        progressDiv.id = id;
+        progressDiv.innerHTML = `
+            <div><i class="fas fa-cloud-upload-alt"></i> ${message}</div>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: 50%"></div>
+            </div>
+        `;
+        document.body.appendChild(progressDiv);
+        return { id, element: progressDiv };
+    }
+    
+    removeUploadProgress(id) {
+        const element = document.getElementById(id);
+        if (element) element.remove();
+        
+        const fileInput = document.getElementById('avatarUploadInput');
+        if (fileInput) fileInput.value = '';
+    }
+    
     updateAllAvatars(photoURL) {
-        // Update sidebar avatar
         const avatarImg = document.getElementById('avatarImg');
         const avatarInitial = document.getElementById('avatarInitial');
         
@@ -407,7 +513,6 @@ class AppController {
             avatarInitial.style.display = 'none';
         }
         
-        // Update profile modal avatar
         const profileAvatarImg = document.getElementById('profileAvatarImg');
         const profileAvatarIcon = document.getElementById('profileAvatarIcon');
         
@@ -417,24 +522,9 @@ class AppController {
             profileAvatarIcon.style.display = 'none';
         }
         
-        // Dispatch event for other components
         window.dispatchEvent(new CustomEvent('avatarUpdated', { 
-            detail: { photoURL: photoURL } 
+            detail: { photoURL } 
         }));
-    }
-    
-    // Remove upload progress
-    removeUploadProgress() {
-        const progressDiv = document.getElementById('uploadProgress');
-        if (progressDiv) {
-            progressDiv.remove();
-        }
-        
-        // Reset file input
-        const fileInput = document.getElementById('avatarUploadInput');
-        if (fileInput) {
-            fileInput.value = '';
-        }
     }
     
     async loadUserData() {
@@ -445,12 +535,11 @@ class AppController {
         await this.loadGroupsList();
         await this.loadUserStats();
         
-        // Load user avatar
         if (user.photoURL) {
             this.updateAllAvatars(user.photoURL);
         }
     }
-    
+
     async loadFriendsList() {
         const user = auth.currentUser;
         if (!user) return;
@@ -462,9 +551,15 @@ class AppController {
             const snapshot = await db.collection('friendRequests')
                 .where('status', '==', 'accepted')
                 .where('participants', 'array-contains', user.uid)
+                .orderBy('timestamp', 'desc')
                 .get();
             
             friendsList.innerHTML = '';
+            
+            if (snapshot.empty) {
+                friendsList.innerHTML = '<div class="no-data"><i class="fas fa-user-friends"></i><p>No friends yet</p><small>Add friends to start chatting!</small></div>';
+                return;
+            }
             
             for (const doc of snapshot.docs) {
                 const request = doc.data();
@@ -473,8 +568,10 @@ class AppController {
                 const friendDoc = await db.collection('users').doc(friendId).get();
                 const friendData = friendDoc.data();
                 
-                const friendElement = this.createFriendElement(friendData, friendId);
-                friendsList.appendChild(friendElement);
+                if (friendData) {
+                    const friendElement = this.createFriendElement(friendData, friendId);
+                    friendsList.appendChild(friendElement);
+                }
             }
         } catch (error) {
             console.error('Error loading friends:', error);
@@ -486,8 +583,9 @@ class AppController {
         div.className = 'friend-item';
         div.dataset.friendId = friendId;
         
-        const displayName = friendData.displayName || friendData.email.split('@')[0];
+        const displayName = friendData.displayName || friendData.email?.split('@')[0] || 'User';
         const initial = displayName[0].toUpperCase();
+        const isOnline = friendData.online || false;
         
         div.innerHTML = `
             <div class="friend-avatar">
@@ -495,21 +593,22 @@ class AppController {
                     `<img src="${friendData.photoURL}" alt="${this.escapeHtml(displayName)}">` : 
                     `<span>${initial}</span>`
                 }
+                <span class="status-indicator ${isOnline ? 'online' : 'offline'}"></span>
             </div>
             <div class="friend-info">
                 <div class="friend-name">${this.escapeHtml(displayName)}</div>
-                <div class="friend-status ${friendData.online ? 'online' : 'offline'}">
-                    <i class="fas fa-circle"></i> ${friendData.online ? 'Online' : 'Offline'}
+                <div class="friend-status ${isOnline ? 'online' : 'offline'}">
+                    <i class="fas fa-circle"></i> ${isOnline ? 'Online' : 'Offline'}
                 </div>
             </div>
-            <button class="chat-btn" onclick="startPrivateChat('${friendId}')">
+            <button class="chat-btn" onclick="appController.startPrivateChat('${friendId}')">
                 <i class="fas fa-comment"></i>
             </button>
         `;
         
         return div;
     }
-    
+
     async loadGroupsList() {
         const user = auth.currentUser;
         if (!user) return;
@@ -525,9 +624,15 @@ class AppController {
             
             groupsList.innerHTML = '';
             
+            if (snapshot.empty) {
+                groupsList.innerHTML = '<div class="no-data"><i class="fas fa-users"></i><p>No groups yet</p><small>Create a group to start chatting!</small></div>';
+                return;
+            }
+            
             snapshot.forEach(doc => {
                 const group = doc.data();
-                const groupElement = this.createGroupElement(group, doc.id);
+                const groupId = doc.id;
+                const groupElement = this.createGroupElement(group, groupId);
                 groupsList.appendChild(groupElement);
             });
         } catch (error) {
@@ -557,7 +662,7 @@ class AppController {
         
         return div;
     }
-    
+
     async loadFriendsForGroup() {
         const user = auth.currentUser;
         if (!user) return;
@@ -573,6 +678,11 @@ class AppController {
             
             membersList.innerHTML = '';
             
+            if (snapshot.empty) {
+                membersList.innerHTML = '<div class="no-data"><p>No friends yet</p><small>Add friends first to invite them to groups!</small></div>';
+                return;
+            }
+            
             for (const doc of snapshot.docs) {
                 const request = doc.data();
                 const friendId = request.from === user.uid ? request.to : request.from;
@@ -580,16 +690,17 @@ class AppController {
                 const friendDoc = await db.collection('users').doc(friendId).get();
                 const friendData = friendDoc.data();
                 
-                const memberElement = document.createElement('div');
-                memberElement.className = 'member-item';
-                memberElement.innerHTML = `
-                    <label>
-                        <input type="checkbox" value="${friendId}">
-                        <span>${this.escapeHtml(friendData.displayName || friendData.email)}</span>
-                    </label>
-                `;
-                
-                membersList.appendChild(memberElement);
+                if (friendData) {
+                    const memberElement = document.createElement('div');
+                    memberElement.className = 'member-item';
+                    memberElement.innerHTML = `
+                        <label>
+                            <input type="checkbox" value="${friendId}">
+                            <span>${this.escapeHtml(friendData.displayName || friendData.email)}</span>
+                        </label>
+                    `;
+                    membersList.appendChild(memberElement);
+                }
             }
         } catch (error) {
             console.error('Error loading friends for group:', error);
@@ -626,6 +737,69 @@ class AppController {
             console.error('Error loading stats:', error);
         }
     }
+
+    listenForFriendRequests() {
+        const user = auth.currentUser;
+        if (!user) return;
+        
+        db.collection('friendRequests')
+            .where('to', '==', user.uid)
+            .where('status', '==', 'pending')
+            .onSnapshot((snapshot) => {
+                snapshot.docChanges().forEach((change) => {
+                    if (change.type === 'added') {
+                        this.showFriendRequestNotification(change.doc.data());
+                    }
+                });
+            });
+    }
+
+    listenForUserStatus() {
+        const user = auth.currentUser;
+        if (!user) return;
+        
+        db.collection('users')
+            .onSnapshot(() => {
+                if (this.activeTab === 'friends') {
+                    this.loadFriendsList();
+                }
+            });
+    }
+
+    showFriendRequestNotification(request) {
+        // You can implement a toast notification here
+        console.log('Friend request from:', request.fromName);
+    }
+
+    searchConversations(query) {
+        if (!query.trim()) {
+            chatManager.loadChats();
+            return;
+        }
+        
+        const items = document.querySelectorAll('.chat-item, .group-item');
+        const searchTerm = query.toLowerCase();
+        
+        items.forEach(item => {
+            const name = item.querySelector('.chat-name')?.textContent.toLowerCase() || '';
+            const message = item.querySelector('.chat-last-message')?.textContent.toLowerCase() || '';
+            
+            if (name.includes(searchTerm) || message.includes(searchTerm)) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    async startPrivateChat(friendId) {
+        await chatManager.startPrivateChat(friendId);
+        
+        if (window.innerWidth <= 768) {
+            document.getElementById('sidebar').classList.remove('active');
+            document.getElementById('sidebarOverlay').classList.remove('active');
+        }
+    }
     
     escapeHtml(text) {
         if (!text) return '';
@@ -635,52 +809,6 @@ class AppController {
     }
 }
 
-// Global functions
-window.startPrivateChat = async function(friendId) {
-    const user = auth.currentUser;
-    if (!user) return;
-    
-    try {
-        const snapshot = await db.collection('privateChats')
-            .where('participants', 'array-contains', user.uid)
-            .get();
-        
-        let existingChat = null;
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            if (data.participants && data.participants.includes(friendId)) {
-                existingChat = { id: doc.id, data };
-            }
-        });
-        
-        if (existingChat) {
-            chatManager.openChat(existingChat.id, existingChat.data, 'private');
-        } else {
-            const friendDoc = await db.collection('users').doc(friendId).get();
-            const friendData = friendDoc.data();
-            
-            const chatData = {
-                participants: [user.uid, friendId],
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
-                lastMessage: 'Start a conversation'
-            };
-            
-            const docRef = await db.collection('privateChats').add(chatData);
-            chatManager.openChat(docRef.id, chatData, 'private');
-        }
-        
-        if (window.innerWidth <= 768) {
-            document.getElementById('sidebar').classList.remove('active');
-            document.getElementById('sidebarOverlay').classList.remove('active');
-        }
-    } catch (error) {
-        console.error('Error starting private chat:', error);
-        alert('Failed to start chat: ' + error.message);
-    }
-};
-
-// Initialize app when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-    window.appController = new AppController();
-});
+// Global instance
+window.appController = new AppController();
+window.startPrivateChat = (friendId) => appController.startPrivateChat(friendId);
