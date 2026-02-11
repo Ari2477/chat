@@ -2,7 +2,10 @@ class ChatManager {
     constructor() {
         this.currentChat = null;
         this.currentChatType = null;
+        this.currentChatData = null;
         this.messagesListener = null;
+        this.chatsListener = null;
+        this.groupsListener = null;
         this.init();
     }
     
@@ -10,8 +13,16 @@ class ChatManager {
         auth.onAuthStateChanged((user) => {
             if (user) {
                 this.setupChatListeners();
+            } else {
+                this.cleanupListeners();
             }
         });
+    }
+    
+    cleanupListeners() {
+        if (this.messagesListener) this.messagesListener();
+        if (this.chatsListener) this.chatsListener();
+        if (this.groupsListener) this.groupsListener();
     }
     
     setupChatListeners() {
@@ -30,7 +41,7 @@ class ChatManager {
                 .orderBy('lastMessageTime', 'desc')
                 .get();
             
-            this.displayChats(privateChatsSnapshot, 'private');
+            await this.displayChats(privateChatsSnapshot, 'private');
             
             // Load group chats
             const groupChatsSnapshot = await db.collection('groupChats')
@@ -38,27 +49,34 @@ class ChatManager {
                 .orderBy('lastMessageTime', 'desc')
                 .get();
             
-            this.displayChats(groupChatsSnapshot, 'group');
+            await this.displayChats(groupChatsSnapshot, 'group');
             
         } catch (error) {
             console.error('Error loading chats:', error);
         }
     }
     
-    displayChats(snapshot, type) {
+    async displayChats(snapshot, type) {
         const chatsList = document.getElementById('chatsList');
         if (!chatsList) return;
+        
+        const fragment = document.createDocumentFragment();
+        const promises = [];
         
         snapshot.forEach((doc) => {
             const chatData = doc.data();
             const chatId = doc.id;
             
-            // Check if chat already exists
             if (!document.querySelector(`[data-chat-id="${chatId}"]`)) {
-                const chatElement = this.createChatElement(chatData, chatId, type);
-                chatsList.appendChild(chatElement);
+                promises.push(
+                    this.createChatElement(chatData, chatId, type)
+                        .then(element => fragment.appendChild(element))
+                );
             }
         });
+        
+        await Promise.all(promises);
+        chatsList.appendChild(fragment);
     }
     
     async createChatElement(chatData, chatId, type) {
@@ -68,14 +86,13 @@ class ChatManager {
         div.dataset.chatType = type;
         
         const isGroup = type === 'group';
-        let name, avatar, lastMessage, time;
+        let name, avatar, lastMessage, time, unreadCount = 0;
         
         if (isGroup) {
             name = chatData.name || 'Unnamed Group';
             avatar = chatData.avatar || null;
             lastMessage = chatData.lastMessage || 'No messages yet';
         } else {
-            // Get other participant data
             const otherParticipant = await this.getOtherParticipant(chatData.participants);
             name = otherParticipant?.displayName || otherParticipant?.email?.split('@')[0] || 'User';
             avatar = otherParticipant?.photoURL || null;
@@ -84,7 +101,6 @@ class ChatManager {
         
         time = chatData.lastMessageTime ? this.formatTime(chatData.lastMessageTime.toDate()) : '';
         
-        // Create avatar HTML
         let avatarHtml = '';
         if (avatar) {
             avatarHtml = `<img src="${avatar}" alt="${this.escapeHtml(name)}">`;
@@ -95,12 +111,16 @@ class ChatManager {
         div.innerHTML = `
             <div class="chat-avatar">
                 ${avatarHtml}
+                ${!isGroup ? `<span class="status-indicator ${chatData.online ? 'online' : 'offline'}"></span>` : ''}
             </div>
             <div class="chat-info">
                 <div class="chat-name">${this.escapeHtml(name)}</div>
                 <div class="chat-last-message">${this.escapeHtml(lastMessage)}</div>
             </div>
-            <div class="chat-time">${time}</div>
+            <div class="chat-meta">
+                <div class="chat-time">${time}</div>
+                ${unreadCount > 0 ? `<span class="unread-badge">${unreadCount}</span>` : ''}
+            </div>
         `;
         
         div.addEventListener('click', () => this.openChat(chatId, chatData, type));
@@ -136,7 +156,7 @@ class ChatManager {
         if (!user) return;
         
         // Listen to private chats
-        db.collection('privateChats')
+        this.chatsListener = db.collection('privateChats')
             .where('participants', 'array-contains', user.uid)
             .orderBy('lastMessageTime', 'desc')
             .onSnapshot((snapshot) => {
@@ -146,11 +166,12 @@ class ChatManager {
             });
         
         // Listen to group chats
-        db.collection('groupChats')
+        this.groupsListener = db.collection('groupChats')
             .where('members', 'array-contains', user.uid)
             .orderBy('lastMessageTime', 'desc')
             .onSnapshot((snapshot) => {
                 this.handleChatUpdates(snapshot, 'group');
+                appController?.loadGroupsList();
             }, (error) => {
                 console.error('Error listening to group chats:', error);
             });
@@ -177,16 +198,32 @@ class ChatManager {
                 }
             } else if (change.type === 'removed') {
                 const element = document.querySelector(`[data-chat-id="${chatId}"]`);
-                if (element) {
-                    element.remove();
-                }
+                if (element) element.remove();
             }
         }
+        
+        // Sort chats by last message time
+        this.sortChats();
+    }
+    
+    sortChats() {
+        const chatsList = document.getElementById('chatsList');
+        if (!chatsList) return;
+        
+        const items = Array.from(chatsList.children);
+        items.sort((a, b) => {
+            const timeA = a.querySelector('.chat-time')?.textContent || '';
+            const timeB = b.querySelector('.chat-time')?.textContent || '';
+            return timeB.localeCompare(timeA);
+        });
+        
+        items.forEach(item => chatsList.appendChild(item));
     }
     
     async openChat(chatId, chatData, type) {
         this.currentChat = chatId;
         this.currentChatType = type;
+        this.currentChatData = chatData;
         
         // Update UI
         document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
@@ -196,6 +233,7 @@ class ChatManager {
         // Show message input
         const welcomeMessage = document.getElementById('welcomeMessage');
         const messageInputContainer = document.getElementById('messageInputContainer');
+        
         if (welcomeMessage) welcomeMessage.style.display = 'none';
         if (messageInputContainer) messageInputContainer.style.display = 'flex';
         
@@ -207,31 +245,51 @@ class ChatManager {
         
         // Listen for new messages
         this.listenToMessages(chatId, type);
+        
+        // Focus on message input
+        setTimeout(() => {
+            const messageInput = document.getElementById('messageInput');
+            if (messageInput) messageInput.focus();
+        }, 300);
     }
     
     async updateChatHeader(chatData, type) {
         const chatTitle = document.getElementById('chatTitle');
         const chatStatus = document.getElementById('chatStatus');
+        const chatAvatar = document.querySelector('.chat-header .chat-avatar');
         
         if (!chatTitle || !chatStatus) return;
         
         if (type === 'group') {
             chatTitle.textContent = chatData.name || 'Unnamed Group';
             chatStatus.textContent = `${chatData.members?.length || 0} members`;
+            
+            if (chatAvatar) {
+                chatAvatar.innerHTML = chatData.avatar ? 
+                    `<img src="${chatData.avatar}" alt="${this.escapeHtml(chatData.name)}">` :
+                    '<i class="fas fa-users"></i>';
+            }
         } else {
             const otherParticipant = await this.getOtherParticipant(chatData.participants);
-            chatTitle.textContent = otherParticipant?.displayName || 
-                                  otherParticipant?.email?.split('@')[0] || 
-                                  'User';
+            const displayName = otherParticipant?.displayName || 
+                              otherParticipant?.email?.split('@')[0] || 
+                              'User';
             
-            // Show online status
+            chatTitle.textContent = displayName;
+            
             const status = otherParticipant?.online ? 'Online' : 'Offline';
             const statusColor = otherParticipant?.online ? '#4caf50' : '#9e9e9e';
             chatStatus.innerHTML = `<span style="color: ${statusColor}">●</span> ${status}`;
+            
+            if (chatAvatar) {
+                chatAvatar.innerHTML = otherParticipant?.photoURL ?
+                    `<img src="${otherParticipant.photoURL}" alt="${this.escapeHtml(displayName)}">` :
+                    `<span>${displayName[0].toUpperCase()}</span>`;
+            }
         }
     }
     
-    async loadMessages(chatId, type) {
+    async loadMessages(chatId, type, limit = 50) {
         const messagesList = document.getElementById('messagesList');
         if (!messagesList) return;
         
@@ -243,21 +301,43 @@ class ChatManager {
             const snapshot = await db.collection(collection)
                 .where('chatId', '==', chatId)
                 .orderBy('timestamp', 'asc')
-                .limit(50)
+                .limit(limit)
                 .get();
             
+            if (snapshot.empty) {
+                this.showEmptyState(messagesList, type);
+                return;
+            }
+            
+            const fragment = document.createDocumentFragment();
             const promises = [];
+            
             snapshot.forEach((doc) => {
                 const message = doc.data();
-                promises.push(this.displayMessage(message));
+                promises.push(
+                    this.createMessageElement(message)
+                        .then(element => fragment.appendChild(element))
+                );
             });
             
             await Promise.all(promises);
+            messagesList.appendChild(fragment);
+            
             this.scrollToBottom();
             
         } catch (error) {
             console.error('Error loading messages:', error);
         }
+    }
+    
+    showEmptyState(messagesList, type) {
+        messagesList.innerHTML = `
+            <div class="empty-state">
+                <i class="fas ${type === 'group' ? 'fa-users' : 'fa-user'}"></i>
+                <p>No messages yet</p>
+                <small>Say hello to start the conversation!</small>
+            </div>
+        `;
     }
     
     listenToMessages(chatId, type) {
@@ -274,8 +354,20 @@ class ChatManager {
                 snapshot.docChanges().forEach(async (change) => {
                     if (change.type === 'added') {
                         const message = change.doc.data();
-                        await this.displayMessage(message);
+                        const messageElement = await this.createMessageElement(message);
+                        
+                        const messagesList = document.getElementById('messagesList');
+                        const emptyState = messagesList.querySelector('.empty-state');
+                        
+                        if (emptyState) {
+                            messagesList.innerHTML = '';
+                        }
+                        
+                        messagesList.appendChild(messageElement);
                         this.scrollToBottom();
+                        
+                        // Update last message in chat list
+                        this.updateLastMessage(chatId, message.text);
                     }
                 });
             }, (error) => {
@@ -283,10 +375,7 @@ class ChatManager {
             });
     }
     
-    async displayMessage(message) {
-        const messagesList = document.getElementById('messagesList');
-        if (!messagesList) return;
-        
+    async createMessageElement(message) {
         const user = auth.currentUser;
         const isSentByMe = message.senderId === user.uid;
         
@@ -303,11 +392,9 @@ class ChatManager {
                 const displayName = senderData?.displayName || senderData?.email?.split('@')[0] || 'User';
                 senderName = displayName;
                 
-                if (senderData?.photoURL) {
-                    senderAvatar = `<img src="${senderData.photoURL}" alt="${this.escapeHtml(displayName)}">`;
-                } else {
-                    senderAvatar = `<span>${displayName[0].toUpperCase()}</span>`;
-                }
+                senderAvatar = senderData?.photoURL ?
+                    `<img src="${senderData.photoURL}" alt="${this.escapeHtml(displayName)}">` :
+                    `<span>${displayName[0].toUpperCase()}</span>`;
             } catch (error) {
                 console.error('Error getting sender info:', error);
             }
@@ -328,7 +415,7 @@ class ChatManager {
                     <div class="message-avatar">
                         ${senderAvatar}
                     </div>
-                    <div class="message-info">
+                    <div class="message-wrapper">
                         <div class="message-sender">${this.escapeHtml(senderName)}</div>
                 ` : ''}
                 <div class="message-content">
@@ -339,7 +426,14 @@ class ChatManager {
             `;
         }
         
-        messagesList.appendChild(messageElement);
+        return messageElement;
+    }
+    
+    updateLastMessage(chatId, text) {
+        const chatItem = document.querySelector(`[data-chat-id="${chatId}"] .chat-last-message`);
+        if (chatItem) {
+            chatItem.textContent = this.escapeHtml(text.substring(0, 30) + (text.length > 30 ? '...' : ''));
+        }
     }
     
     async sendMessage(text) {
@@ -377,16 +471,22 @@ class ChatManager {
             alert('Failed to send message: ' + error.message);
         }
     }
-
-    async createGroup(name, members, avatar = null) {
+    
+    async createGroup(name, members = [], avatar = null) {
         const user = auth.currentUser;
         if (!user) throw new Error('Not authenticated');
         
-        // Filter out empty or invalid members
-        const validMembers = members.filter(id => id && id !== user.uid);
-        const allMembers = [user.uid, ...validMembers];
+        if (!name || !name.trim()) {
+            throw new Error('Group name is required');
+        }
         
-        // Remove duplicates
+        const allMembers = [user.uid];
+        
+        if (members && members.length > 0) {
+            const validMembers = members.filter(id => id && id !== user.uid);
+            allMembers.push(...validMembers);
+        }
+        
         const uniqueMembers = [...new Set(allMembers)];
         
         const groupData = {
@@ -402,12 +502,8 @@ class ChatManager {
         };
         
         try {
-            console.log('Creating group with data:', groupData);
-            
             const docRef = await db.collection('groupChats').add(groupData);
-            console.log('Group created with ID:', docRef.id);
             
-            // Add system message
             await db.collection('groupMessages').add({
                 chatId: docRef.id,
                 senderId: 'system',
@@ -424,7 +520,47 @@ class ChatManager {
             throw new Error(error.message || 'Failed to create group');
         }
     }
-
+    
+    async startPrivateChat(friendId) {
+        const user = auth.currentUser;
+        if (!user) return;
+        
+        try {
+            const snapshot = await db.collection('privateChats')
+                .where('participants', 'array-contains', user.uid)
+                .get();
+            
+            let existingChat = null;
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                if (data.participants && data.participants.includes(friendId)) {
+                    existingChat = { id: doc.id, data };
+                }
+            });
+            
+            if (existingChat) {
+                await this.openChat(existingChat.id, existingChat.data, 'private');
+            } else {
+                const friendDoc = await db.collection('users').doc(friendId).get();
+                const friendData = friendDoc.data();
+                
+                const chatData = {
+                    participants: [user.uid, friendId],
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
+                    lastMessage: 'Start a conversation'
+                };
+                
+                const docRef = await db.collection('privateChats').add(chatData);
+                await this.openChat(docRef.id, chatData, 'private');
+            }
+            
+        } catch (error) {
+            console.error('Error starting private chat:', error);
+            alert('Failed to start chat: ' + error.message);
+        }
+    }
+    
     async addFriend(email) {
         const user = auth.currentUser;
         if (!user) throw new Error('Not authenticated');
@@ -461,7 +597,7 @@ class ChatManager {
             let alreadyFriends = false;
             acceptedSnapshot.forEach(doc => {
                 const data = doc.data();
-                if (data.participants.includes(friendId)) {
+                if (data.participants?.includes(friendId)) {
                     alreadyFriends = true;
                 }
             });
@@ -495,8 +631,6 @@ class ChatManager {
             };
             
             await db.collection('friendRequests').add(friendRequest);
-            console.log('Friend request sent to:', email);
-            
             return true;
             
         } catch (error) {
@@ -529,7 +663,10 @@ class ChatManager {
         const messagesContainer = document.getElementById('messagesContainer');
         if (messagesContainer) {
             setTimeout(() => {
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                messagesContainer.scrollTo({
+                    top: messagesContainer.scrollHeight,
+                    behavior: 'smooth'
+                });
             }, 100);
         }
     }
