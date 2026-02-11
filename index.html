@@ -288,10 +288,36 @@
         </div>
     </div>
 
+    <input type="file" id="imageUploadInput" accept="image/*" style="display: none;">
+   
     <input type="file" id="avatarUploadInput" accept="image/*" style="display: none;">
+
+    <div class="modal image-viewer-modal" id="imageViewerModal">
+        <div class="modal-content image-viewer-content">
+            <div class="image-viewer-header">
+                <button class="close-modal"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="image-viewer-body">
+                <img src="" alt="Viewer" id="imageViewerImg">
+            </div>
+            <div class="image-viewer-footer">
+                <button class="download-btn" id="downloadImageBtn">
+                    <i class="fas fa-download"></i> Download
+                </button>
+            </div>
+        </div>
+    </div>
 
     <script src="firebase-config.js"></script>
     <script>
+        auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+            .then(() => {
+                console.log('✅ Auth persistence enabled');
+            })
+            .catch((error) => {
+                console.error('❌ Auth persistence error:', error);
+            });
+
         // Enable Firestore with proper settings
         db.settings({
             timestampsInSnapshots: true,
