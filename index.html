@@ -100,9 +100,7 @@
                 <button class="mobile-menu-btn" id="mobileMenuBtn">
                     <i class="fas fa-bars"></i>
                 </button>
-                <div class="chat-avatar" id="chatAvatar" style="display: none;">
-                    <!-- Dynamic chat avatar -->
-                </div>
+                <div class="chat-avatar" id="chatAvatar" style="display: none;"></div>
                 <div class="chat-info">
                     <h2 id="chatTitle">Welcome to ChatBuddy</h2>
                     <p id="chatStatus">Select a conversation to start chatting</p>
@@ -111,6 +109,22 @@
                     <button class="user-info-btn" id="profileInfoBtn">
                         <i class="fas fa-user-circle"></i>
                     </button>
+                    <div class="group-menu-container" id="groupMenuContainer" style="display: none;">
+                        <button class="group-menu-btn" id="groupMenuBtn">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <div class="group-dropdown" id="groupDropdown">
+                            <button onclick="appController.showAddMembersModal()">
+                                <i class="fas fa-user-plus"></i> Add Members
+                            </button>
+                            <button onclick="appController.showGroupInfo()">
+                                <i class="fas fa-info-circle"></i> Group Info
+                            </button>
+                            <button onclick="appController.leaveGroup()">
+                                <i class="fas fa-sign-out-alt"></i> Leave Group
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
             
@@ -142,6 +156,7 @@
         </div>
     </div>
     
+    <!-- CREATE GROUP MODAL -->
     <div class="modal" id="createGroupModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -154,6 +169,7 @@
                     <input type="text" id="groupNameInput" placeholder="Enter group name" autocomplete="off">
                 </div>
                 
+                <!-- GROUP AVATAR UPLOAD -->
                 <div class="form-group">
                     <label>Group Avatar (Optional)</label>
                     <div class="avatar-upload">
@@ -167,6 +183,7 @@
                     </div>
                 </div>
                 
+                <!-- HIDDEN FILE INPUT FOR GROUP AVATAR -->
                 <input type="file" id="groupAvatarInput" accept="image/*" style="display: none;">
                 
                 <div class="form-group">
@@ -201,6 +218,30 @@
             <div class="modal-footer">
                 <button class="cancel-btn">Cancel</button>
                 <button class="add-btn" id="addFriendSubmit">Add Friend</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD MEMBERS TO GROUP MODAL -->
+    <div class="modal" id="addMembersModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add Members to Group</h3>
+                <button class="close-modal"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Select Friends to Add</label>
+                    <div class="member-search">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="addMembersSearch" placeholder="Search friends...">
+                    </div>
+                    <div class="members-list" id="addMembersList"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-btn">Cancel</button>
+                <button class="create-btn" id="addMembersSubmit">Add Members</button>
             </div>
         </div>
     </div>
@@ -249,9 +290,9 @@
 
     <input type="file" id="avatarUploadInput" accept="image/*" style="display: none;">
 
-    <!-- SCRIPTS -->
     <script src="firebase-config.js"></script>
     <script>
+        // Enable Firestore with proper settings
         db.settings({
             timestampsInSnapshots: true,
             ignoreUndefinedProperties: true,
