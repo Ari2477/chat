@@ -100,12 +100,14 @@
                 <button class="mobile-menu-btn" id="mobileMenuBtn">
                     <i class="fas fa-bars"></i>
                 </button>
+                <div class="chat-avatar" id="chatAvatar" style="display: none;">
+                    <!-- Dynamic chat avatar -->
+                </div>
                 <div class="chat-info">
                     <h2 id="chatTitle">Welcome to ChatBuddy</h2>
                     <p id="chatStatus">Select a conversation to start chatting</p>
                 </div>
                 <div class="chat-actions">
-                    <!-- REMOVED CALL BUTTON - Added Profile Info Button -->
                     <button class="user-info-btn" id="profileInfoBtn">
                         <i class="fas fa-user-circle"></i>
                     </button>
@@ -140,7 +142,6 @@
         </div>
     </div>
     
-    <!-- Create Group Modal -->
     <div class="modal" id="createGroupModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -150,20 +151,24 @@
             <div class="modal-body">
                 <div class="form-group">
                     <label>Group Name</label>
-                    <input type="text" id="groupNameInput" placeholder="Enter group name">
+                    <input type="text" id="groupNameInput" placeholder="Enter group name" autocomplete="off">
                 </div>
+                
                 <div class="form-group">
                     <label>Group Avatar (Optional)</label>
                     <div class="avatar-upload">
                         <div class="avatar-preview" id="groupAvatarPreview">
                             <i class="fas fa-users"></i>
                         </div>
-                        <button class="upload-btn" id="uploadGroupAvatar">
+                        <button type="button" class="upload-btn" id="uploadGroupAvatarBtn">
                             <i class="fas fa-camera"></i>
                             <span>Upload Photo</span>
                         </button>
                     </div>
                 </div>
+                
+                <input type="file" id="groupAvatarInput" accept="image/*" style="display: none;">
+                
                 <div class="form-group">
                     <label>Add Members</label>
                     <div class="member-search">
@@ -180,7 +185,7 @@
         </div>
     </div>
     
-    <!-- Add Friend Modal -->
+    <!-- ADD FRIEND MODAL -->
     <div class="modal" id="addFriendModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -190,7 +195,7 @@
             <div class="modal-body">
                 <div class="form-group">
                     <label>Friend's Email</label>
-                    <input type="email" id="friendEmailInput" placeholder="Enter email address">
+                    <input type="email" id="friendEmailInput" placeholder="Enter email address" autocomplete="off">
                 </div>
             </div>
             <div class="modal-footer">
@@ -200,7 +205,7 @@
         </div>
     </div>
 
-    <!-- Profile Modal -->
+    <!-- PROFILE MODAL -->
     <div class="modal profile-modal" id="profileModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -242,35 +247,36 @@
         </div>
     </div>
 
-    <!-- Hidden file input for avatar upload -->
     <input type="file" id="avatarUploadInput" accept="image/*" style="display: none;">
 
-    <!-- SCRIPTS - Load in correct order -->
+    <!-- SCRIPTS -->
     <script src="firebase-config.js"></script>
-<script>
-db.settings({
-  timestampsInSnapshots: true,
-  ignoreUndefinedProperties: true,
-  merge: true
-});
+    <script>
+        db.settings({
+            timestampsInSnapshots: true,
+            ignoreUndefinedProperties: true,
+            merge: true
+        });
 
-db.enablePersistence()
-  .catch((err) => {
-    if (err.code == 'failed-precondition') {
-      console.log('Persistence failed');
-    } else if (err.code == 'unimplemented') {
-      console.log('Persistence not available');
-    }
-  });
+        // Enable Firestore persistence
+        db.enablePersistence()
+            .catch((err) => {
+                if (err.code === 'failed-precondition') {
+                    console.log('Persistence failed');
+                } else if (err.code === 'unimplemented') {
+                    console.log('Persistence not available');
+                }
+            });
 
-auth.onAuthStateChanged((user) => {
-  if (!user) {
-    window.location.href = 'login.html';
-  } else {
-    document.body.style.display = 'block';
-  }
-});
-</script>
+        // Check authentication
+        auth.onAuthStateChanged((user) => {
+            if (!user) {
+                window.location.href = 'login.html';
+            } else {
+                document.body.style.display = 'block';
+            }
+        });
+    </script>
     <script src="auth.js"></script>
     <script src="chat.js"></script>
     <script src="app.js"></script>
