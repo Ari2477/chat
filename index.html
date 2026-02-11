@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>ChatBuddy · Home</title>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+    
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Firebase Config -->
+    <script src="firebase-config.json"></script>
+    <script>
+        // Initialize Firebase
+        fetch('firebase-config.json')
+            .then(response => response.json())
+            .then(config => {
+                firebase.initializeApp(config.firebaseConfig);
+                window.auth = firebase.auth();
+                window.db = firebase.firestore();
+                window.storage = firebase.storage();
+                
+                // Enable Firestore persistence
+                db.enablePersistence()
+                    .catch((err) => {
+                        if (err.code === 'failed-precondition') {
+                            console.log('Persistence failed');
+                        } else if (err.code === 'unimplemented') {
+                            console.log('Persistence not available');
+                        }
+                    });
+                
+                // Check authentication
+                auth.onAuthStateChanged((user) => {
+                    if (!user) {
+                        window.location.href = 'login.html';
+                    } else {
+                        document.body.style.display = 'block';
+                        initializeApp();
+                    }
+                });
+            });
+    </script>
+</head>
+<body style="display: none;">
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="user-profile">
+                    <div class="avatar" id="userAvatar">
+                        <img src="" alt="avatar" id="avatarImg">
+                        <span id="avatarInitial"></span>
+                    </div>
+                    <div class="user-info">
+                        <h3 id="userName">Loading...</h3>
+                        <span class="status online"><i class="fas fa-circle"></i> Online</span>
+                    </div>
+                </div>
+                <button class="toggle-btn" id="toggleSidebar">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+            </div>
+            
+            <div class="sidebar-search">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Search conversations..." id="searchInput">
+            </div>
+            
+            <div class="sidebar-tabs">
+                <button class="tab-btn active" data-tab="chats">
+                    <i class="fas fa-comments"></i>
+                    <span>Chats</span>
+                </button>
+                <button class="tab-btn" data-tab="groups">
+                    <i class="fas fa-users"></i>
+                    <span>Groups</span>
+                </button>
+                <button class="tab-btn" data-tab="friends">
+                    <i class="fas fa-user-friends"></i>
+                    <span>Friends</span>
+                </button>
+            </div>
+            
+            <div class="sidebar-content">
+                <!-- Chats List -->
+                <div class="tab-pane active" id="chatsTab">
+                    <div class="chats-list" id="chatsList">
+                        <!-- Chats will be populated here -->
+                    </div>
+                </div>
+                
+                <!-- Groups Tab -->
+                <div class="tab-pane" id="groupsTab">
+                    <div class="groups-header">
+                        <button class="create-group-btn" id="createGroupBtn">
+                            <i class="fas fa-plus-circle"></i>
+                            <span>Create New Group</span>
+                        </button>
+                    </div>
+                    <div class="groups-list" id="groupsList">
+                        <!-- Groups will be populated here -->
+                    </div>
+                </div>
+                
+                <!-- Friends Tab -->
+                <div class="tab-pane" id="friendsTab">
+                    <div class="friends-header">
+                        <button class="add-friend-btn" id="addFriendBtn">
+                            <i class="fas fa-user-plus"></i>
+                            <span>Add Friend</span>
+                        </button>
+                    </div>
+                    <div class="friends-list" id="friendsList">
+                        <!-- Friends will be populated here -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sidebar-footer">
+                <button class="logout-btn" id="logoutBtn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Main Chat Area -->
+        <div class="main-content">
+            <div class="chat-header" id="chatHeader">
+                <button class="mobile-menu-btn" id="mobileMenuBtn">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="chat-info">
+                    <h2 id="chatTitle">Welcome to ChatBuddy</h2>
+                    <p id="chatStatus">Select a conversation to start chatting</p>
+                </div>
+                <div class="chat-actions">
+                    <button class="action-btn" id="videoCallBtn">
+                        <i class="fas fa-video"></i>
+                    </button>
+                    <button class="action-btn" id="infoBtn">
+                        <i class="fas fa-info-circle"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="messages-container" id="messagesContainer">
+                <div class="welcome-message" id="welcomeMessage">
+                    <div class="welcome-icon">
+                        <i class="fas fa-comment-dots"></i>
+                    </div>
+                    <h3>Welcome to ChatBuddy!</h3>
+                    <p>Start a conversation or create a group to chat with friends</p>
+                </div>
+                
+                <div class="messages-list" id="messagesList">
+                    <!-- Messages will be populated here -->
+                </div>
+            </div>
+            
+            <div class="message-input-container" id="messageInputContainer" style="display: none;">
+                <button class="attach-btn" id="attachBtn">
+                    <i class="fas fa-plus"></i>
+                </button>
+                <div class="input-wrapper">
+                    <input type="text" id="messageInput" placeholder="Type a message..." autocomplete="off">
+                    <button class="emoji-btn" id="emojiBtn">
+                        <i class="far fa-smile"></i>
+                    </button>
+                </div>
+                <button class="send-btn" id="sendBtn">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Create Group Modal -->
+    <div class="modal" id="createGroupModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create New Group</h3>
+                <button class="close-modal"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Group Name</label>
+                    <input type="text" id="groupNameInput" placeholder="Enter group name">
+                </div>
+                <div class="form-group">
+                    <label>Group Avatar (Optional)</label>
+                    <div class="avatar-upload">
+                        <div class="avatar-preview" id="groupAvatarPreview">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <button class="upload-btn" id="uploadGroupAvatar">
+                            <i class="fas fa-camera"></i>
+                            <span>Upload Photo</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Add Members</label>
+                    <div class="member-search">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="memberSearch" placeholder="Search friends...">
+                    </div>
+                    <div class="members-list" id="membersList">
+                        <!-- Friends will be populated here -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-btn">Cancel</button>
+                <button class="create-btn" id="createGroupSubmit">Create Group</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add Friend Modal -->
+    <div class="modal" id="addFriendModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add Friend</h3>
+                <button class="close-modal"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Friend's Email</label>
+                    <input type="email" id="friendEmailInput" placeholder="Enter email address">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-btn">Cancel</button>
+                <button class="add-btn" id="addFriendSubmit">Add Friend</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Custom Scripts -->
+    <script src="auth.js"></script>
+    <script src="chat.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
