@@ -1,4 +1,4 @@
-// Chat Module - ULTIMATE UPGRADED VERSION - 100% FIXED!
+// Chat Module - PERFECT VERSION - NO DOUBLE MESSAGES, ULTRA SMOOTH!
 class ChatManager {
     constructor() {
         this.currentChat = null;
@@ -10,6 +10,8 @@ class ChatManager {
         this.messageCache = new Map();
         this.userCache = new Map();
         this.pendingMessages = new Set();
+        this.processedMessageIds = new Set();
+        this.lastMessageTime = 0;
         this.init();
     }
     
@@ -63,6 +65,7 @@ class ChatManager {
         this.messageCache.clear();
         this.userCache.clear();
         this.pendingMessages.clear();
+        this.processedMessageIds.clear();
     }
     
     async getUserData(userId) {
@@ -187,22 +190,27 @@ class ChatManager {
             name = otherParticipant?.displayName || otherParticipant?.email?.split('@')[0] || 'User';
             avatar = otherParticipant?.photoURL || null;
             lastMessage = chatData.lastMessage || 'No messages yet';
+            
+            // Store initial for avatar
+            if (otherParticipant) {
+                div.dataset.initial = name[0].toUpperCase();
+            }
         }
         
-        // ✅ FIX: Use formatTime directly, no .toDate()
         time = chatData.lastMessageTime ? this.formatTime(chatData.lastMessageTime) : '';
         
         let avatarHtml = '';
         if (avatar) {
             avatarHtml = `<img src="${avatar}" alt="${this.escapeHtml(name)}" loading="lazy">`;
         } else {
-            avatarHtml = `<i class="fas ${isGroup ? 'fa-users' : 'fa-user'}"></i>`;
+            const initial = name[0].toUpperCase();
+            avatarHtml = `<span data-initial="${initial}">${initial}</span>`;
         }
         
         div.innerHTML = `
-            <div class="chat-avatar">
+            <div class="chat-avatar" data-initial="${name[0].toUpperCase()}">
                 ${avatarHtml}
-                ${!isGroup ? `<span class="status-indicator"></span>` : ''}
+                ${!isGroup ? `<span class="status-indicator ${otherParticipant?.online ? 'online' : 'offline'}"></span>` : ''}
             </div>
             <div class="chat-info">
                 <div class="chat-name">${this.escapeHtml(name)}</div>
@@ -312,6 +320,9 @@ class ChatManager {
             return;
         }
         
+        // Clear processed message IDs when switching chats
+        this.processedMessageIds.clear();
+        
         this.currentChat = chatId;
         this.currentChatType = type;
         this.currentChatData = chatData;
@@ -404,7 +415,11 @@ class ChatManager {
             
             snapshot.forEach((doc) => {
                 const message = doc.data();
+                const messageId = doc.id;
+                this.processedMessageIds.add(messageId);
+                
                 const messageElement = this.createMessageElement(message);
+                messageElement.dataset.messageId = messageId;
                 fragment.appendChild(messageElement);
             });
             
@@ -427,7 +442,7 @@ class ChatManager {
         `;
     }
     
-    // ============ REAL-TIME MESSAGES ============
+    // ============ REAL-TIME MESSAGES - ULTIMATE ANTI-DOUBLE! ============
     listenToMessages(chatId, type) {
         if (this.messagesListener) {
             this.messagesListener();
@@ -445,23 +460,46 @@ class ChatManager {
                         const message = change.doc.data();
                         const messageId = change.doc.id;
                         
+                        // ✅ ULTIMATE ANTI-DOUBLE CHECK
+                        if (this.processedMessageIds.has(messageId)) {
+                            return;
+                        }
+                        
+                        // Check if message already exists in DOM
                         if (document.querySelector(`[data-message-id="${messageId}"]`)) {
                             return;
                         }
+                        
+                        // Add to processed set
+                        this.processedMessageIds.add(messageId);
+                        
+                        // Clear after 1 minute para hindi lumaki masyado
+                        setTimeout(() => {
+                            this.processedMessageIds.delete(messageId);
+                        }, 60000);
                         
                         const messageElement = this.createMessageElement(message);
                         messageElement.dataset.messageId = messageId;
                         
                         const messagesList = document.getElementById('messagesList');
-                        const emptyState = messagesList.querySelector('.empty-state');
                         
-                        if (emptyState) {
-                            messagesList.innerHTML = '';
+                        // ✅ Remove temp message if this is the same message
+                        if (message.senderId === auth.currentUser?.uid) {
+                            const tempMessages = messagesList.querySelectorAll('.message-sending');
+                            tempMessages.forEach(temp => {
+                                const tempText = temp.querySelector('.message-text')?.textContent;
+                                if (tempText === message.text) {
+                                    temp.remove();
+                                }
+                            });
                         }
+                        
+                        const emptyState = messagesList.querySelector('.empty-state');
+                        if (emptyState) emptyState.remove();
                         
                         messagesList.appendChild(messageElement);
                         
-                        // Auto scroll para sa bagong messages
+                        // Auto scroll for new messages from others
                         if (message.senderId !== auth.currentUser?.uid) {
                             this.scrollToBottom(true);
                         }
@@ -484,18 +522,21 @@ class ChatManager {
         
         let senderAvatar = '';
         let senderName = '';
+        let senderInitial = '';
         
         if (!isSentByMe && message.senderId !== 'system') {
             const senderData = this.userCache.get(message.senderId);
             const displayName = senderData?.displayName || senderData?.email?.split('@')[0] || 'User';
             senderName = displayName;
+            senderInitial = displayName[0].toUpperCase();
             
-            senderAvatar = senderData?.photoURL ?
-                `<img src="${senderData.photoURL}" alt="${this.escapeHtml(displayName)}" loading="lazy">` :
-                `<span>${displayName[0].toUpperCase()}</span>`;
+            if (senderData?.photoURL) {
+                senderAvatar = `<img src="${senderData.photoURL}" alt="${this.escapeHtml(displayName)}" loading="lazy">`;
+            } else {
+                senderAvatar = `<span data-initial="${senderInitial}">${senderInitial}</span>`;
+            }
         }
         
-        // ✅ FIX: Use formatTime directly, no .toDate()
         const time = message.timestamp ? this.formatTime(message.timestamp) : '';
         
         if (message.senderId === 'system') {
@@ -508,7 +549,7 @@ class ChatManager {
         } else {
             messageElement.innerHTML = `
                 ${!isSentByMe ? `
-                    <div class="message-avatar">
+                    <div class="message-avatar" data-initial="${senderInitial}">
                         ${senderAvatar}
                     </div>
                     <div class="message-wrapper">
@@ -541,86 +582,129 @@ class ChatManager {
         }
     }
     
-    // ============ MESSAGE ACTIONS ============
+    // ============ MESSAGE ACTIONS - PERFECT SEND! ============
     async sendMessage(text) {
-        if (!this.currentChat || !text.trim()) return;
+        if (!this.currentChat || !text || !text.trim()) return;
         
-        const messageKey = `${this.currentChat}_${text}_${Date.now()}`;
+        const user = auth.currentUser;
+        if (!user) {
+            alert('You must be logged in');
+            return;
+        }
+        
+        const messageText = text.trim();
+        
+        // ✅ ULTIMATE ANTI-DOUBLE SEND
+        const messageKey = `${this.currentChat}_${messageText}_${user.uid}`;
+        
+        // Check if same message sent in last 2 seconds
         if (this.pendingMessages.has(messageKey)) {
+            console.log('⏳ Duplicate message prevented');
             return;
         }
         
         this.pendingMessages.add(messageKey);
         
-        const user = auth.currentUser;
-        if (!user) {
-            alert('You must be logged in');
-            this.pendingMessages.delete(messageKey);
-            return;
+        // ✅ DISABLE SEND BUTTON AGAD
+        const sendBtn = document.getElementById('sendBtn');
+        const messageInput = document.getElementById('messageInput');
+        
+        if (sendBtn) {
+            sendBtn.disabled = true;
+            sendBtn.style.opacity = '0.6';
+            sendBtn.style.cursor = 'not-allowed';
         }
         
-        // ✅ FIX: Gumamit ng Date object para sa optimistic update
+        // ✅ CLEAR INPUT AGAD
+        if (messageInput) {
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+        }
+        
+        // ✅ OPTIMISTIC UPDATE - Date object
+        const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         const optimisticTimestamp = new Date();
         
-        const message = {
+        const tempMessage = {
             chatId: this.currentChat,
             senderId: user.uid,
             senderName: user.displayName || user.email,
-            text: text.trim(),
-            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            text: messageText,
+            timestamp: optimisticTimestamp,
             type: 'text'
         };
+        
+        const tempElement = this.createMessageElement(tempMessage);
+        tempElement.classList.add('message-sending');
+        tempElement.dataset.messageId = tempId;
+        
+        const messagesList = document.getElementById('messagesList');
+        const emptyState = messagesList.querySelector('.empty-state');
+        if (emptyState) emptyState.remove();
+        
+        messagesList.appendChild(tempElement);
+        this.scrollToBottom(true);
         
         const collection = this.currentChatType === 'group' ? 'groupMessages' : 'privateMessages';
         const chatCollection = this.currentChatType === 'group' ? 'groupChats' : 'privateChats';
         
         try {
-            // Optimistic update - Date object ang timestamp
-            const tempMessage = { 
-                ...message, 
-                timestamp: optimisticTimestamp
-            };
+            // ✅ SEND TO FIRESTORE
+            const docRef = await db.collection(collection).add({
+                chatId: this.currentChat,
+                senderId: user.uid,
+                senderName: user.displayName || user.email,
+                text: messageText,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                type: 'text'
+            });
             
-            const tempElement = this.createMessageElement(tempMessage);
-            tempElement.classList.add('temp-message');
+            // ✅ UPDATE MESSAGE WITH REAL ID
+            tempElement.dataset.messageId = docRef.id;
+            tempElement.classList.remove('message-sending');
+            tempElement.classList.add('message-sent');
             
-            const messagesList = document.getElementById('messagesList');
-            const emptyState = messagesList.querySelector('.empty-state');
-            if (emptyState) {
-                messagesList.innerHTML = '';
-            }
-            messagesList.appendChild(tempElement);
-            this.scrollToBottom(true);
+            // ✅ ADD TO PROCESSED SET PARA HINDI MADOUBLE
+            this.processedMessageIds.add(docRef.id);
             
-            // Actual send to Firestore
-            await db.collection(collection).add(message);
-            
+            // ✅ UPDATE LAST MESSAGE
             await db.collection(chatCollection).doc(this.currentChat).update({
-                lastMessage: text.trim(),
+                lastMessage: messageText,
                 lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
                 lastSenderId: user.uid
             });
             
-            tempElement.classList.remove('temp-message');
+            // ✅ UPDATE CHAT LIST
+            this.updateLastMessage(this.currentChat, messageText);
             
         } catch (error) {
             console.error('❌ Error sending message:', error);
             
-            const messagesList = document.getElementById('messagesList');
-            const lastMessage = messagesList.lastChild;
-            if (lastMessage && lastMessage.classList.contains('temp-message')) {
-                lastMessage.classList.add('error');
-                const contentDiv = lastMessage.querySelector('.message-content');
-                if (contentDiv) {
-                    contentDiv.innerHTML += '<span class="error-icon"><i class="fas fa-exclamation-circle"></i></span>';
-                }
+            tempElement.classList.add('message-error');
+            const messageContent = tempElement.querySelector('.message-content');
+            if (messageContent) {
+                const errorIcon = document.createElement('span');
+                errorIcon.className = 'error-icon';
+                errorIcon.innerHTML = '⚠️';
+                messageContent.appendChild(errorIcon);
             }
             
-            alert('Failed to send message: ' + error.message);
+            alert('Failed to send message. Please try again.');
+            
         } finally {
+            // ✅ RE-ENABLE SEND BUTTON AFTER DELAY
             setTimeout(() => {
-                this.pendingMessages.delete(messageKey);
-            }, 1000);
+                if (sendBtn) {
+                    sendBtn.disabled = false;
+                    sendBtn.style.opacity = '1';
+                    sendBtn.style.cursor = 'pointer';
+                }
+                
+                // Remove from pending after 3 seconds
+                setTimeout(() => {
+                    this.pendingMessages.delete(messageKey);
+                }, 3000);
+            }, 500);
         }
     }
     
@@ -804,39 +888,26 @@ class ChatManager {
         return await this.getUserData(otherUid);
     }
     
-    // ✅ SUPER FIXED: Format Time - handles ALL timestamp formats!
     formatTime(timestamp) {
         if (!timestamp) return '';
         
         try {
             let date;
             
-            // Case 1: Firebase Timestamp (may toDate function)
             if (timestamp && typeof timestamp.toDate === 'function') {
                 date = timestamp.toDate();
-            }
-            // Case 2: Date object
-            else if (timestamp instanceof Date) {
+            } else if (timestamp instanceof Date) {
                 date = timestamp;
-            }
-            // Case 3: Milliseconds number
-            else if (typeof timestamp === 'number') {
+            } else if (typeof timestamp === 'number') {
                 date = new Date(timestamp);
-            }
-            // Case 4: ISO string
-            else if (typeof timestamp === 'string') {
+            } else if (typeof timestamp === 'string') {
                 date = new Date(timestamp);
-            }
-            // Case 5: Firestore server timestamp {seconds, nanoseconds}
-            else if (timestamp && typeof timestamp === 'object' && timestamp.seconds) {
+            } else if (timestamp && typeof timestamp === 'object' && timestamp.seconds) {
                 date = new Date(timestamp.seconds * 1000);
-            }
-            // Case 6: Invalid
-            else {
+            } else {
                 return '';
             }
             
-            // Validate date
             if (!date || isNaN(date.getTime())) {
                 return '';
             }
@@ -849,10 +920,7 @@ class ChatManager {
             const days = Math.floor(hours / 24);
             
             if (days > 7) {
-                return date.toLocaleDateString('en-US', { 
-                    month: 'short', 
-                    day: 'numeric' 
-                });
+                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
             } else if (days > 0) {
                 return `${days}d ago`;
             } else if (hours > 0) {
@@ -891,7 +959,6 @@ class ChatManager {
 // ============ INITIALIZATION ============
 let chatManager;
 if (typeof window !== 'undefined') {
-    // Prevent multiple instances
     if (!window.chatManagerInstance) {
         chatManager = new ChatManager();
         window.chatManager = chatManager;
