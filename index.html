@@ -16,40 +16,6 @@
     
     <!-- Custom Styles -->
     <link rel="stylesheet" href="style.css">
-    
-    <!-- Firebase Config -->
-    <script src="firebase-config.js"></script>
-    <script>
-        // Initialize Firebase
-        fetch('firebase-config.json')
-            .then(response => response.json())
-            .then(config => {
-                firebase.initializeApp(config.firebaseConfig);
-                window.auth = firebase.auth();
-                window.db = firebase.firestore();
-                window.storage = firebase.storage();
-                
-                // Enable Firestore persistence
-                db.enablePersistence()
-                    .catch((err) => {
-                        if (err.code === 'failed-precondition') {
-                            console.log('Persistence failed');
-                        } else if (err.code === 'unimplemented') {
-                            console.log('Persistence not available');
-                        }
-                    });
-                
-                // Check authentication
-                auth.onAuthStateChanged((user) => {
-                    if (!user) {
-                        window.location.href = 'login.html';
-                    } else {
-                        document.body.style.display = 'block';
-                        initializeApp();
-                    }
-                });
-            });
-    </script>
 </head>
 <body style="display: none;">
     <div class="app-container">
@@ -92,14 +58,10 @@
             </div>
             
             <div class="sidebar-content">
-                <!-- Chats List -->
                 <div class="tab-pane active" id="chatsTab">
-                    <div class="chats-list" id="chatsList">
-                        <!-- Chats will be populated here -->
-                    </div>
+                    <div class="chats-list" id="chatsList"></div>
                 </div>
                 
-                <!-- Groups Tab -->
                 <div class="tab-pane" id="groupsTab">
                     <div class="groups-header">
                         <button class="create-group-btn" id="createGroupBtn">
@@ -107,12 +69,9 @@
                             <span>Create New Group</span>
                         </button>
                     </div>
-                    <div class="groups-list" id="groupsList">
-                        <!-- Groups will be populated here -->
-                    </div>
+                    <div class="groups-list" id="groupsList"></div>
                 </div>
                 
-                <!-- Friends Tab -->
                 <div class="tab-pane" id="friendsTab">
                     <div class="friends-header">
                         <button class="add-friend-btn" id="addFriendBtn">
@@ -120,9 +79,7 @@
                             <span>Add Friend</span>
                         </button>
                     </div>
-                    <div class="friends-list" id="friendsList">
-                        <!-- Friends will be populated here -->
-                    </div>
+                    <div class="friends-list" id="friendsList"></div>
                 </div>
             </div>
             
@@ -162,10 +119,7 @@
                     <h3>Welcome to ChatBuddy!</h3>
                     <p>Start a conversation or create a group to chat with friends</p>
                 </div>
-                
-                <div class="messages-list" id="messagesList">
-                    <!-- Messages will be populated here -->
-                </div>
+                <div class="messages-list" id="messagesList"></div>
             </div>
             
             <div class="message-input-container" id="messageInputContainer" style="display: none;">
@@ -215,9 +169,7 @@
                         <i class="fas fa-search"></i>
                         <input type="text" id="memberSearch" placeholder="Search friends...">
                     </div>
-                    <div class="members-list" id="membersList">
-                        <!-- Friends will be populated here -->
-                    </div>
+                    <div class="members-list" id="membersList"></div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -246,8 +198,29 @@
             </div>
         </div>
     </div>
-    
-    <!-- Custom Scripts -->
+
+    <!-- SCRIPTS - Load in correct order -->
+    <script src="firebase-config.js"></script>
+    <script>
+        // Enable Firestore persistence
+        db.enablePersistence()
+            .catch((err) => {
+                if (err.code === 'failed-precondition') {
+                    console.log('Persistence failed');
+                } else if (err.code === 'unimplemented') {
+                    console.log('Persistence not available');
+                }
+            });
+
+        // Check authentication
+        auth.onAuthStateChanged((user) => {
+            if (!user) {
+                window.location.href = 'login.html';
+            } else {
+                document.body.style.display = 'block';
+            }
+        });
+    </script>
     <script src="auth.js"></script>
     <script src="chat.js"></script>
     <script src="app.js"></script>
