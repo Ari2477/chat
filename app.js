@@ -84,26 +84,36 @@ class AppController {
             });
         }
         
-        // ============ MOBILE MENU TOGGLE - FIXED! ============
+        // ============ MOBILE MENU TOGGLE - ULTIMATE FIX! ============
         const mobileMenuBtn = document.getElementById('mobileMenuBtn');
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebarOverlay');
         
         if (mobileMenuBtn && sidebar && overlay) {
-            mobileMenuBtn.addEventListener('click', (e) => {
+            // Remove existing listeners by cloning
+            const newMobileMenuBtn = mobileMenuBtn.cloneNode(true);
+            mobileMenuBtn.parentNode.replaceChild(newMobileMenuBtn, mobileMenuBtn);
+            
+            // Add fresh event listener
+            newMobileMenuBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 e.preventDefault();
                 
                 sidebar.classList.toggle('active');
                 overlay.classList.toggle('active');
                 
-                // ✅ HIDE menu button when sidebar is open
+                // Hide/show button properly
                 if (sidebar.classList.contains('active')) {
-                    mobileMenuBtn.style.display = 'none';
+                    newMobileMenuBtn.classList.add('hide');
+                    newMobileMenuBtn.style.display = 'none';
                 } else {
-                    mobileMenuBtn.style.display = 'flex';
+                    newMobileMenuBtn.classList.remove('hide');
+                    newMobileMenuBtn.style.display = 'flex';
                 }
             });
+            
+            // Update reference
+            window.mobileMenuBtn = newMobileMenuBtn;
         }
         
         if (overlay) {
@@ -111,9 +121,10 @@ class AppController {
                 sidebar.classList.remove('active');
                 overlay.classList.remove('active');
                 
-                // ✅ SHOW menu button again when sidebar closes
-                if (mobileMenuBtn) {
-                    mobileMenuBtn.style.display = 'flex';
+                const btn = document.getElementById('mobileMenuBtn') || window.mobileMenuBtn;
+                if (btn) {
+                    btn.classList.remove('hide');
+                    btn.style.display = 'flex';
                 }
             });
         }
@@ -179,6 +190,40 @@ class AppController {
                 }
             });
         }
+        
+        // ============ IMAGE UPLOAD BUTTON ============
+        const attachBtn = document.getElementById('attachBtn');
+        const imageUploadInput = document.getElementById('imageUploadInput');
+        
+        if (attachBtn && imageUploadInput) {
+            attachBtn.addEventListener('click', () => {
+                imageUploadInput.click();
+            });
+            
+            imageUploadInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    chatManager.sendImageMessage(file);
+                }
+            });
+        }
+
+        // ============ IMAGE VIEWER CLOSE ============
+        const closeImageViewerBtns = document.querySelectorAll('#imageViewerModal .close-modal');
+        closeImageViewerBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.getElementById('imageViewerModal').classList.remove('active');
+                document.body.style.overflow = '';
+            });
+        });
+
+        window.addEventListener('click', (e) => {
+            const modal = document.getElementById('imageViewerModal');
+            if (e.target === modal) {
+                modal.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        });
         
         // Send message
         const sendBtn = document.getElementById('sendBtn');
@@ -355,51 +400,55 @@ class AppController {
     }
     
     setupSidebar() {
-        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn') || window.mobileMenuBtn;
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebarOverlay');
         
+        // Handle window resize
         window.addEventListener('resize', () => {
             if (window.innerWidth > 768) {
                 sidebar.classList.remove('active');
                 if (overlay) overlay.classList.remove('active');
                 if (mobileMenuBtn) {
-                    mobileMenuBtn.style.display = 'none'; // Desktop - hide mobile button
+                    mobileMenuBtn.style.display = 'none';
                 }
             } else {
-                // Mobile - show button only if sidebar is closed
                 if (mobileMenuBtn && sidebar && !sidebar.classList.contains('active')) {
                     mobileMenuBtn.style.display = 'flex';
+                    mobileMenuBtn.classList.remove('hide');
                 }
             }
         });
         
+        // Close sidebar when clicking outside (mobile)
         document.addEventListener('click', (e) => {
             if (window.innerWidth <= 768) {
                 const sidebar = document.getElementById('sidebar');
-                const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+                const mobileMenuBtn = document.getElementById('mobileMenuBtn') || window.mobileMenuBtn;
                 const overlay = document.getElementById('sidebarOverlay');
                 
-                // Close sidebar when clicking outside
-                if (sidebar && mobileMenuBtn && !sidebar.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
-                    sidebar.classList.remove('active');
-                    if (overlay) overlay.classList.remove('active');
-                    if (mobileMenuBtn) {
-                        mobileMenuBtn.style.display = 'flex'; // Show button when sidebar closes
-                    }
-                }
-                
-                // Close sidebar when clicking on chat/group/friend item
-                const chatItem = e.target.closest('.chat-item');
-                const groupItem = e.target.closest('.group-item');
-                const friendItem = e.target.closest('.friend-item');
-                const chatBtn = e.target.closest('.chat-btn');
-                
-                if ((chatItem || groupItem || friendItem || chatBtn) && sidebar.classList.contains('active')) {
+                // Close when clicking outside
+                if (sidebar && mobileMenuBtn && 
+                    !sidebar.contains(e.target) && 
+                    !mobileMenuBtn.contains(e.target) && 
+                    sidebar.classList.contains('active')) {
+                    
                     sidebar.classList.remove('active');
                     if (overlay) overlay.classList.remove('active');
                     if (mobileMenuBtn) {
                         mobileMenuBtn.style.display = 'flex';
+                        mobileMenuBtn.classList.remove('hide');
+                    }
+                }
+                
+                // Close when clicking on chat/group/friend item
+                const chatItem = e.target.closest('.chat-item, .group-item, .friend-item, .chat-btn');
+                if (chatItem && sidebar && sidebar.classList.contains('active')) {
+                    sidebar.classList.remove('active');
+                    if (overlay) overlay.classList.remove('active');
+                    if (mobileMenuBtn) {
+                        mobileMenuBtn.style.display = 'flex';
+                        mobileMenuBtn.classList.remove('hide');
                     }
                 }
             }
@@ -1342,11 +1391,14 @@ class AppController {
             if (window.innerWidth <= 768) {
                 const sidebar = document.getElementById('sidebar');
                 const overlay = document.getElementById('sidebarOverlay');
-                const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+                const mobileMenuBtn = document.getElementById('mobileMenuBtn') || window.mobileMenuBtn;
                 
                 if (sidebar) sidebar.classList.remove('active');
                 if (overlay) overlay.classList.remove('active');
-                if (mobileMenuBtn) mobileMenuBtn.style.display = 'flex';
+                if (mobileMenuBtn) {
+                    mobileMenuBtn.style.display = 'flex';
+                    mobileMenuBtn.classList.remove('hide');
+                }
             }
         } catch (error) {
             console.error('❌ Error starting private chat:', error);
