@@ -30,107 +30,77 @@ document.addEventListener('DOMContentLoaded', function() {
     setupAppListeners();
 });
 
-// Initialize mobile menu with smooth touch
+// ============ MOBILE MENU TOGGLE - FIXED ============
 function initMobileMenu() {
-    const menuToggle = document.getElementById('menu-toggle');
-    const sidebar = document.querySelector('.sidebar');
-    const mainContent = document.querySelector('.main-content');
-    
-    if (!menuToggle || !sidebar) return;
-    
-    // Remove existing listeners to prevent duplicates
-    menuToggle.replaceWith(menuToggle.cloneNode(true));
-    const newMenuToggle = document.getElementById('menu-toggle');
-    
-    newMenuToggle.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
+    setTimeout(() => {
+        const menuToggle = document.getElementById('menu-toggle');
+        const sidebar = document.querySelector('.sidebar');
         
-        // Toggle sidebar with smooth animation
-        sidebar.classList.toggle('active');
-        
-        // Update menu icon
-        const icon = this.querySelector('i');
-        if (sidebar.classList.contains('active')) {
-            icon.className = 'fas fa-times';
-            document.body.style.overflow = 'hidden'; // Prevent background scroll
-        } else {
-            icon.className = 'fas fa-bars';
-            document.body.style.overflow = ''; // Restore scroll
+        if (!menuToggle) {
+            // Create menu toggle if not exists
+            const header = document.querySelector('.chat-header');
+            if (header) {
+                const newToggle = document.createElement('button');
+                newToggle.id = 'menu-toggle';
+                newToggle.className = 'menu-toggle';
+                newToggle.innerHTML = '<i class="fas fa-bars"></i>';
+                header.prepend(newToggle);
+            }
+            return;
         }
-    });
-    
-    // Close sidebar when clicking on main content (mobile)
-    if (mainContent) {
-        mainContent.addEventListener('click', function(e) {
+        
+        if (!sidebar) return;
+        
+        // Remove existing listeners
+        const newToggle = menuToggle.cloneNode(true);
+        menuToggle.parentNode.replaceChild(newToggle, menuToggle);
+        
+        newToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            sidebar.classList.toggle('active');
+            
+            const icon = this.querySelector('i');
+            if (icon) {
+                icon.className = sidebar.classList.contains('active') ? 'fas fa-times' : 'fas fa-bars';
+                document.body.style.overflow = sidebar.classList.contains('active') ? 'hidden' : '';
+            }
+        });
+        
+        // Close when clicking outside
+        document.addEventListener('click', function(e) {
             if (window.innerWidth <= 768 && sidebar.classList.contains('active')) {
-                // Don't close if clicking inside modal or info panel
-                if (!e.target.closest('.modal') && !e.target.closest('.info-panel')) {
+                if (!sidebar.contains(e.target) && !newToggle.contains(e.target)) {
                     sidebar.classList.remove('active');
                     document.body.style.overflow = '';
-                    const icon = newMenuToggle.querySelector('i');
+                    const icon = newToggle.querySelector('i');
                     if (icon) icon.className = 'fas fa-bars';
                 }
             }
         });
-    }
-    
-    // Handle swipe to close sidebar (mobile)
-    let touchStartX = 0;
-    let touchEndX = 0;
-    
-    sidebar.addEventListener('touchstart', function(e) {
-        touchStartX = e.changedTouches[0].screenX;
-    }, { passive: true });
-    
-    sidebar.addEventListener('touchend', function(e) {
-        if (window.innerWidth <= 768) {
-            touchEndX = e.changedTouches[0].screenX;
-            const swipeDistance = touchEndX - touchStartX;
-            
-            // Swipe left to close sidebar
-            if (swipeDistance < -50 && sidebar.classList.contains('active')) {
-                sidebar.classList.remove('active');
-                document.body.style.overflow = '';
-                const icon = newMenuToggle.querySelector('i');
-                if (icon) icon.className = 'fas fa-bars';
-            }
-        }
-    }, { passive: true });
-    
-    // Handle window resize
-    window.addEventListener('resize', function() {
-        if (window.innerWidth > 768) {
-            sidebar.classList.remove('active');
-            document.body.style.overflow = '';
-            const icon = newMenuToggle.querySelector('i');
-            if (icon) icon.className = 'fas fa-bars';
-        }
-    });
+    }, 100);
 }
 
-// Update UI with user information
+// ============ UPDATE USER UI WITH COMPLETE INFO ============
 function updateUserUI(user) {
-    // Update user name and avatar in sidebar
     const userNameEl = document.getElementById('user-name');
     const userAvatarEl = document.getElementById('user-avatar');
     const profileNameEl = document.getElementById('profile-name');
     const profileEmailEl = document.getElementById('profile-email');
     const profileAvatarEl = document.getElementById('profile-avatar');
     const profileJoinedEl = document.getElementById('profile-joined');
-    const userEmailEl = document.getElementById('user-email');
+    const profileBioEl = document.getElementById('profile-bio');
     
-    if (userNameEl) userNameEl.textContent = user.displayName || user.email.split('@')[0];
-    if (userEmailEl) userEmailEl.textContent = user.email;
-    if (profileNameEl) profileNameEl.textContent = user.displayName || user.email.split('@')[0];
-    if (profileEmailEl) profileEmailEl.textContent = user.email;
+    const displayName = user.displayName || user.email.split('@')[0];
+    const avatarUrl = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=0084ff&color=fff&size=128`;
     
-    const avatarUrl = user.photoURL || `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(user.displayName || user.email)}`;
-    
+    if (userNameEl) userNameEl.textContent = displayName;
     if (userAvatarEl) userAvatarEl.src = avatarUrl;
+    if (profileNameEl) profileNameEl.textContent = displayName;
+    if (profileEmailEl) profileEmailEl.textContent = user.email;
     if (profileAvatarEl) profileAvatarEl.src = avatarUrl;
     
-    // Get user document for additional info
+    // Get user document from Firestore
     db.collection('users').doc(user.uid).get()
         .then(doc => {
             if (doc.exists) {
@@ -138,16 +108,26 @@ function updateUserUI(user) {
                 
                 // Update joined date
                 if (profileJoinedEl && userData.createdAt) {
-                    const joinedDate = userData.createdAt.toDate();
-                    profileJoinedEl.textContent = `Joined: ${joinedDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
+                    const date = userData.createdAt.toDate();
+                    profileJoinedEl.textContent = `Joined: ${date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
                 }
                 
-                // Update bio if available
-                const profileBioEl = document.getElementById('profile-bio');
-                if (profileBioEl && userData.bio) {
-                    profileBioEl.textContent = userData.bio;
+                // Update bio
+                if (profileBioEl) {
+                    profileBioEl.textContent = userData.bio || 'No bio yet. Click edit to add one!';
                     profileBioEl.style.display = 'block';
                 }
+            } else {
+                // Create user document if not exists
+                db.collection('users').doc(user.uid).set({
+                    uid: user.uid,
+                    email: user.email,
+                    displayName: displayName,
+                    photoURL: avatarUrl,
+                    bio: '',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+                });
             }
         })
         .catch(error => {
@@ -155,98 +135,183 @@ function updateUserUI(user) {
         });
 }
 
-// Setup additional app event listeners
+// ============ UPDATE USER PROFILE - WORKING! ============
+function updateUserProfile(name, bio, photoFile = null) {
+    const user = auth.currentUser;
+    if (!user) return;
+    
+    showLoading(true);
+    
+    // Update Firestore first
+    const updateData = {
+        displayName: name,
+        bio: bio || '',
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    
+    // If there's a photo file, upload it
+    if (photoFile) {
+        const storageRef = storage.ref();
+        const avatarRef = storageRef.child(`avatars/${user.uid}/${Date.now()}_${photoFile.name}`);
+        
+        avatarRef.put(photoFile)
+            .then(snapshot => snapshot.ref.getDownloadURL())
+            .then(photoURL => {
+                updateData.photoURL = photoURL;
+                return db.collection('users').doc(user.uid).update(updateData);
+            })
+            .then(() => {
+                return user.updateProfile({
+                    displayName: name,
+                    photoURL: updateData.photoURL
+                });
+            })
+            .then(() => {
+                showToast('Profile updated successfully!', 'success');
+                updateUserUI(user);
+                closeModal('profile-modal');
+                showLoading(false);
+            })
+            .catch(error => {
+                console.error('Error updating profile with photo:', error);
+                showToast('Failed to update profile', 'error');
+                showLoading(false);
+            });
+    } else {
+        // No photo, just update name and bio
+        db.collection('users').doc(user.uid).update(updateData)
+            .then(() => {
+                return user.updateProfile({
+                    displayName: name
+                });
+            })
+            .then(() => {
+                showToast('Profile updated successfully!', 'success');
+                updateUserUI(user);
+                closeModal('profile-modal');
+                showLoading(false);
+            })
+            .catch(error => {
+                console.error('Error updating profile:', error);
+                showToast('Failed to update profile', 'error');
+                showLoading(false);
+            });
+    }
+}
+
+// ============ AVATAR UPLOAD - WORKING! ============
+function setupAvatarUpload() {
+    const changeAvatarBtn = document.getElementById('change-avatar-btn');
+    if (!changeAvatarBtn) return;
+    
+    // Create file input
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    fileInput.style.display = 'none';
+    fileInput.id = 'avatar-upload-input';
+    document.body.appendChild(fileInput);
+    
+    // Remove old listener
+    const newBtn = changeAvatarBtn.cloneNode(true);
+    changeAvatarBtn.parentNode.replaceChild(newBtn, changeAvatarBtn);
+    
+    newBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        fileInput.click();
+    });
+    
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            showToast('Please select an image file', 'error');
+            return;
+        }
+        
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            showToast('Image size must be less than 5MB', 'error');
+            return;
+        }
+        
+        // Show preview
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const previewUrl = e.target.result;
+            const profileAvatar = document.getElementById('profile-avatar');
+            const userAvatar = document.getElementById('user-avatar');
+            
+            if (profileAvatar) profileAvatar.src = previewUrl;
+            if (userAvatar) userAvatar.src = previewUrl;
+        };
+        reader.readAsDataURL(file);
+        
+        // Get current profile data
+        const name = document.getElementById('edit-name')?.value || auth.currentUser.displayName;
+        const bio = document.getElementById('edit-bio')?.value || '';
+        
+        // Update profile with photo
+        updateUserProfile(name, bio, file);
+    });
+}
+
+// ============ SETUP APP LISTENERS - COMPLETE ============
 function setupAppListeners() {
-    // Search functionality for users - with debounce for performance
+    // Search users with debounce
     const searchUsersInput = document.getElementById('search-users');
     if (searchUsersInput) {
-        let searchTimeout;
+        let timeout;
         searchUsersInput.addEventListener('input', function() {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                const searchTerm = this.value.toLowerCase().trim();
-                const userItems = document.querySelectorAll('#users-list .list-item');
-                
-                userItems.forEach(item => {
-                    const userName = item.querySelector('.list-item-info h4')?.textContent.toLowerCase() || '';
-                    const userEmail = item.querySelector('.list-item-info p')?.textContent.toLowerCase() || '';
-                    
-                    if (userName.includes(searchTerm) || userEmail.includes(searchTerm)) {
-                        item.style.display = 'flex';
-                        item.style.opacity = '1';
-                        item.style.transform = 'translateX(0)';
-                    } else {
-                        item.style.display = 'none';
-                    }
-                });
-            }, 300); // Debounce for better performance
-        });
-    }
-    
-    // Search functionality for groups - with debounce
-    const searchGroupsInput = document.getElementById('search-groups');
-    if (searchGroupsInput) {
-        let searchTimeout;
-        searchGroupsInput.addEventListener('input', function() {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                const searchTerm = this.value.toLowerCase().trim();
-                const groupItems = document.querySelectorAll('#groups-list .list-item');
-                
-                groupItems.forEach(item => {
-                    const groupName = item.querySelector('.list-item-info h4')?.textContent.toLowerCase() || '';
-                    
-                    if (groupName.includes(searchTerm)) {
-                        item.style.display = 'flex';
-                        item.style.opacity = '1';
-                    } else {
-                        item.style.display = 'none';
-                    }
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+                const term = this.value.toLowerCase();
+                document.querySelectorAll('#users-list .list-item').forEach(item => {
+                    const name = item.querySelector('.list-item-info h4')?.textContent.toLowerCase() || '';
+                    item.style.display = name.includes(term) ? 'flex' : 'none';
                 });
             }, 300);
         });
     }
     
-    // Tab switching with smooth animation
-    const tabBtns = document.querySelectorAll('.sidebar .tab-btn');
-    tabBtns.forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            const tabId = this.getAttribute('data-tab');
+    // Search groups with debounce
+    const searchGroupsInput = document.getElementById('search-groups');
+    if (searchGroupsInput) {
+        let timeout;
+        searchGroupsInput.addEventListener('input', function() {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+                const term = this.value.toLowerCase();
+                document.querySelectorAll('#groups-list .list-item').forEach(item => {
+                    const name = item.querySelector('.list-item-info h4')?.textContent.toLowerCase() || '';
+                    item.style.display = name.includes(term) ? 'flex' : 'none';
+                });
+            }, 300);
+        });
+    }
+    
+    // Tab switching
+    document.querySelectorAll('.sidebar .tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const tabId = this.dataset.tab;
             
-            // Update active tab button with animation
-            tabBtns.forEach(b => {
-                b.classList.remove('active');
-                b.style.transform = 'scale(1)';
-            });
+            document.querySelectorAll('.sidebar .tab-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
-            this.style.transform = 'scale(0.98)';
-            setTimeout(() => { this.style.transform = 'scale(1)'; }, 100);
             
-            // Show selected tab content with fade effect
-            document.querySelectorAll('.sidebar .tab-content').forEach(content => {
-                content.style.opacity = '0';
-                content.style.transition = 'opacity 0.2s ease';
-                setTimeout(() => {
-                    content.classList.remove('active');
-                    if (content.id === `${tabId}-tab`) {
-                        content.classList.add('active');
-                        setTimeout(() => { content.style.opacity = '1'; }, 50);
-                    }
-                }, 150);
+            document.querySelectorAll('.sidebar .tab-content').forEach(c => {
+                c.classList.remove('active');
+                if (c.id === `${tabId}-tab`) c.classList.add('active');
             });
         });
     });
     
-    // Logout button with confirmation
+    // Logout button
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', function(e) {
             e.preventDefault();
-            this.style.transform = 'scale(0.95)';
-            setTimeout(() => { this.style.transform = 'scale(1)'; }, 100);
-            
-            // Show confirmation
             if (confirm('Are you sure you want to logout?')) {
                 showLoading(true);
                 handleLogout();
@@ -254,116 +319,108 @@ function setupAppListeners() {
         });
     }
     
-    // Create group button
-    const createGroupBtn = document.getElementById('create-group-btn');
-    if (createGroupBtn) {
-        createGroupBtn.addEventListener('click', function() {
-            this.style.transform = 'scale(0.9)';
-            setTimeout(() => { this.style.transform = 'scale(1)'; }, 100);
-            openModal('create-group-modal');
-            loadAvailableUsersForGroup();
-        });
-    }
-    
-    // Create group submit
-    const createGroupSubmit = document.getElementById('create-group-submit');
-    if (createGroupSubmit) {
-        createGroupSubmit.addEventListener('click', function() {
-            this.style.transform = 'scale(0.98)';
-            setTimeout(() => { this.style.transform = 'scale(1)'; }, 100);
-            
-            const groupName = document.getElementById('group-name').value.trim();
-            const description = document.getElementById('group-description').value.trim();
-            
-            if (!groupName) {
-                showToast('Please enter a group name', 'warning');
-                return;
-            }
-            
-            // Get selected members
-            const selectedCheckboxes = document.querySelectorAll('#available-users-list input[type="checkbox"]:checked');
-            const selectedMembers = Array.from(selectedCheckboxes).map(cb => cb.value);
-            
-            if (selectedMembers.length === 0) {
-                showToast('Please select at least one member', 'warning');
-                return;
-            }
-            
-            createGroup(groupName, description, selectedMembers);
-        });
-    }
-    
-    // Update profile button
+    // ============ PROFILE EDIT - FULLY WORKING! ============
     const updateProfileBtn = document.getElementById('update-profile-btn');
     if (updateProfileBtn) {
         updateProfileBtn.addEventListener('click', function() {
-            this.style.transform = 'scale(0.98)';
-            setTimeout(() => { this.style.transform = 'scale(1)'; }, 100);
-            openModal('profile-modal');
+            const user = auth.currentUser;
+            if (!user) return;
             
-            // Load current profile data
-            const currentUser = auth.currentUser;
-            if (currentUser) {
-                db.collection('users').doc(currentUser.uid).get()
-                    .then(doc => {
-                        if (doc.exists) {
-                            const user = doc.data();
-                            document.getElementById('edit-name').value = user.displayName || '';
-                            document.getElementById('edit-bio').value = user.bio || '';
-                        }
-                    });
-            }
+            // Open modal
+            const modal = document.getElementById('profile-modal');
+            if (modal) modal.classList.add('active');
+            
+            // Load current data
+            db.collection('users').doc(user.uid).get()
+                .then(doc => {
+                    if (doc.exists) {
+                        const data = doc.data();
+                        document.getElementById('edit-name').value = data.displayName || '';
+                        document.getElementById('edit-bio').value = data.bio || '';
+                    }
+                });
         });
     }
     
-    // Update profile submit
+    // Setup avatar upload
+    setupAvatarUpload();
+    
+    // ============ UPDATE PROFILE SUBMIT - WORKING! ============
     const updateProfileSubmit = document.getElementById('update-profile-submit');
     if (updateProfileSubmit) {
-        updateProfileSubmit.addEventListener('click', function() {
-            this.style.transform = 'scale(0.98)';
-            setTimeout(() => { this.style.transform = 'scale(1)'; }, 100);
-            
-            const name = document.getElementById('edit-name').value.trim();
-            const bio = document.getElementById('edit-bio').value.trim();
+        const newSubmit = updateProfileSubmit.cloneNode(true);
+        updateProfileSubmit.parentNode.replaceChild(newSubmit, updateProfileSubmit);
+        
+        newSubmit.addEventListener('click', function() {
+            const name = document.getElementById('edit-name')?.value.trim();
+            const bio = document.getElementById('edit-bio')?.value.trim();
             
             if (!name) {
                 showToast('Please enter your name', 'warning');
                 return;
             }
             
-            updateUserProfile(name, bio);
+            // Update without photo
+            updateUserProfile(name, bio || '');
         });
     }
     
-    // Chat info button
+    // ============ CREATE GROUP - WORKING! ============
+    const createGroupBtn = document.getElementById('create-group-btn');
+    if (createGroupBtn) {
+        createGroupBtn.addEventListener('click', function() {
+            const modal = document.getElementById('create-group-modal');
+            if (modal) {
+                modal.classList.add('active');
+                loadAvailableUsersForGroup();
+            }
+        });
+    }
+    
+    const createGroupSubmit = document.getElementById('create-group-submit');
+    if (createGroupSubmit) {
+        createGroupSubmit.addEventListener('click', function() {
+            const name = document.getElementById('group-name')?.value.trim();
+            const desc = document.getElementById('group-description')?.value.trim();
+            const selected = document.querySelectorAll('#available-users-list input[type="checkbox"]:checked');
+            
+            if (!name) {
+                showToast('Please enter group name', 'warning');
+                return;
+            }
+            
+            if (selected.length === 0) {
+                showToast('Please select at least one member', 'warning');
+                return;
+            }
+            
+            const members = Array.from(selected).map(cb => cb.value);
+            createGroup(name, desc || '', members);
+        });
+    }
+    
+    // ============ CHAT INFO PANEL ============
     const chatInfoBtn = document.getElementById('chat-info-btn');
     if (chatInfoBtn) {
         chatInfoBtn.addEventListener('click', function() {
-            this.style.transform = 'scale(0.9)';
-            setTimeout(() => { this.style.transform = 'scale(1)'; }, 100);
-            document.getElementById('info-panel').classList.add('active');
+            document.getElementById('info-panel')?.classList.add('active');
         });
     }
     
-    // Close info panel button
     const closeInfoBtn = document.getElementById('close-info-btn');
     if (closeInfoBtn) {
         closeInfoBtn.addEventListener('click', function() {
-            this.style.transform = 'scale(0.9)';
-            setTimeout(() => { this.style.transform = 'scale(1)'; }, 100);
-            document.getElementById('info-panel').classList.remove('active');
+            document.getElementById('info-panel')?.classList.remove('active');
         });
     }
     
-    // Close modal buttons
+    // ============ MODAL CLOSE BUTTONS ============
     document.querySelectorAll('.close-modal').forEach(btn => {
         btn.addEventListener('click', function() {
-            this.style.transform = 'scale(0.9)';
-            setTimeout(() => { this.style.transform = 'scale(1)'; }, 100);
             const modal = this.closest('.modal');
             if (modal) {
                 modal.classList.remove('active');
-                document.body.style.overflow = ''; // Restore scrolling
+                document.body.style.overflow = '';
             }
         });
     });
@@ -378,25 +435,10 @@ function setupAppListeners() {
         });
     });
     
-    // Change avatar button
-    const changeAvatarBtn = document.getElementById('change-avatar-btn');
-    if (changeAvatarBtn) {
-        changeAvatarBtn.addEventListener('click', function() {
-            this.style.transform = 'scale(0.9)';
-            setTimeout(() => { this.style.transform = 'scale(1)'; }, 100);
-            showToast('Avatar upload coming soon!', 'info');
-        });
-    }
-    
-    // Change password button
+    // ============ PASSWORD CHANGE - WORKING! ============
     const changePasswordBtn = document.getElementById('change-password-btn');
     if (changePasswordBtn) {
         changePasswordBtn.addEventListener('click', function() {
-            this.style.transform = 'scale(0.98)';
-            setTimeout(() => { this.style.transform = 'scale(1)'; }, 100);
-            showToast('Password reset link will be sent to your email', 'info');
-            
-            // Send password reset email
             const user = auth.currentUser;
             if (user && user.email) {
                 auth.sendPasswordResetEmail(user.email)
@@ -409,61 +451,32 @@ function setupAppListeners() {
             }
         });
     }
-    
-    // Attach file button
-    const attachBtn = document.getElementById('attach-btn');
-    if (attachBtn) {
-        attachBtn.addEventListener('click', function() {
-            this.style.transform = 'scale(0.9)';
-            setTimeout(() => { this.style.transform = 'scale(1)'; }, 100);
-            showToast('File attachment coming soon!', 'info');
-        });
-    }
-    
-    // Emoji button
-    const emojiBtn = document.getElementById('emoji-btn');
-    if (emojiBtn) {
-        emojiBtn.addEventListener('click', function() {
-            this.style.transform = 'scale(0.9)';
-            setTimeout(() => { this.style.transform = 'scale(1)'; }, 100);
-            showToast('Emoji picker coming soon!', 'info');
-        });
-    }
-    
-    // Prevent zoom on input focus for iOS
-    const inputs = document.querySelectorAll('input, textarea, select');
-    inputs.forEach(input => {
-        input.addEventListener('focus', function() {
-            this.style.fontSize = '16px';
-        });
-    });
 }
 
-// Show toast notification (replacement for alert)
+// ============ TOAST NOTIFICATION ============
 function showToast(message, type = 'info') {
-    // Remove existing toast
     const existingToast = document.querySelector('.toast-notification');
     if (existingToast) existingToast.remove();
     
-    // Create toast element
     const toast = document.createElement('div');
     toast.className = `toast-notification toast-${type}`;
-    toast.innerHTML = `
-        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
-        <span>${message}</span>
-    `;
     
-    // Add styles dynamically
+    const icon = type === 'success' ? 'check-circle' : 
+                 type === 'error' ? 'exclamation-circle' : 
+                 type === 'warning' ? 'exclamation-triangle' : 'info-circle';
+    
+    toast.innerHTML = `<i class="fas fa-${icon}"></i><span>${message}</span>`;
+    
     toast.style.cssText = `
         position: fixed;
         bottom: 20px;
         left: 50%;
         transform: translateX(-50%);
-        background-color: ${type === 'success' ? '#34c759' : type === 'error' ? '#ff3b30' : '#0084ff'};
+        background: ${type === 'success' ? '#34c759' : type === 'error' ? '#ff3b30' : type === 'warning' ? '#ff9500' : '#0084ff'};
         color: white;
         padding: 12px 24px;
         border-radius: 30px;
-        font-size: 14px;
+        font-size: 15px;
         font-weight: 500;
         z-index: 9999;
         display: flex;
@@ -477,89 +490,61 @@ function showToast(message, type = 'info') {
     
     document.body.appendChild(toast);
     
-    // Auto remove after 3 seconds
     setTimeout(() => {
         toast.style.animation = 'fadeOut 0.3s ease';
         setTimeout(() => toast.remove(), 300);
     }, 3000);
 }
 
-// Show/hide loading overlay
+// ============ LOADING OVERLAY ============
 function showLoading(show) {
-    const loadingOverlay = document.getElementById('loading-overlay');
-    if (loadingOverlay) {
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) {
         if (show) {
-            loadingOverlay.classList.add('active');
+            overlay.classList.add('active');
             document.body.style.overflow = 'hidden';
         } else {
-            loadingOverlay.classList.remove('active');
+            overlay.classList.remove('active');
             document.body.style.overflow = '';
         }
     }
 }
 
-// Show error message
-function showError(message) {
-    showToast(message, 'error');
-}
-
-// Add CSS animations dynamically
+// ============ ADD ANIMATIONS ============
 const style = document.createElement('style');
 style.textContent = `
     @keyframes slideUp {
-        from {
-            transform: translate(-50%, 100%);
-            opacity: 0;
-        }
-        to {
-            transform: translate(-50%, 0);
-            opacity: 1;
-        }
+        from { transform: translate(-50%, 100%); opacity: 0; }
+        to { transform: translate(-50%, 0); opacity: 1; }
     }
-    
     @keyframes fadeOut {
-        from {
-            opacity: 1;
-        }
-        to {
-            opacity: 0;
-        }
+        from { opacity: 1; }
+        to { opacity: 0; }
     }
-    
-    .toast-notification {
-        pointer-events: none;
-        backdrop-filter: blur(10px);
-    }
-    
-    @media (max-width: 768px) {
-        .toast-notification {
-            bottom: 80px;
-            font-size: 15px;
-            padding: 14px 28px;
-        }
-    }
-    
-    .list-item {
-        transition: opacity 0.2s ease, transform 0.2s ease;
-    }
-    
     .sidebar {
         transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    
-    .icon-btn, .send-btn, .logout-btn, .action-btn, .submit-btn, .tab-btn {
-        transition: transform 0.1s ease, background-color 0.2s ease;
+    .menu-toggle {
+        display: none;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: #0084ff;
+        color: white;
+        border: none;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
     }
-    
+    @media (max-width: 768px) {
+        .menu-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    }
     button {
         -webkit-tap-highlight-color: transparent;
         touch-action: manipulation;
-    }
-    
-    input, textarea, select {
-        -webkit-appearance: none;
-        appearance: none;
-        border-radius: 8px;
     }
 `;
 document.head.appendChild(style);
