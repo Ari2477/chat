@@ -1,5 +1,3 @@
-// Chat Module - ULTIMATE UPGRADED VERSION
-// Perfect for real-time conversations, smooth UI, walang palya!
 class ChatManager {
     constructor() {
         this.currentChat = null;
