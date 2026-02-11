@@ -247,26 +247,30 @@
 
     <!-- SCRIPTS - Load in correct order -->
     <script src="firebase-config.js"></script>
-    <script>
-        // Enable Firestore persistence
-        db.enablePersistence()
-            .catch((err) => {
-                if (err.code === 'failed-precondition') {
-                    console.log('Persistence failed');
-                } else if (err.code === 'unimplemented') {
-                    console.log('Persistence not available');
-                }
-            });
+<script>
+db.settings({
+  timestampsInSnapshots: true,
+  ignoreUndefinedProperties: true,
+  merge: true
+});
 
-        // Check authentication
-        auth.onAuthStateChanged((user) => {
-            if (!user) {
-                window.location.href = 'login.html';
-            } else {
-                document.body.style.display = 'block';
-            }
-        });
-    </script>
+db.enablePersistence()
+  .catch((err) => {
+    if (err.code == 'failed-precondition') {
+      console.log('Persistence failed');
+    } else if (err.code == 'unimplemented') {
+      console.log('Persistence not available');
+    }
+  });
+
+auth.onAuthStateChanged((user) => {
+  if (!user) {
+    window.location.href = 'login.html';
+  } else {
+    document.body.style.display = 'block';
+  }
+});
+</script>
     <script src="auth.js"></script>
     <script src="chat.js"></script>
     <script src="app.js"></script>
