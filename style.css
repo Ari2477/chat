@@ -2384,3 +2384,188 @@ body {
         opacity: 1;
     }
 }
+
+.chat-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    flex-shrink: 0;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.chat-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;  
+    border-radius: 50%;
+}
+
+.chat-avatar i {
+    font-size: 24px;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.chat-avatar span {
+    font-size: 20px;
+    font-weight: 600;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* FRIEND AVATAR - 50x50 perfect circle */
+.friend-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.friend-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.friend-avatar span {
+    font-size: 20px;
+    font-weight: 600;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* MESSAGE AVATAR - 35x35 perfect circle */
+.message-avatar {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.message-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.message-avatar span {
+    font-size: 16px;
+    font-weight: 600;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* MEMBER AVATAR - 40x40 perfect circle */
+.member-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.member-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.member-avatar span {
+    font-size: 18px;
+    font-weight: 600;
+    color: white;
+}
+
+/* PROFILE AVATAR - 120x120 perfect circle */
+.profile-avatar-large {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 15px;
+    overflow: hidden;
+    border: 4px solid rgba(255,255,255,0.3);
+    box-shadow: 0 10px 25px rgba(102,126,234,0.4);
+}
+
+.profile-avatar-large img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.profile-avatar-large i,
+.profile-avatar-large span {
+    font-size: 48px;
+    color: white;
+    text-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+/* STATUS INDICATOR - perfect circle din */
+.status-indicator {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid var(--darker-bg);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.1);
+}
+
+.status-indicator.online {
+    background: #31a24c;  
+    box-shadow: 0 0 0 1px white;
+}
+
+.status-indicator.offline {
+    background: #9e9e9e;
+    box-shadow: 0 0 0 1px white;
+}
+
+.chat-avatar[data-initial="A"],
+.friend-avatar[data-initial="A"],
+.message-avatar[data-initial="A"] {
+    background: linear-gradient(135deg, #FF6B6B, #FF8E8E);
+}
+
+.chat-avatar[data-initial="B"],
+.friend-avatar[data-initial="B"],
+.message-avatar[data-initial="B"] {
+    background: linear-gradient(135deg, #4ECDC4, #6EE7E6);
+}
+
+.chat-avatar[data-initial="C"],
+.friend-avatar[data-initial="C"],
+.message-avatar[data-initial="C"] {
+    background: linear-gradient(135deg, #A8E6CF, #C8F0D9);
+}
