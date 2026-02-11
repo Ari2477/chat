@@ -18,13 +18,16 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body style="display: none;">
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
     <div class="app-container">
         <!-- Sidebar -->
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="user-profile">
                     <div class="avatar" id="userAvatar">
-                        <img src="" alt="avatar" id="avatarImg">
+                        <img src="" alt="avatar" id="avatarImg" style="display: none;">
                         <span id="avatarInitial"></span>
                     </div>
                     <div class="user-info">
@@ -102,11 +105,9 @@
                     <p id="chatStatus">Select a conversation to start chatting</p>
                 </div>
                 <div class="chat-actions">
-                    <button class="action-btn" id="videoCallBtn">
-                        <i class="fas fa-video"></i>
-                    </button>
-                    <button class="action-btn" id="infoBtn">
-                        <i class="fas fa-info-circle"></i>
+                    <!-- REMOVED CALL BUTTON - Added Profile Info Button -->
+                    <button class="user-info-btn" id="profileInfoBtn">
+                        <i class="fas fa-user-circle"></i>
                     </button>
                 </div>
             </div>
@@ -198,6 +199,51 @@
             </div>
         </div>
     </div>
+
+    <!-- Profile Modal -->
+    <div class="modal profile-modal" id="profileModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>My Profile</h3>
+                <button class="close-modal"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="profile-header">
+                    <div class="profile-avatar-large" id="profileAvatarUpload">
+                        <img src="" alt="Profile" id="profileAvatarImg" style="display: none;">
+                        <i class="fas fa-user" id="profileAvatarIcon"></i>
+                    </div>
+                    <h2 class="profile-name" id="profileName"></h2>
+                    <p class="profile-email" id="profileEmail"></p>
+                    
+                    <div class="profile-stats">
+                        <div class="stat-item">
+                            <div class="stat-value" id="profileFriendsCount">0</div>
+                            <div class="stat-label">Friends</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="profileGroupsCount">0</div>
+                            <div class="stat-label">Groups</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="profileChatsCount">0</div>
+                            <div class="stat-label">Chats</div>
+                        </div>
+                    </div>
+                    
+                    <div class="profile-actions">
+                        <button class="upload-photo-btn" id="uploadProfilePhoto">
+                            <i class="fas fa-camera"></i>
+                            <span>Change Photo</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden file input for avatar upload -->
+    <input type="file" id="avatarUploadInput" accept="image/*" style="display: none;">
 
     <!-- SCRIPTS - Load in correct order -->
     <script src="firebase-config.js"></script>
