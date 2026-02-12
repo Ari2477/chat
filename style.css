@@ -1,3 +1,8 @@
+/* ============================================
+   MINI MESSENGER - COMPLETE FIXED CSS
+   FLEXIBLE INPUT, KITA ANG ONLINE STATUS AT BADGE!
+   ============================================ */
+
 * {
     margin: 0;
     padding: 0;
@@ -44,6 +49,7 @@ body {
     padding: 15px 20px;
     background: white;
     border-bottom: 1px solid #f0f0f0;
+    flex-shrink: 0;
 }
 
 .user-info {
@@ -59,6 +65,7 @@ body {
     border-radius: 50%;
     overflow: hidden;
     border: 2px solid #4f46e5;
+    position: relative;
 }
 
 .user-avatar img {
@@ -75,6 +82,14 @@ body {
 .online-status {
     font-size: 12px;
     color: #10b981;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.online-status::before {
+    content: "●";
+    font-size: 12px;
 }
 
 .header-actions {
@@ -96,6 +111,7 @@ body {
     padding: 10px;
     background: #f8f9fa;
     gap: 10px;
+    flex-shrink: 0;
 }
 
 .tab {
@@ -124,7 +140,8 @@ body {
     display: none;
     flex: 1;
     flex-direction: column;
-    height: calc(100% - 140px);
+    min-height: 0; /* IMPORTANT: Para sa flexbox scrolling */
+    height: 100%;
 }
 
 .chat-view.active {
@@ -139,6 +156,7 @@ body {
     background: white;
     border-bottom: 1px solid #f0f0f0;
     cursor: pointer;
+    flex-shrink: 0;
 }
 
 .gc-avatar {
@@ -147,6 +165,7 @@ body {
     border-radius: 15px;
     overflow: hidden;
     margin-right: 15px;
+    position: relative;
 }
 
 .gc-avatar img {
@@ -169,17 +188,70 @@ body {
     color: #666;
 }
 
-/* Messages Container */
+/* ============================================
+   MESSAGES CONTAINER - FLEXIBLE TO!
+   ============================================ */
 .messages-container {
-    flex: 1;
+    flex: 1 1 auto;
     overflow-y: auto;
     padding: 20px;
     background: #f8f9fa;
     display: flex;
     flex-direction: column;
     gap: 12px;
+    min-height: 0; /* IMPORTANT: Para gumana ang scrolling */
+    height: 100%;
 }
 
+/* ============================================
+   MESSAGE INPUT - FLEXIBLE NA 'TO!
+   ============================================ */
+.message-input-container {
+    display: flex;
+    padding: 15px 20px;
+    background: white;
+    border-top: 1px solid #f0f0f0;
+    gap: 10px;
+    flex-shrink: 0; /* Hindi lumiliit */
+    width: 100%;
+}
+
+.message-input-container input {
+    flex: 1;
+    padding: 12px 18px;
+    border: 1px solid #e0e0e0;
+    border-radius: 25px;
+    font-size: 14px;
+    outline: none;
+    min-width: 0; /* Para hindi magoverflow */
+}
+
+.message-input-container input:focus {
+    border-color: #4f46e5;
+}
+
+.send-btn {
+    width: 45px;
+    height: 45px;
+    border: none;
+    background: #4f46e5;
+    color: white;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.send-btn:disabled {
+    background: #cbd5e1;
+    cursor: not-allowed;
+}
+
+/* ============================================
+   MESSAGES - AYOS NA AYOS!
+   ============================================ */
 .message {
     display: flex;
     align-items: flex-end;
@@ -198,6 +270,9 @@ body {
     border-radius: 50%;
     overflow: hidden;
     flex-shrink: 0;
+    border: 2px solid #4f46e5;
+    background: #f1f5f9;
+    position: relative;
 }
 
 .message-avatar img {
@@ -212,6 +287,7 @@ body {
     border-radius: 18px;
     border-bottom-left-radius: 4px;
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    word-break: break-word;
 }
 
 .message.sent .message-content {
@@ -235,41 +311,268 @@ body {
 .message-text {
     font-size: 14px;
     word-wrap: break-word;
+    line-height: 1.4;
 }
 
 .message-time {
     font-size: 10px;
     color: #999;
     margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .message.sent .message-time {
     color: rgba(255,255,255,0.7);
 }
 
-/* Message Input */
-.message-input-container {
+/* ============================================
+   USERS LIST - MAY BADGE AT STATUS!
+   ============================================ */
+.users-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background: white;
+    border-bottom: 1px solid #f0f0f0;
+    flex-shrink: 0;
+}
+
+.users-list-header h4 {
+    font-size: 14px;
+    color: #333;
+}
+
+#online-count {
+    background: #4f46e5;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.users-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    min-height: 0;
+}
+
+/* ============================================
+   USER ITEM - KITA ANG ONLINE STATUS AT BADGE!
+   ============================================ */
+.user-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    background: white;
+    border-radius: 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.user-item:hover {
+    background: #f8fafc;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+/* USER AVATAR - DITO NAKALAGAY ANG BADGE AT STATUS */
+.user-item-avatar {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    overflow: hidden;
+    margin-right: 12px;
+    flex-shrink: 0;
+    border: 2px solid #4f46e5;
+    background: #f1f5f9;
+}
+
+.user-item-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* STATUS INDICATOR - NASA BABA NG PFP, KITA AGAD! */
+.status-indicator {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid white;
+    z-index: 5;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.status-indicator.online {
+    background: #22c55e;
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
+}
+
+.status-indicator.offline {
+    background: #94a3b8;
+}
+
+/* UNREAD BADGE - NASA ITAAS NG PFP, KITA AGAD! */
+.user-item-avatar .unread-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 22px;
+    height: 22px;
+    background: #ef4444;
+    color: white;
+    border-radius: 22px;
+    padding: 0 6px;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid white;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.5);
+    z-index: 10;
+    animation: pulse 2s infinite;
+}
+
+/* USER INFO */
+.user-item-info {
+    flex: 1;
+    min-width: 0; /* Para sa text overflow */
+}
+
+.user-item-name {
+    font-weight: 600;
+    margin-bottom: 4px;
+    font-size: 15px;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.user-item-status {
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.user-item-status.online {
+    color: #22c55e;
+}
+
+.user-item-status.offline {
+    color: #94a3b8;
+}
+
+/* HIDE OLD BADGE SA INFO */
+.user-item-info .unread-badge {
+    display: none !important;
+}
+
+/* ============================================
+   PM CHAT AREA - FLEXIBLE INPUT!
+   ============================================ */
+.pm-chat-area {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: #f8f9fa;
+    min-height: 0; /* IMPORTANT */
+}
+
+.pm-chat-area.hidden {
+    display: none !important;
+}
+
+.pm-header {
+    display: flex;
+    align-items: center;
+    padding: 15px 20px;
+    background: white;
+    border-bottom: 1px solid #f0f0f0;
+    gap: 15px;
+    flex-shrink: 0;
+}
+
+.pm-header button {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: #4f46e5;
+    padding: 5px;
+}
+
+.pm-user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.pm-user-info img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #4f46e5;
+}
+
+.pm-user-info span {
+    font-weight: 600;
+    font-size: 16px;
+    color: #1e293b;
+}
+
+/* PM Messages Container */
+#pm-messages {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 20px;
+    background: #f8f9fa;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;
+}
+
+/* PM Message Input - FLEXIBLE! */
+.pm-chat-area .message-input-container {
     display: flex;
     padding: 15px 20px;
     background: white;
     border-top: 1px solid #f0f0f0;
     gap: 10px;
+    flex-shrink: 0;
+    width: 100%;
 }
 
-.message-input-container input {
+.pm-chat-area .message-input-container input {
     flex: 1;
     padding: 12px 18px;
     border: 1px solid #e0e0e0;
     border-radius: 25px;
     font-size: 14px;
     outline: none;
+    min-width: 0;
 }
 
-.message-input-container input:focus {
+.pm-chat-area .message-input-container input:focus {
     border-color: #4f46e5;
 }
 
-.send-btn {
+.pm-chat-area .send-btn {
     width: 45px;
     height: 45px;
     border: none;
@@ -280,108 +583,12 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
 }
 
-/* Users List */
-.users-list-header {
-    display: flex;
-    justify-content: space-between;
-    padding: 15px 20px;
-    background: white;
-    border-bottom: 1px solid #f0f0f0;
-}
-
-.users-list {
-    flex: 1;
-    overflow-y: auto;
-    padding: 10px;
-}
-
-.user-item {
-    display: flex;
-    align-items: center;
-    padding: 12px;
-    background: white;
-    border-radius: 12px;
-    margin-bottom: 8px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.user-item:hover {
-    background: #f8f9fa;
-}
-
-.user-item-avatar {
-    width: 45px;
-    height: 45px;
-    border-radius: 50%;
-    overflow: hidden;
-    margin-right: 12px;
-}
-
-.user-item-avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.user-item-info {
-    flex: 1;
-}
-
-.user-item-name {
-    font-weight: 600;
-    margin-bottom: 4px;
-}
-
-.user-item-status {
-    font-size: 11px;
-    color: #10b981;
-}
-
-/* PM Chat Area */
-.pm-chat-area {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    background: #f8f9fa;
-}
-
-.pm-chat-area.hidden {
-    display: none;
-}
-
-.pm-header {
-    display: flex;
-    align-items: center;
-    padding: 15px 20px;
-    background: white;
-    border-bottom: 1px solid #f0f0f0;
-    gap: 15px;
-}
-
-.pm-header button {
-    background: none;
-    border: none;
-    font-size: 20px;
-    cursor: pointer;
-}
-
-.pm-user-info {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.pm-user-info img {
-    width: 35px;
-    height: 35px;
-    border-radius: 50%;
-    object-fit: cover;
-}
-
-/* Sidebar */
+/* ============================================
+   SIDEBAR
+   ============================================ */
 .sidebar {
     position: absolute;
     top: 0;
@@ -405,6 +612,11 @@ body {
     padding: 20px;
     background: #4f46e5;
     color: white;
+    flex-shrink: 0;
+}
+
+.sidebar-header h3 {
+    font-size: 18px;
 }
 
 .sidebar-header button {
@@ -427,88 +639,29 @@ body {
 
 .sidebar-section h4 {
     margin-bottom: 15px;
-    color: #666;
+    color: #64748b;
     font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
-.gc-info-card {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px;
-    background: #f8f9fa;
-    border-radius: 12px;
-    cursor: pointer;
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 2px 8px rgba(239, 68, 68, 0.5);
+    }
+    50% {
+        transform: scale(1.1);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.8);
+    }
 }
 
-.gc-info-card img {
-    width: 50px;
-    height: 50px;
-    border-radius: 12px;
-    object-fit: cover;
-}
-
-.gc-info-card div {
-    display: flex;
-    flex-direction: column;
-}
-
-.gc-info-card span {
-    font-size: 12px;
-    color: #666;
-    margin-top: 4px;
-}
-
-.sidebar-users-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.sidebar-btn {
-    width: 100%;
-    padding: 12px;
-    background: #f8f9fa;
-    border: none;
-    border-radius: 10px;
-    text-align: left;
-    font-size: 14px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 8px;
-}
-
-.sidebar-btn.logout {
-    color: #dc2626;
-}
-
-/* Modal */
-.modal {
-    display: none;
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.5);
-    z-index: 2000;
-    align-items: flex-end;
-}
-
-.modal.active {
-    display: flex;
-}
-
-.modal-content {
-    width: 100%;
-    max-height: 90%;
-    background: white;
-    border-top-left-radius: 25px;
-    border-top-right-radius: 25px;
-    overflow: hidden;
-    animation: slideUp 0.3s ease;
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
 }
 
 @keyframes slideUp {
@@ -520,228 +673,9 @@ body {
     }
 }
 
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px;
-    border-bottom: 1px solid #f0f0f0;
-}
-
-.modal-header button {
-    background: none;
-    border: none;
-    font-size: 20px;
-    cursor: pointer;
-}
-
-.modal-body {
-    padding: 20px;
-    overflow-y: auto;
-    max-height: calc(90vh - 70px);
-}
-
-.gc-pfp-section {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-bottom: 25px;
-}
-
-.gc-pfp-section img {
-    width: 100px;
-    height: 100px;
-    border-radius: 20px;
-    object-fit: cover;
-    margin-bottom: 15px;
-}
-
-.btn-secondary {
-    padding: 10px 20px;
-    background: #f0f0f0;
-    border: none;
-    border-radius: 25px;
-    font-size: 14px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.info-row {
-    margin-bottom: 20px;
-}
-
-.info-row label {
-    display: block;
-    font-size: 12px;
-    color: #666;
-    margin-bottom: 6px;
-}
-
-.edit-group {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px;
-    background: #f8f9fa;
-    border-radius: 10px;
-}
-
-.edit-btn {
-    background: none;
-    border: none;
-    color: #4f46e5;
-    cursor: pointer;
-}
-
-.members-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-top: 10px;
-}
-
-/* Loading */
-.loading {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100px;
-    color: #666;
-}
-
-/* Hidden */
-.hidden {
-    display: none !important;
-}
-
-/* Message Avatar - Fixed */
-.message-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    overflow: hidden;
-    flex-shrink: 0;
-    border: 2px solid #4f46e5;
-    background: #f1f5f9;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.message-avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-/* User Item Avatar - Fixed */
-.user-item-avatar {
-    position: relative;
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    overflow: hidden;
-    margin-right: 12px;
-    flex-shrink: 0;
-    border: 2px solid #4f46e5;
-    background: #f1f5f9;
-}
-
-.user-item-avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-/* Status Indicator */
-.status-indicator {
-    position: absolute;
-    bottom: 2px;
-    right: 2px;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    border: 2px solid white;
-}
-
-.status-indicator.online {
-    background: #22c55e;
-    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
-}
-
-.status-indicator.offline {
-    background: #94a3b8;
-}
-
-/* Unread Badge */
-.unread-badge {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    min-width: 22px;
-    height: 22px;
-    background: #ef4444;
-    color: white;
-    border-radius: 22px;
-    padding: 0 6px;
-    font-size: 12px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
-    animation: pulse 2s infinite;
-}
-
-/* Message Read Status */
-.status-read {
-    color: #22c55e;
-    margin-left: 6px;
-    font-size: 12px;
-}
-
-.status-sent {
-    color: #94a3b8;
-    margin-left: 6px;
-    font-size: 12px;
-}
-
-/* Loading Dots */
-.loading-dots {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.loading-dots span {
-    width: 4px;
-    height: 4px;
-    background: #64748b;
-    border-radius: 50%;
-    animation: bounce 1.4s infinite;
-}
-
-.loading-dots span:nth-child(2) {
-    animation-delay: 0.2s;
-}
-
-.loading-dots span:nth-child(3) {
-    animation-delay: 0.4s;
-}
-
-@keyframes bounce {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-4px); }
-}
-
-@keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-}
-
-/* Toast Notifications */
+/* ============================================
+   TOAST NOTIFICATIONS
+   ============================================ */
 .toast {
     position: fixed;
     bottom: 20px;
@@ -780,8 +714,10 @@ body {
     color: white;
 }
 
-/* No Messages */
-.no-messages {
+/* ============================================
+   NO MESSAGES / NO USERS
+   ============================================ */
+.no-messages, .no-users {
     text-align: center;
     color: #94a3b8;
     padding: 40px 20px;
@@ -792,149 +728,50 @@ body {
     gap: 12px;
 }
 
-/* Member Item */
-.member-item {
-    display: flex;
-    align-items: center;
-    padding: 12px;
-    background: #f8fafc;
-    border-radius: 12px;
-    margin-bottom: 8px;
+.no-messages i, .no-users i {
+    font-size: 48px;
+    color: #cbd5e1;
 }
-
-.member-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    overflow: hidden;
-    margin-right: 12px;
-    border: 2px solid #4f46e5;
-}
-
-.member-avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.member-info {
-    flex: 1;
-}
-
-.member-name {
-    font-weight: 600;
-    font-size: 14px;
-}
-
-.member-role {
-    font-size: 12px;
-    color: #64748b;
-}
-
-/* Message Link */
-.message-link {
-    color: #4f46e5;
-    text-decoration: none;
-    word-break: break-all;
-}
-
-.message-link:hover {
-    text-decoration: underline;
-}
-
 
 /* ============================================
-   PINAKAMABILIS NA UNREAD BADGE - NASA PFP!
+   MODAL
    ============================================ */
-
-/* User Item Avatar - DITO LALAGAY ANG BADGE */
-.user-item-avatar {
-    position: relative;
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    overflow: hidden;
-    margin-right: 12px;
-    flex-shrink: 0;
-    border: 2px solid #4f46e5;
-    background: #f1f5f9;
+.modal {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 2000;
+    align-items: flex-end;
 }
 
-/* BADGE - NASA PFP, KITA AGAD! */
-.user-item-avatar .unread-badge {
-    position: absolute;
-    top: -4px;
-    right: -4px;
-    min-width: 22px;
-    height: 22px;
-    background: #ef4444;
-    color: white;
-    border-radius: 22px;
-    padding: 0 6px;
-    font-size: 12px;
-    font-weight: 700;
+.modal.active {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 2px solid white;
-    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.5);
-    z-index: 10;
-    animation: pulse 2s infinite;
 }
 
-/* PULSE ANIMATION - PARA KITA AGAD */
-@keyframes pulse {
-    0%, 100% {
-        transform: scale(1);
-        box-shadow: 0 2px 8px rgba(239, 68, 68, 0.5);
-    }
-    50% {
-        transform: scale(1.1);
-        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.8);
-    }
+.modal-content {
+    width: 100%;
+    max-height: 90%;
+    background: white;
+    border-top-left-radius: 25px;
+    border-top-right-radius: 25px;
+    overflow: hidden;
+    animation: slideUp 0.3s ease;
 }
 
-/* STATUS INDICATOR - NASA BABA NG PFP */
-.status-indicator {
-    position: absolute;
-    bottom: 2px;
-    right: 2px;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    border: 2px solid white;
-    z-index: 5;
-}
-
-.status-indicator.online {
-    background: #22c55e;
-    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
-}
-
-.status-indicator.offline {
-    background: #94a3b8;
-}
-
-/* HIDE OLD BADGE SA INFO - WALA NA! */
-.user-item-info .unread-badge {
-    display: none !important;
-}
-
-/* SIDEBAR USER ITEM */
-.sidebar-user-item .user-item-avatar {
-    position: relative;
-}
-
-/* NO USERS */
-.no-users {
-    text-align: center;
-    color: #94a3b8;
-    padding: 30px 20px;
-    font-size: 14px;
-}
-
-/* RESPONSIVE */
+/* ============================================
+   RESPONSIVE
+   ============================================ */
 @media (max-width: 480px) {
+    #app {
+        height: 100vh;
+        max-width: 100%;
+        border-radius: 0;
+    }
+    
     .user-item-avatar {
         width: 44px;
         height: 44px;
@@ -949,7 +786,58 @@ body {
     }
     
     .status-indicator {
-        width: 10px;
-        height: 10px;
+        width: 12px;
+        height: 12px;
+        bottom: 1px;
+        right: 1px;
     }
+    
+    .message-input-container {
+        padding: 12px 15px;
+    }
+    
+    .message-input-container input {
+        padding: 10px 16px;
+        font-size: 13px;
+    }
+    
+    .send-btn {
+        width: 42px;
+        height: 42px;
+    }
+}
+
+/* ============================================
+   HIDDEN CLASS
+   ============================================ */
+.hidden {
+    display: none !important;
+}
+
+/* ============================================
+   SCROLLBAR - MAS MAGANDA
+   ============================================ */
+.messages-container::-webkit-scrollbar,
+.users-list::-webkit-scrollbar,
+.sidebar-content::-webkit-scrollbar {
+    width: 4px;
+}
+
+.messages-container::-webkit-scrollbar-track,
+.users-list::-webkit-scrollbar-track,
+.sidebar-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.messages-container::-webkit-scrollbar-thumb,
+.users-list::-webkit-scrollbar-thumb,
+.sidebar-content::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+.messages-container::-webkit-scrollbar-thumb:hover,
+.users-list::-webkit-scrollbar-thumb:hover,
+.sidebar-content::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
 }
