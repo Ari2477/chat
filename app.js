@@ -76,13 +76,8 @@ async function initializeApp() {
         // Load users for PM
         loadUsers();
         
-        // Listen to unread messages
+        // ✅ LISTEN TO UNREAD MESSAGES - REAL TIME!
         listenToUnreadPMs();
-        
-        // 🔔 INITIALIZE NOTIFICATIONS
-        await initNotifications();
-        listenToPMNotifications();
-        listenToGCNotifications();
         
         // Set up presence
         setupPresence();
@@ -461,7 +456,7 @@ function loadUsers() {
         });
 }
 
-// Display Users List - WALANG BROKEN IMAGE
+// ✅ FIXED: Display Users List - BADGE NASA PFP!
 function displayUsers(users) {
     const usersList = document.getElementById('users-list');
     if (!usersList) return;
@@ -487,11 +482,6 @@ function displayUsers(users) {
         const statusClass = user.online ? 'online' : 'offline';
         const statusText = user.online ? '● Online' : '○ Offline';
         
-        let unreadBadge = '';
-        if (user.unreadCount > 0) {
-            unreadBadge = `<span class="unread-badge">${user.unreadCount > 99 ? '99+' : user.unreadCount}</span>`;
-        }
-        
         userDiv.innerHTML = `
             <div class="user-item-avatar">
                 <img src="${escapeHTML(avatarUrl)}" 
@@ -499,11 +489,11 @@ function displayUsers(users) {
                      loading="lazy"
                      onerror="this.onerror=null; this.src='${escapeHTML(fallbackAvatar)}';">
                 <span class="status-indicator ${statusClass}"></span>
+                <!-- BADGE AY ILALAGAY DITO VIA JAVASCRIPT -->
             </div>
             <div class="user-item-info">
                 <div class="user-item-name">${escapeHTML(user.name || 'User')}</div>
                 <div class="user-item-status ${statusClass}">${statusText}</div>
-                ${unreadBadge}
             </div>
         `;
         
@@ -511,7 +501,7 @@ function displayUsers(users) {
     });
 }
 
-// Display Sidebar Users
+// ✅ FIXED: Display Sidebar Users - BADGE NASA PFP!
 function displaySidebarUsers(users) {
     const sidebarUsers = document.getElementById('sidebar-users-list');
     if (!sidebarUsers) return;
@@ -534,11 +524,6 @@ function displaySidebarUsers(users) {
         const statusClass = user.online ? 'online' : 'offline';
         const statusText = user.online ? '● Online' : '○ Offline';
         
-        let unreadBadge = '';
-        if (user.unreadCount > 0) {
-            unreadBadge = `<span class="unread-badge">${user.unreadCount > 99 ? '99+' : user.unreadCount}</span>`;
-        }
-        
         userDiv.innerHTML = `
             <div class="user-item-avatar">
                 <img src="${escapeHTML(avatarUrl)}" 
@@ -546,11 +531,11 @@ function displaySidebarUsers(users) {
                      loading="lazy"
                      onerror="this.onerror=null; this.src='${escapeHTML(fallbackAvatar)}';">
                 <span class="status-indicator ${statusClass}"></span>
+                <!-- BADGE AY ILALAGAY DITO VIA JAVASCRIPT -->
             </div>
             <div class="user-item-info">
                 <div class="user-item-name">${escapeHTML(user.name || 'User')}</div>
                 <div class="user-item-status ${statusClass}">${statusText}</div>
-                ${unreadBadge}
             </div>
         `;
         
@@ -558,7 +543,11 @@ function displaySidebarUsers(users) {
     });
 }
 
-// Listen to Unread PMs
+// ============================================
+// 🔔 PINAKAMABILIS NA UNREAD BADGE - REAL TIME!
+// ============================================
+
+// ✅ Listen to Unread PMs - REAL TIME AGAD!
 function listenToUnreadPMs() {
     if (!currentUser) return;
     
@@ -568,6 +557,8 @@ function listenToUnreadPMs() {
         .where('receiverId', '==', currentUser.uid)
         .where('read', '==', false)
         .onSnapshot((snapshot) => {
+            console.log('📨 Unread messages:', snapshot.size);
+            
             const unreadMap = new Map();
             
             snapshot.forEach(doc => {
@@ -576,35 +567,96 @@ function listenToUnreadPMs() {
                 unreadMap.set(senderId, (unreadMap.get(senderId) || 0) + 1);
             });
             
+            // ✅ UPDATE BADGE AGAD - REAL TIME!
             unreadMap.forEach((count, senderId) => {
                 updateUserUnreadBadge(senderId, count);
             });
             
-            // Update document title with total unread
+            // ✅ REMOVE BADGE NG MGA WALA NANG UNREAD
+            document.querySelectorAll('.user-item[data-user-id]').forEach(item => {
+                const userId = item.dataset.userId;
+                if (!unreadMap.has(userId)) {
+                    updateUserUnreadBadge(userId, 0);
+                }
+            });
+            
+            // Update title
             const totalUnread = Array.from(unreadMap.values()).reduce((a, b) => a + b, 0);
             document.title = totalUnread > 0 ? `(${totalUnread}) Mini Messenger` : 'Mini Messenger';
         });
 }
 
-// Update Unread Badge
+// ✅ PINAKAMABILIS NA PAG-UPDATE NG BADGE - NASA PFP!
 function updateUserUnreadBadge(userId, count) {
+    // Update sa Users List
     const userItems = document.querySelectorAll(`.user-item[data-user-id="${userId}"]`);
+    
     userItems.forEach(item => {
-        let badge = item.querySelector('.unread-badge');
+        // Hanapin ang avatar container
+        const avatarContainer = item.querySelector('.user-item-avatar');
+        if (!avatarContainer) return;
+        
+        // Hanapin o gumawa ng badge sa PFP
+        let badge = avatarContainer.querySelector('.unread-badge');
         
         if (count > 0) {
             if (!badge) {
                 badge = document.createElement('span');
                 badge.className = 'unread-badge';
-                item.querySelector('.user-item-info').appendChild(badge);
+                avatarContainer.appendChild(badge);
             }
             badge.textContent = count > 99 ? '99+' : count;
             badge.style.display = 'flex';
+            
+            // Add animation para kita agad
+            badge.style.animation = 'none';
+            badge.offsetHeight;
+            badge.style.animation = 'pulse 2s infinite';
+            
         } else {
-            if (badge) badge.style.display = 'none';
+            if (badge) {
+                badge.style.display = 'none';
+            }
         }
     });
 }
+
+// ✅ Reset PM Notifications
+function resetPMNotifications(senderId) {
+    updateUserUnreadBadge(senderId, 0);
+    
+    // Update document title
+    const totalUnread = getTotalUnreadCount();
+    document.title = totalUnread > 0 ? `(${totalUnread}) Mini Messenger` : 'Mini Messenger';
+}
+
+// ✅ Reset GC Notifications
+function resetGCNotifications() {
+    // Update document title
+    const totalUnread = getTotalUnreadCount();
+    document.title = totalUnread > 0 ? `(${totalUnread}) Mini Messenger` : 'Mini Messenger';
+}
+
+// ✅ Get total unread count
+function getTotalUnreadCount() {
+    let total = 0;
+    const badges = document.querySelectorAll('.user-item-avatar .unread-badge');
+    badges.forEach(badge => {
+        if (badge.style.display !== 'none') {
+            const count = badge.textContent;
+            if (count === '99+') {
+                total += 99;
+            } else {
+                total += parseInt(count) || 0;
+            }
+        }
+    });
+    return total;
+}
+
+// ============================================
+// PRIVATE MESSAGES
+// ============================================
 
 // Open Private Chat
 async function openPrivateChat(user) {
@@ -645,7 +697,7 @@ async function openPrivateChat(user) {
     listenToPMMessages(user.id);
 }
 
-// Mark Messages as Read
+// ✅ Mark Messages as Read - MAY BADGE REMOVE AGAD!
 async function markMessagesAsRead(senderId) {
     if (!currentUser || !senderId) return;
     
@@ -660,13 +712,21 @@ async function markMessagesAsRead(senderId) {
         
         const snapshot = await messagesRef.get();
         
-        const batch = db.batch();
-        snapshot.forEach(doc => {
-            batch.update(doc.ref, { read: true });
-        });
-        
-        await batch.commit();
-        updateUserUnreadBadge(senderId, 0);
+        if (snapshot.size > 0) {
+            const batch = db.batch();
+            snapshot.forEach(doc => {
+                batch.update(doc.ref, { 
+                    read: true,
+                    readAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            });
+            
+            await batch.commit();
+            console.log(`✅ Marked ${snapshot.size} messages as read`);
+            
+            // ✅ BADGE REMOVE AGAD!
+            updateUserUnreadBadge(senderId, 0);
+        }
         
     } catch (error) {
         console.error('Error marking messages as read:', error);
@@ -962,222 +1022,6 @@ async function changeProfilePicture() {
     };
     
     input.click();
-}
-
-// ============================================
-// 🔔 NOTIFICATION SYSTEM - PFP LANG MAY BADGE (PARANG MESSENGER)
-// ============================================
-
-// Notification Variables
-let notificationPermission = false;
-let notificationSound = null;
-
-// Initialize Notifications
-async function initNotifications() {
-    console.log('🔔 Initializing notifications...');
-    
-    // Create notification sound
-    notificationSound = new Audio();
-    notificationSound.src = 'data:audio/wav;base64,U3RlZmFuIE1hZ25pdHNraSBUaGlzIGlzIGEgdGVzdCBmaWxlLg==';
-    notificationSound.volume = 0.3;
-    
-    // Request permission
-    if ('Notification' in window) {
-        try {
-            const permission = await Notification.requestPermission();
-            notificationPermission = permission === 'granted';
-            console.log('🔔 Notification permission:', permission);
-        } catch (error) {
-            console.error('❌ Notification permission error:', error);
-        }
-    }
-}
-
-// Listen to PM Messages for Notifications - PFP LANG MAY BADGE
-function listenToPMNotifications() {
-    if (!currentUser) return;
-    
-    db.collectionGroup('messages')
-        .where('receiverId', '==', currentUser.uid)
-        .where('read', '==', false)
-        .onSnapshot((snapshot) => {
-            
-            // Check for new messages only
-            snapshot.docChanges().forEach((change) => {
-                if (change.type === 'added') {
-                    const message = change.doc.data();
-                    const senderId = message.senderId;
-                    
-                    // Don't notify own messages
-                    if (senderId === currentUser.uid) return;
-                    
-                    // Get sender info
-                    db.collection('users').doc(senderId).get().then((userDoc) => {
-                        if (userDoc.exists) {
-                            const sender = userDoc.data();
-                            
-                            // Get current unread count and increment
-                            const currentCount = getCurrentUnreadCount(senderId);
-                            updateUserUnreadBadge(senderId, currentCount + 1);
-                            
-                            // Play notification sound
-                            if (notificationSound) {
-                                notificationSound.play().catch(e => console.log('Sound play failed:', e));
-                            }
-                            
-                            // Show desktop notification - PFP LANG
-                            if (!document.hasFocus() && notificationPermission) {
-                                showDesktopNotification(
-                                    sender.name || 'User',
-                                    message.text?.substring(0, 100) || 'Sent a message',
-                                    sender.photoURL,
-                                    `pm-${senderId}`
-                                );
-                            }
-                            
-                            // Show in-app toast
-                            showToast(`📩 ${sender.name || 'User'}: ${message.text?.substring(0, 30)}${message.text?.length > 30 ? '...' : ''}`, 'info');
-                        }
-                    });
-                }
-            });
-            
-            // Update document title with total unread
-            const totalUnread = getTotalUnreadCount();
-            document.title = totalUnread > 0 ? `(${totalUnread}) Mini Messenger` : 'Mini Messenger';
-        });
-}
-
-// Listen to GC Messages for Notifications - PFP LANG MAY BADGE
-function listenToGCNotifications() {
-    if (!currentUser) return;
-    
-    db.collection('groupChats')
-        .doc(GROUP_CHAT_ID)
-        .collection('messages')
-        .orderBy('timestamp', 'desc')
-        .limit(5)
-        .onSnapshot((snapshot) => {
-            snapshot.docChanges().forEach((change) => {
-                if (change.type === 'added') {
-                    const message = change.doc.data();
-                    
-                    // Don't notify own messages
-                    if (message.senderId === currentUser.uid) return;
-                    
-                    // Get sender info
-                    db.collection('users').doc(message.senderId).get().then((userDoc) => {
-                        if (userDoc.exists) {
-                            const sender = userDoc.data();
-                            
-                            // Get current unread count and increment
-                            const currentCount = getCurrentUnreadCount(message.senderId);
-                            updateUserUnreadBadge(message.senderId, currentCount + 1);
-                            
-                            // Play notification sound
-                            if (notificationSound) {
-                                notificationSound.play().catch(e => console.log('Sound play failed:', e));
-                            }
-                            
-                            // Show desktop notification - PFP LANG
-                            if (!document.hasFocus() && notificationPermission) {
-                                showDesktopNotification(
-                                    sender.name || 'User',
-                                    `📢 ${message.text?.substring(0, 100) || 'Sent a message'}`,
-                                    sender.photoURL,
-                                    `gc-${message.senderId}`
-                                );
-                            }
-                            
-                            // Show in-app toast
-                            showToast(`💬 ${sender.name || 'User'}: ${message.text?.substring(0, 30)}${message.text?.length > 30 ? '...' : ''}`, 'info');
-                        }
-                    });
-                }
-            });
-            
-            // Update document title with total unread
-            const totalUnread = getTotalUnreadCount();
-            document.title = totalUnread > 0 ? `(${totalUnread}) Mini Messenger` : 'Mini Messenger';
-        });
-}
-
-// Get current unread count for a user
-function getCurrentUnreadCount(userId) {
-    const userItem = document.querySelector(`.user-item[data-user-id="${userId}"]`);
-    if (userItem) {
-        const badge = userItem.querySelector('.unread-badge');
-        if (badge) {
-            const count = badge.textContent;
-            return count === '99+' ? 99 : (parseInt(count) || 0);
-        }
-    }
-    return 0;
-}
-
-// Get total unread count from all badges
-function getTotalUnreadCount() {
-    let total = 0;
-    const badges = document.querySelectorAll('.user-item .unread-badge');
-    badges.forEach(badge => {
-        const count = badge.textContent;
-        if (count === '99+') {
-            total += 99;
-        } else {
-            total += parseInt(count) || 0;
-        }
-    });
-    return total;
-}
-
-// Reset PM Notifications for specific user
-function resetPMNotifications(senderId) {
-    updateUserUnreadBadge(senderId, 0);
-    
-    // Update document title
-    const totalUnread = getTotalUnreadCount();
-    document.title = totalUnread > 0 ? `(${totalUnread}) Mini Messenger` : 'Mini Messenger';
-}
-
-// Reset GC Notifications
-function resetGCNotifications() {
-    // Update document title
-    const totalUnread = getTotalUnreadCount();
-    document.title = totalUnread > 0 ? `(${totalUnread}) Mini Messenger` : 'Mini Messenger';
-}
-
-// Show Desktop Notification
-function showDesktopNotification(title, body, icon = null, tag = null) {
-    // Don't notify if no permission
-    if (!notificationPermission) return;
-    
-    // Don't notify if tab is active
-    if (document.hasFocus()) return;
-    
-    try {
-        const options = {
-            body: body,
-            icon: icon || 'https://ui-avatars.com/api/?name=M&background=4f46e5&color=fff&size=128',
-            badge: 'https://ui-avatars.com/api/?name=M&background=4f46e5&color=fff&size=64',
-            timestamp: Date.now(),
-            silent: false,
-            tag: tag || 'message',
-            renotify: true,
-            requireInteraction: false
-        };
-        
-        const notification = new Notification(title, options);
-        
-        notification.onclick = function() {
-            window.focus();
-            this.close();
-        };
-        
-        setTimeout(() => notification.close(), 5000);
-        
-    } catch (error) {
-        console.error('❌ Notification error:', error);
-    }
 }
 
 // ============================================
