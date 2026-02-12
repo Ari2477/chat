@@ -79,6 +79,11 @@ async function initializeApp() {
         // Listen to unread messages
         listenToUnreadPMs();
         
+        // 🔔 INITIALIZE NOTIFICATIONS
+        await initNotifications();
+        listenToPMNotifications();
+        listenToGCNotifications();
+        
         // Set up presence
         setupPresence();
         
@@ -609,6 +614,9 @@ async function openPrivateChat(user) {
     // Mark messages as read when opening chat
     await markMessagesAsRead(user.id);
     
+    // 🔔 RESET PM NOTIFICATIONS FOR THIS USER
+    resetPMNotifications(user.id);
+    
     const pmNameEl = document.getElementById('pm-user-name');
     const pmPfpEl = document.getElementById('pm-user-pfp');
     
@@ -658,6 +666,11 @@ async function markMessagesAsRead(senderId) {
         
         await batch.commit();
         updateUserUnreadBadge(senderId, 0);
+        
+        // 🔔 UPDATE UNREAD PM COUNT
+        unreadPMCount -= snapshot.size;
+        if (unreadPMCount < 0) unreadPMCount = 0;
+        updateGlobalNotificationBadge();
         
     } catch (error) {
         console.error('Error marking messages as read:', error);
@@ -956,6 +969,240 @@ async function changeProfilePicture() {
 }
 
 // ============================================
+// 🔔🔔🔔 NOTIFICATION SYSTEM - I-DAGDAG LANG ITO 🔔🔔🔔
+// ============================================
+
+// Notification Variables
+let notificationPermission = false;
+let notificationSound = null;
+let unreadPMCount = 0;
+let unreadGCCount = 0;
+
+// Initialize Notifications
+async function initNotifications() {
+    console.log('🔔 Initializing notifications...');
+    
+    // Create notification sound (silent beep)
+    notificationSound = new Audio();
+    notificationSound.src = 'data:audio/wav;base64,U3RlZmFuIE1hZ25pdHNraSBUaGlzIGlzIGEgdGVzdCBmaWxlLg==';
+    notificationSound.volume = 0.3;
+    
+    // Request permission
+    if ('Notification' in window) {
+        try {
+            const permission = await Notification.requestPermission();
+            notificationPermission = permission === 'granted';
+            console.log('🔔 Notification permission:', permission);
+        } catch (error) {
+            console.error('❌ Notification permission error:', error);
+        }
+    }
+    
+    // Create global notification badge
+    createGlobalNotificationBadge();
+}
+
+// Create Global Notification Badge
+function createGlobalNotificationBadge() {
+    const existingBadge = document.getElementById('global-notification-badge');
+    if (existingBadge) existingBadge.remove();
+    
+    const badge = document.createElement('div');
+    badge.id = 'global-notification-badge';
+    badge.className = 'global-notification-badge hidden';
+    badge.innerHTML = '<span class="global-notification-count">0</span>';
+    document.body.appendChild(badge);
+}
+
+// Update Global Notification Badge
+function updateGlobalNotificationBadge() {
+    const badge = document.getElementById('global-notification-badge');
+    const countEl = badge?.querySelector('.global-notification-count');
+    const totalUnread = unreadPMCount + unreadGCCount;
+    
+    if (badge && countEl) {
+        if (totalUnread > 0) {
+            countEl.textContent = totalUnread > 99 ? '99+' : totalUnread;
+            badge.classList.remove('hidden');
+            document.title = `(${totalUnread}) Mini Messenger`;
+        } else {
+            badge.classList.add('hidden');
+            document.title = 'Mini Messenger';
+        }
+    }
+}
+
+// Show Desktop Notification
+function showDesktopNotification(title, body, icon = null, tag = null) {
+    // Don't notify if tab is active
+    if (document.hasFocus()) return;
+    
+    // Don't notify if no permission
+    if (!notificationPermission) return;
+    
+    try {
+        const options = {
+            body: body,
+            icon: icon || 'https://ui-avatars.com/api/?name=M&background=4f46e5&color=fff&size=128',
+            badge: 'https://ui-avatars.com/api/?name=M&background=4f46e5&color=fff&size=64',
+            timestamp: Date.now(),
+            silent: false,
+            tag: tag || 'message',
+            renotify: true,
+            requireInteraction: false
+        };
+        
+        const notification = new Notification(title, options);
+        
+        notification.onclick = function() {
+            window.focus();
+            this.close();
+        };
+        
+        // Play sound
+        if (notificationSound) {
+            notificationSound.play().catch(e => console.log('Sound play failed:', e));
+        }
+        
+        setTimeout(() => notification.close(), 5000);
+        
+    } catch (error) {
+        console.error('❌ Notification error:', error);
+    }
+}
+
+// ============================================
+// PM NOTIFICATIONS
+// ============================================
+
+// Listen to PM Messages for Notifications
+function listenToPMNotifications() {
+    if (!currentUser) return;
+    
+    db.collectionGroup('messages')
+        .where('receiverId', '==', currentUser.uid)
+        .where('read', '==', false)
+        .onSnapshot((snapshot) => {
+            // Update unread count
+            unreadPMCount = snapshot.size;
+            updateGlobalNotificationBadge();
+            
+            // Check for new messages
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === 'added') {
+                    const message = change.doc.data();
+                    const senderId = message.senderId;
+                    
+                    // Don't notify own messages
+                    if (senderId === currentUser.uid) return;
+                    
+                    // Get sender info
+                    db.collection('users').doc(senderId).get().then((userDoc) => {
+                        if (userDoc.exists) {
+                            const sender = userDoc.data();
+                            const senderName = sender.name || 'User';
+                            const senderPhoto = sender.photoURL;
+                            
+                            // Show desktop notification
+                            showDesktopNotification(
+                                `💬 PM from ${senderName}`,
+                                message.text?.substring(0, 100) || 'Sent a message',
+                                senderPhoto,
+                                `pm-${senderId}`
+                            );
+                            
+                            // Show in-app toast
+                            showToast(`📩 ${senderName}: ${message.text?.substring(0, 30)}${message.text?.length > 30 ? '...' : ''}`, 'info');
+                        }
+                    });
+                }
+            });
+        });
+}
+
+// ============================================
+// GROUP CHAT NOTIFICATIONS
+// ============================================
+
+// Listen to GC Messages for Notifications
+function listenToGCNotifications() {
+    if (!currentUser) return;
+    
+    db.collection('groupChats')
+        .doc(GROUP_CHAT_ID)
+        .collection('messages')
+        .orderBy('timestamp', 'desc')
+        .limit(5)
+        .onSnapshot((snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === 'added') {
+                    const message = change.doc.data();
+                    
+                    // Don't notify own messages
+                    if (message.senderId === currentUser.uid) return;
+                    
+                    // Don't notify if tab is focused
+                    if (document.hasFocus()) {
+                        // Just update badge
+                        unreadGCCount++;
+                        updateGlobalNotificationBadge();
+                        return;
+                    }
+                    
+                    // Get sender info
+                    db.collection('users').doc(message.senderId).get().then((userDoc) => {
+                        if (userDoc.exists) {
+                            const sender = userDoc.data();
+                            const senderName = sender.name || 'User';
+                            const senderPhoto = sender.photoURL;
+                            
+                            // Update unread count
+                            unreadGCCount++;
+                            updateGlobalNotificationBadge();
+                            
+                            // Show desktop notification
+                            showDesktopNotification(
+                                `👥 Group Chat - ${senderName}`,
+                                message.text?.substring(0, 100) || 'Sent a message',
+                                senderPhoto,
+                                'gc-notification'
+                            );
+                            
+                            // Show in-app toast
+                            showToast(`💬 ${senderName}: ${message.text?.substring(0, 30)}${message.text?.length > 30 ? '...' : ''}`, 'info');
+                        }
+                    });
+                }
+            });
+        });
+}
+
+// ============================================
+// RESET NOTIFICATIONS
+// ============================================
+
+// Reset GC Notifications
+function resetGCNotifications() {
+    unreadGCCount = 0;
+    updateGlobalNotificationBadge();
+}
+
+// Reset PM Notifications for specific user
+function resetPMNotifications(senderId) {
+    // Update unread count
+    db.collectionGroup('messages')
+        .where('receiverId', '==', currentUser.uid)
+        .where('senderId', '==', senderId)
+        .where('read', '==', false)
+        .get()
+        .then((snapshot) => {
+            unreadPMCount -= snapshot.size;
+            if (unreadPMCount < 0) unreadPMCount = 0;
+            updateGlobalNotificationBadge();
+        });
+}
+
+// ============================================
 // UTILITY FUNCTIONS
 // ============================================
 
@@ -1022,6 +1269,11 @@ function switchTab(tab) {
     if (pmTab) pmTab.classList.toggle('active', tab === 'pm');
     if (gcView) gcView.classList.toggle('active', tab === 'gc');
     if (pmView) pmView.classList.toggle('active', tab === 'pm');
+    
+    // 🔔 RESET GC NOTIFICATIONS WHEN OPENING GROUP CHAT
+    if (tab === 'gc') {
+        resetGCNotifications();
+    }
 }
 
 // Toggle Sidebar
