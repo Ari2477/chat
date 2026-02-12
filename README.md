@@ -37,18 +37,7 @@ mini-messenger/
 2. App nickname: `mini-messenger-web`
 3. **Uncheck** "Also set up Firebase Hosting"
 4. Click **"Register app"**
-5. **COPY YOUR FIREBASE CONFIG** - you'll need this!
-
-```javascript
-const firebaseConfig = {
-    apiKey: "AIzaSyBkR0E-PftBKDNkdpWS1niFRMRjcK64-P4",
-    authDomain: "mini-chat-app-1a2ca.firebaseapp.com",
-    projectId: "mini-chat-app-1a2ca",
-    storageBucket: "mini-chat-app-1a2ca.firebasestorage.app",
-    messagingSenderId: "638448934198",
-    appId: "1:638448934198:web:8e0dcbf8a4987642312797"
-};
-```
+5. **COPY YOUR FIREBASE CONFIG** 
 
 ---
 
