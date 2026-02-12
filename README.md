@@ -275,18 +275,8 @@ yourprojectname.onrender.com
 
 # 📸 PART 8: SCREENSHOTS
 
-Add your screenshots in `/screenshots` folder:
-
-```
-screenshots/
-├── firebase-console.png
-├── firebase-config.png
-├── google-auth.png
-├── firestore-rules.png
-├── imgbb-api.png
-├── render-deploy.png
-└── live-app.png
-```
+![Login Screen](screenshots/login.png)
+![Chat Screen](screenshots/chat.png)
 
 ---
 
