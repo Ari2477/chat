@@ -8,30 +8,13 @@ const firebaseConfig = {
   appId: "1:638448934198:web:8e0dcbf8a4987642312797"
 };
 
-// Initialize Firebase
+const IMGBB_API_KEY = "87b58d438e0cbe5226c1df0a8071621e"; 
+
 firebase.initializeApp(firebaseConfig);
-
-// Initialize Firebase services
-const auth = firebase.auth();
 const db = firebase.firestore();
-const storage = firebase.storage();
+const auth = firebase.auth();
+const provider = new firebase.auth.GoogleAuthProvider();
 
-// Enable Firestore offline persistence
-db.enablePersistence()
-  .catch((err) => {
-    if (err.code === 'failed-precondition') {
-      console.log('Persistence failed');
-    } else if (err.code === 'unimplemented') {
-      console.log('Persistence not available');
-    }
-  });
-
-// ImgBB API Key
-const IMGBB_API_KEY = 'i bb329b6e5c824a671520a9983eb3f37c'; // Replace with your actual key
-
-// Export Firebase services globally
-window.firebase = firebase;
-window.auth = auth;
-window.db = db;
-window.storage = storage;
-window.IMGBB_API_KEY = IMGBB_API_KEY;
+db.enablePersistence().catch(err => {
+    console.log("Persistence error:", err);
+});
