@@ -227,7 +227,7 @@ function listenToGCMessages() {
         });
 }
 
-// ✅ FIXED: Append Group Chat Message - WALANG "M" NA BROKEN IMAGE
+// Append Group Chat Message - WALANG "M" NA BROKEN IMAGE
 function appendGCMessage(message, container, userMap = {}) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${message.senderId === currentUser?.uid ? 'sent' : 'received'}`;
@@ -307,7 +307,7 @@ function formatMessageText(text) {
     return text;
 }
 
-// ✅ FIXED: Send Group Chat Message - WITH LOADING STATE
+// Send Group Chat Message - WITH LOADING STATE
 async function sendGCMessage() {
     const input = document.getElementById('gc-message-input');
     if (!input) return;
@@ -461,7 +461,7 @@ function loadUsers() {
         });
 }
 
-// ✅ FIXED: Display Users List - WALANG BROKEN IMAGE
+// Display Users List - WALANG BROKEN IMAGE
 function displayUsers(users) {
     const usersList = document.getElementById('users-list');
     if (!usersList) return;
@@ -511,7 +511,7 @@ function displayUsers(users) {
     });
 }
 
-// ✅ FIXED: Display Sidebar Users
+// Display Sidebar Users
 function displaySidebarUsers(users) {
     const sidebarUsers = document.getElementById('sidebar-users-list');
     if (!sidebarUsers) return;
@@ -580,7 +580,8 @@ function listenToUnreadPMs() {
                 updateUserUnreadBadge(senderId, count);
             });
             
-            const totalUnread = unreadMap.size;
+            // Update document title with total unread
+            const totalUnread = Array.from(unreadMap.values()).reduce((a, b) => a + b, 0);
             document.title = totalUnread > 0 ? `(${totalUnread}) Mini Messenger` : 'Mini Messenger';
         });
 }
@@ -605,7 +606,7 @@ function updateUserUnreadBadge(userId, count) {
     });
 }
 
-// ✅ FIXED: Open Private Chat
+// Open Private Chat
 async function openPrivateChat(user) {
     if (!user) return;
     
@@ -614,7 +615,7 @@ async function openPrivateChat(user) {
     // Mark messages as read when opening chat
     await markMessagesAsRead(user.id);
     
-    // 🔔 RESET PM NOTIFICATIONS FOR THIS USER
+    // Reset PM notifications for this user
     resetPMNotifications(user.id);
     
     const pmNameEl = document.getElementById('pm-user-name');
@@ -666,11 +667,6 @@ async function markMessagesAsRead(senderId) {
         
         await batch.commit();
         updateUserUnreadBadge(senderId, 0);
-        
-        // 🔔 UPDATE UNREAD PM COUNT
-        unreadPMCount -= snapshot.size;
-        if (unreadPMCount < 0) unreadPMCount = 0;
-        updateGlobalNotificationBadge();
         
     } catch (error) {
         console.error('Error marking messages as read:', error);
@@ -724,7 +720,7 @@ function listenToPMMessages(otherUserId) {
         });
 }
 
-// ✅ FIXED: Append Private Message - WALANG BROKEN IMAGE
+// Append Private Message - WALANG BROKEN IMAGE
 function appendPMMessage(message, container) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${message.senderId === currentUser?.uid ? 'sent' : 'received'}`;
@@ -780,7 +776,7 @@ function appendPMMessage(message, container) {
     container.appendChild(messageDiv);
 }
 
-// ✅ FIXED: Send Private Message
+// Send Private Message
 async function sendPM() {
     if (!currentPMUser) {
         showToast('Select a user first', 'error');
@@ -969,20 +965,18 @@ async function changeProfilePicture() {
 }
 
 // ============================================
-// 🔔🔔🔔 NOTIFICATION SYSTEM - I-DAGDAG LANG ITO 🔔🔔🔔
+// 🔔 NOTIFICATION SYSTEM - PFP LANG MAY BADGE (PARANG MESSENGER)
 // ============================================
 
 // Notification Variables
 let notificationPermission = false;
 let notificationSound = null;
-let unreadPMCount = 0;
-let unreadGCCount = 0;
 
 // Initialize Notifications
 async function initNotifications() {
     console.log('🔔 Initializing notifications...');
     
-    // Create notification sound (silent beep)
+    // Create notification sound
     notificationSound = new Audio();
     notificationSound.src = 'data:audio/wav;base64,U3RlZmFuIE1hZ25pdHNraSBUaGlzIGlzIGEgdGVzdCBmaWxlLg==';
     notificationSound.volume = 0.3;
@@ -997,48 +991,168 @@ async function initNotifications() {
             console.error('❌ Notification permission error:', error);
         }
     }
-    
-    // Create global notification badge
-    createGlobalNotificationBadge();
 }
 
-// Create Global Notification Badge
-function createGlobalNotificationBadge() {
-    const existingBadge = document.getElementById('global-notification-badge');
-    if (existingBadge) existingBadge.remove();
+// Listen to PM Messages for Notifications - PFP LANG MAY BADGE
+function listenToPMNotifications() {
+    if (!currentUser) return;
     
-    const badge = document.createElement('div');
-    badge.id = 'global-notification-badge';
-    badge.className = 'global-notification-badge hidden';
-    badge.innerHTML = '<span class="global-notification-count">0</span>';
-    document.body.appendChild(badge);
+    db.collectionGroup('messages')
+        .where('receiverId', '==', currentUser.uid)
+        .where('read', '==', false)
+        .onSnapshot((snapshot) => {
+            
+            // Check for new messages only
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === 'added') {
+                    const message = change.doc.data();
+                    const senderId = message.senderId;
+                    
+                    // Don't notify own messages
+                    if (senderId === currentUser.uid) return;
+                    
+                    // Get sender info
+                    db.collection('users').doc(senderId).get().then((userDoc) => {
+                        if (userDoc.exists) {
+                            const sender = userDoc.data();
+                            
+                            // Get current unread count and increment
+                            const currentCount = getCurrentUnreadCount(senderId);
+                            updateUserUnreadBadge(senderId, currentCount + 1);
+                            
+                            // Play notification sound
+                            if (notificationSound) {
+                                notificationSound.play().catch(e => console.log('Sound play failed:', e));
+                            }
+                            
+                            // Show desktop notification - PFP LANG
+                            if (!document.hasFocus() && notificationPermission) {
+                                showDesktopNotification(
+                                    sender.name || 'User',
+                                    message.text?.substring(0, 100) || 'Sent a message',
+                                    sender.photoURL,
+                                    `pm-${senderId}`
+                                );
+                            }
+                            
+                            // Show in-app toast
+                            showToast(`📩 ${sender.name || 'User'}: ${message.text?.substring(0, 30)}${message.text?.length > 30 ? '...' : ''}`, 'info');
+                        }
+                    });
+                }
+            });
+            
+            // Update document title with total unread
+            const totalUnread = getTotalUnreadCount();
+            document.title = totalUnread > 0 ? `(${totalUnread}) Mini Messenger` : 'Mini Messenger';
+        });
 }
 
-// Update Global Notification Badge
-function updateGlobalNotificationBadge() {
-    const badge = document.getElementById('global-notification-badge');
-    const countEl = badge?.querySelector('.global-notification-count');
-    const totalUnread = unreadPMCount + unreadGCCount;
+// Listen to GC Messages for Notifications - PFP LANG MAY BADGE
+function listenToGCNotifications() {
+    if (!currentUser) return;
     
-    if (badge && countEl) {
-        if (totalUnread > 0) {
-            countEl.textContent = totalUnread > 99 ? '99+' : totalUnread;
-            badge.classList.remove('hidden');
-            document.title = `(${totalUnread}) Mini Messenger`;
-        } else {
-            badge.classList.add('hidden');
-            document.title = 'Mini Messenger';
+    db.collection('groupChats')
+        .doc(GROUP_CHAT_ID)
+        .collection('messages')
+        .orderBy('timestamp', 'desc')
+        .limit(5)
+        .onSnapshot((snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === 'added') {
+                    const message = change.doc.data();
+                    
+                    // Don't notify own messages
+                    if (message.senderId === currentUser.uid) return;
+                    
+                    // Get sender info
+                    db.collection('users').doc(message.senderId).get().then((userDoc) => {
+                        if (userDoc.exists) {
+                            const sender = userDoc.data();
+                            
+                            // Get current unread count and increment
+                            const currentCount = getCurrentUnreadCount(message.senderId);
+                            updateUserUnreadBadge(message.senderId, currentCount + 1);
+                            
+                            // Play notification sound
+                            if (notificationSound) {
+                                notificationSound.play().catch(e => console.log('Sound play failed:', e));
+                            }
+                            
+                            // Show desktop notification - PFP LANG
+                            if (!document.hasFocus() && notificationPermission) {
+                                showDesktopNotification(
+                                    sender.name || 'User',
+                                    `📢 ${message.text?.substring(0, 100) || 'Sent a message'}`,
+                                    sender.photoURL,
+                                    `gc-${message.senderId}`
+                                );
+                            }
+                            
+                            // Show in-app toast
+                            showToast(`💬 ${sender.name || 'User'}: ${message.text?.substring(0, 30)}${message.text?.length > 30 ? '...' : ''}`, 'info');
+                        }
+                    });
+                }
+            });
+            
+            // Update document title with total unread
+            const totalUnread = getTotalUnreadCount();
+            document.title = totalUnread > 0 ? `(${totalUnread}) Mini Messenger` : 'Mini Messenger';
+        });
+}
+
+// Get current unread count for a user
+function getCurrentUnreadCount(userId) {
+    const userItem = document.querySelector(`.user-item[data-user-id="${userId}"]`);
+    if (userItem) {
+        const badge = userItem.querySelector('.unread-badge');
+        if (badge) {
+            const count = badge.textContent;
+            return count === '99+' ? 99 : (parseInt(count) || 0);
         }
     }
+    return 0;
+}
+
+// Get total unread count from all badges
+function getTotalUnreadCount() {
+    let total = 0;
+    const badges = document.querySelectorAll('.user-item .unread-badge');
+    badges.forEach(badge => {
+        const count = badge.textContent;
+        if (count === '99+') {
+            total += 99;
+        } else {
+            total += parseInt(count) || 0;
+        }
+    });
+    return total;
+}
+
+// Reset PM Notifications for specific user
+function resetPMNotifications(senderId) {
+    updateUserUnreadBadge(senderId, 0);
+    
+    // Update document title
+    const totalUnread = getTotalUnreadCount();
+    document.title = totalUnread > 0 ? `(${totalUnread}) Mini Messenger` : 'Mini Messenger';
+}
+
+// Reset GC Notifications
+function resetGCNotifications() {
+    // Update document title
+    const totalUnread = getTotalUnreadCount();
+    document.title = totalUnread > 0 ? `(${totalUnread}) Mini Messenger` : 'Mini Messenger';
 }
 
 // Show Desktop Notification
 function showDesktopNotification(title, body, icon = null, tag = null) {
-    // Don't notify if tab is active
-    if (document.hasFocus()) return;
-    
     // Don't notify if no permission
     if (!notificationPermission) return;
+    
+    // Don't notify if tab is active
+    if (document.hasFocus()) return;
     
     try {
         const options = {
@@ -1059,147 +1173,11 @@ function showDesktopNotification(title, body, icon = null, tag = null) {
             this.close();
         };
         
-        // Play sound
-        if (notificationSound) {
-            notificationSound.play().catch(e => console.log('Sound play failed:', e));
-        }
-        
         setTimeout(() => notification.close(), 5000);
         
     } catch (error) {
         console.error('❌ Notification error:', error);
     }
-}
-
-// ============================================
-// PM NOTIFICATIONS
-// ============================================
-
-// Listen to PM Messages for Notifications
-function listenToPMNotifications() {
-    if (!currentUser) return;
-    
-    db.collectionGroup('messages')
-        .where('receiverId', '==', currentUser.uid)
-        .where('read', '==', false)
-        .onSnapshot((snapshot) => {
-            // Update unread count
-            unreadPMCount = snapshot.size;
-            updateGlobalNotificationBadge();
-            
-            // Check for new messages
-            snapshot.docChanges().forEach((change) => {
-                if (change.type === 'added') {
-                    const message = change.doc.data();
-                    const senderId = message.senderId;
-                    
-                    // Don't notify own messages
-                    if (senderId === currentUser.uid) return;
-                    
-                    // Get sender info
-                    db.collection('users').doc(senderId).get().then((userDoc) => {
-                        if (userDoc.exists) {
-                            const sender = userDoc.data();
-                            const senderName = sender.name || 'User';
-                            const senderPhoto = sender.photoURL;
-                            
-                            // Show desktop notification
-                            showDesktopNotification(
-                                `💬 PM from ${senderName}`,
-                                message.text?.substring(0, 100) || 'Sent a message',
-                                senderPhoto,
-                                `pm-${senderId}`
-                            );
-                            
-                            // Show in-app toast
-                            showToast(`📩 ${senderName}: ${message.text?.substring(0, 30)}${message.text?.length > 30 ? '...' : ''}`, 'info');
-                        }
-                    });
-                }
-            });
-        });
-}
-
-// ============================================
-// GROUP CHAT NOTIFICATIONS
-// ============================================
-
-// Listen to GC Messages for Notifications
-function listenToGCNotifications() {
-    if (!currentUser) return;
-    
-    db.collection('groupChats')
-        .doc(GROUP_CHAT_ID)
-        .collection('messages')
-        .orderBy('timestamp', 'desc')
-        .limit(5)
-        .onSnapshot((snapshot) => {
-            snapshot.docChanges().forEach((change) => {
-                if (change.type === 'added') {
-                    const message = change.doc.data();
-                    
-                    // Don't notify own messages
-                    if (message.senderId === currentUser.uid) return;
-                    
-                    // Don't notify if tab is focused
-                    if (document.hasFocus()) {
-                        // Just update badge
-                        unreadGCCount++;
-                        updateGlobalNotificationBadge();
-                        return;
-                    }
-                    
-                    // Get sender info
-                    db.collection('users').doc(message.senderId).get().then((userDoc) => {
-                        if (userDoc.exists) {
-                            const sender = userDoc.data();
-                            const senderName = sender.name || 'User';
-                            const senderPhoto = sender.photoURL;
-                            
-                            // Update unread count
-                            unreadGCCount++;
-                            updateGlobalNotificationBadge();
-                            
-                            // Show desktop notification
-                            showDesktopNotification(
-                                `👥 Group Chat - ${senderName}`,
-                                message.text?.substring(0, 100) || 'Sent a message',
-                                senderPhoto,
-                                'gc-notification'
-                            );
-                            
-                            // Show in-app toast
-                            showToast(`💬 ${senderName}: ${message.text?.substring(0, 30)}${message.text?.length > 30 ? '...' : ''}`, 'info');
-                        }
-                    });
-                }
-            });
-        });
-}
-
-// ============================================
-// RESET NOTIFICATIONS
-// ============================================
-
-// Reset GC Notifications
-function resetGCNotifications() {
-    unreadGCCount = 0;
-    updateGlobalNotificationBadge();
-}
-
-// Reset PM Notifications for specific user
-function resetPMNotifications(senderId) {
-    // Update unread count
-    db.collectionGroup('messages')
-        .where('receiverId', '==', currentUser.uid)
-        .where('senderId', '==', senderId)
-        .where('read', '==', false)
-        .get()
-        .then((snapshot) => {
-            unreadPMCount -= snapshot.size;
-            if (unreadPMCount < 0) unreadPMCount = 0;
-            updateGlobalNotificationBadge();
-        });
 }
 
 // ============================================
@@ -1270,7 +1248,7 @@ function switchTab(tab) {
     if (gcView) gcView.classList.toggle('active', tab === 'gc');
     if (pmView) pmView.classList.toggle('active', tab === 'pm');
     
-    // 🔔 RESET GC NOTIFICATIONS WHEN OPENING GROUP CHAT
+    // Reset GC notifications when opening group chat
     if (tab === 'gc') {
         resetGCNotifications();
     }
