@@ -841,3 +841,244 @@ body {
 .message-link:hover {
     text-decoration: underline;
 }
+
+/* ============================================
+   NOTIFICATION STYLES - I-DAGDAG SA BABA NG style.css
+   ============================================ */
+
+/* Global Notification Badge */
+.global-notification-badge {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    width: 24px;
+    height: 24px;
+    background: #ef4444;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.5);
+    z-index: 10000;
+    animation: pulse 2s infinite;
+    cursor: pointer;
+}
+
+.global-notification-badge.hidden {
+    display: none;
+}
+
+.global-notification-count {
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+/* Desktop Notification Styles (for in-app) */
+.notification-toast {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    max-width: 350px;
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 9999;
+    animation: slideInLeft 0.3s ease, fadeOut 0.3s ease 4.7s;
+    border-left: 4px solid #4f46e5;
+}
+
+.notification-toast.pm {
+    border-left-color: #4f46e5;
+}
+
+.notification-toast.gc {
+    border-left-color: #10b981;
+}
+
+.notification-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+    border: 2px solid #4f46e5;
+}
+
+.notification-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.notification-content {
+    flex: 1;
+}
+
+.notification-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 4px;
+}
+
+.notification-body {
+    font-size: 13px;
+    color: #64748b;
+    line-height: 1.4;
+}
+
+.notification-time {
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 4px;
+}
+
+@keyframes slideInLeft {
+    from {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+/* Pulse Animation */
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 2px 8px rgba(239, 68, 68, 0.5);
+    }
+    50% {
+        transform: scale(1.1);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.7);
+    }
+}
+
+/* Unread Badge sa User List */
+.unread-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    min-width: 22px;
+    height: 22px;
+    background: #ef4444;
+    color: white;
+    border-radius: 22px;
+    padding: 0 6px;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+    animation: pulse 2s infinite;
+}
+
+/* Message Read Status */
+.status-read {
+    color: #22c55e;
+    margin-left: 6px;
+    font-size: 12px;
+}
+
+.status-sent {
+    color: #94a3b8;
+    margin-left: 6px;
+    font-size: 12px;
+}
+
+/* Loading Dots */
+.loading-dots {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.loading-dots span {
+    width: 4px;
+    height: 4px;
+    background: #64748b;
+    border-radius: 50%;
+    animation: bounce 1.4s infinite;
+}
+
+.loading-dots span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.loading-dots span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+}
+
+/* No Messages */
+.no-messages {
+    text-align: center;
+    color: #94a3b8;
+    padding: 40px 20px;
+    font-size: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.no-messages i {
+    font-size: 48px;
+    color: #cbd5e1;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .global-notification-badge {
+        top: 60px;
+        right: 15px;
+        width: 22px;
+        height: 22px;
+    }
+    
+    .global-notification-count {
+        font-size: 11px;
+    }
+    
+    .notification-toast {
+        left: 15px;
+        right: 15px;
+        max-width: none;
+        padding: 14px;
+    }
+    
+    .notification-avatar {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .notification-title {
+        font-size: 13px;
+    }
+    
+    .notification-body {
+        font-size: 12px;
+    }
+}
