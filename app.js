@@ -1,3 +1,7 @@
+// ============================================
+// MINI MESSENGER - COMPLETE FIXED VERSION
+// ============================================
+
 // Global Variables
 let currentUser = null;
 let currentPMUser = null;
@@ -5,12 +9,15 @@ let unsubscribeGC = null;
 let unsubscribePM = null;
 let unsubscribeUsers = null;
 let unsubscribeMembers = null;
+let unsubscribeUnreadPMs = null;
 let isUploading = false;
 
 // GROUP CHAT ID (Fixed for demo)
 const GROUP_CHAT_ID = "general_chat";
 
-// Check Authentication
+// ============================================
+// AUTHENTICATION
+// ============================================
 firebase.auth().onAuthStateChanged(async (user) => {
     if (!user) {
         window.location.href = 'login.html';
@@ -19,7 +26,6 @@ firebase.auth().onAuthStateChanged(async (user) => {
     
     currentUser = user;
     
-    // Wait for DOM to be ready
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => initializeApp());
     } else {
@@ -27,26 +33,41 @@ firebase.auth().onAuthStateChanged(async (user) => {
     }
 });
 
-// Initialize App
+// ============================================
+// INITIALIZATION - FIXED WITH PROPER FALLBACK
+// ============================================
 async function initializeApp() {
     try {
         console.log('Initializing app for user:', currentUser.uid);
         
-        // Update user info
+        // Get user's first letter for avatar fallback
+        const userFirstLetter = (currentUser.displayName || currentUser.email || 'U').charAt(0).toUpperCase();
+        const defaultAvatar = `https://ui-avatars.com/api/?name=${userFirstLetter}&background=4f46e5&color=fff&size=200&bold=true`;
+        
+        // Update user info with proper fallback
         const userNameEl = document.getElementById('current-user-name');
         const userPfpEl = document.getElementById('current-user-pfp');
         
-        if (userNameEl) userNameEl.textContent = currentUser.displayName || 'User';
-        if (userPfpEl) userPfpEl.src = currentUser.photoURL || 'https://i.ibb.co/4T7YQcD/default-user.png';
+        if (userNameEl) userNameEl.textContent = currentUser.displayName || currentUser.email.split('@')[0] || 'User';
         
-        // Update user online status
+        // Set profile picture with multiple fallbacks
+        if (userPfpEl) {
+            userPfpEl.src = currentUser.photoURL || defaultAvatar;
+            userPfpEl.onerror = function() {
+                this.onerror = null;
+                this.src = defaultAvatar;
+            };
+        }
+        
+        // Save/Update user in Firestore with fallback avatar
         await db.collection('users').doc(currentUser.uid).set({
             uid: currentUser.uid,
-            name: currentUser.displayName || 'Anonymous',
+            name: currentUser.displayName || currentUser.email.split('@')[0] || 'Anonymous',
             email: currentUser.email || '',
-            photoURL: currentUser.photoURL || 'https://i.ibb.co/4T7YQcD/default-user.png',
+            photoURL: currentUser.photoURL || defaultAvatar,
             online: true,
-            lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+            lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
+            lastActive: new Date().toISOString()
         }, { merge: true });
         
         // Initialize group chat
@@ -55,33 +76,38 @@ async function initializeApp() {
         // Load users for PM
         loadUsers();
         
+        // Listen to unread messages
+        listenToUnreadPMs();
+        
         // Set up presence
         setupPresence();
         
         // Setup enter key listeners
         setupEnterKeyListeners();
         
-        console.log('App initialized successfully');
+        console.log('✅ App initialized successfully');
         showToast('✅ Connected to chat!', 'success');
         
     } catch (error) {
-        console.error('Error initializing app:', error);
+        console.error('❌ Error initializing app:', error);
         showToast('Failed to initialize. Refreshing...', 'error');
         setTimeout(() => window.location.reload(), 2000);
     }
 }
 
-// Initialize Group Chat
+// ============================================
+// GROUP CHAT - FIXED WITH PROPER IMAGE HANDLING
+// ============================================
 async function initializeGroupChat() {
     const gcRef = db.collection('groupChats').doc(GROUP_CHAT_ID);
     const gcDoc = await gcRef.get();
     
     if (!gcDoc.exists) {
-        // Create default group chat
+        // Create default group chat with proper avatar
         await gcRef.set({
             name: 'General Chat',
             description: 'Welcome to the group! 👋',
-            photoURL: 'https://i.ibb.co/4T7YQcD/default-group.png',
+            photoURL: 'https://ui-avatars.com/api/?name=G&background=4f46e5&color=fff&size=200&bold=true',
             createdBy: currentUser.uid,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             members: [currentUser.uid],
@@ -98,17 +124,12 @@ async function initializeGroupChat() {
         }
     }
     
-    // Load GC info
     loadGCInfo();
-    
-    // Listen to GC messages
     listenToGCMessages();
-    
-    // Listen to GC members
     listenToGCMembers();
 }
 
-// Load Group Chat Info
+// Load Group Chat Info - WITH FALLBACK
 function loadGCInfo() {
     db.collection('groupChats').doc(GROUP_CHAT_ID).onSnapshot((doc) => {
         if (doc.exists) {
@@ -125,12 +146,19 @@ function loadGCInfo() {
             const descEl = document.getElementById('display-gc-desc');
             if (descEl) descEl.textContent = data.description || 'Welcome to the group! 👋';
             
-            // Update GC photo
-            const gcPFP = data.photoURL || 'https://i.ibb.co/4T7YQcD/default-group.png';
+            // Update GC photo with fallback
+            const gcPFP = data.photoURL || 'https://ui-avatars.com/api/?name=G&background=4f46e5&color=fff&size=200&bold=true';
             const pfpElements = ['gc-pfp', 'sidebar-gc-pfp', 'modal-gc-pfp'];
+            
             pfpElements.forEach(id => {
                 const el = document.getElementById(id);
-                if (el) el.src = gcPFP;
+                if (el) {
+                    el.src = gcPFP;
+                    el.onerror = function() {
+                        this.onerror = null;
+                        this.src = 'https://ui-avatars.com/api/?name=G&background=4f46e5&color=fff&size=200&bold=true';
+                    };
+                }
             });
             
             // Update member count
@@ -144,7 +172,7 @@ function loadGCInfo() {
     });
 }
 
-// Listen to Group Chat Messages - FIXED REAL TIME
+// Listen to Group Chat Messages - REAL TIME
 function listenToGCMessages() {
     if (unsubscribeGC) unsubscribeGC();
     
@@ -156,7 +184,6 @@ function listenToGCMessages() {
         .collection('messages')
         .orderBy('timestamp', 'asc')
         .onSnapshot((snapshot) => {
-            // Clear container
             messagesContainer.innerHTML = '';
             
             if (snapshot.empty) {
@@ -176,19 +203,16 @@ function listenToGCMessages() {
                 const userDoc = await db.collection('users').doc(senderId).get();
                 return { id: senderId, data: userDoc.data() };
             })).then((usersData) => {
-                // Create map of user data
                 const userMap = {};
                 usersData.filter(Boolean).forEach(user => {
                     if (user) userMap[user.id] = user.data;
                 });
                 
-                // Display messages
                 snapshot.forEach((doc) => {
                     const message = doc.data();
                     appendGCMessage(message, messagesContainer, userMap);
                 });
                 
-                // Scroll to bottom
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
             });
             
@@ -198,19 +222,29 @@ function listenToGCMessages() {
         });
 }
 
-// Append Group Chat Message - FIXED
+// ✅ FIXED: Append Group Chat Message - WALANG "M" NA BROKEN IMAGE
 function appendGCMessage(message, container, userMap = {}) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${message.senderId === currentUser?.uid ? 'sent' : 'received'}`;
     
     // Get sender info
     let senderName = message.senderName || 'Unknown';
-    let senderPhoto = message.senderPhoto || 'https://i.ibb.co/4T7YQcD/default-user.png';
+    let senderPhoto = message.senderPhoto || '';
+    let senderId = message.senderId;
     
+    // Get proper sender info
     if (message.senderId !== currentUser?.uid && userMap[message.senderId]) {
         senderName = userMap[message.senderId].name || senderName;
         senderPhoto = userMap[message.senderId].photoURL || senderPhoto;
+        senderId = message.senderId;
     }
+    
+    // Create fallback avatar using UI Avatars
+    const firstLetter = senderName.charAt(0).toUpperCase();
+    const fallbackAvatar = `https://ui-avatars.com/api/?name=${firstLetter}&background=${message.senderId === currentUser?.uid ? '4f46e5' : '64748b'}&color=fff&size=100&bold=true`;
+    
+    // Use sender photo or fallback
+    const avatarUrl = senderPhoto || fallbackAvatar;
     
     const time = message.timestamp ? 
         new Date(message.timestamp.toDate()).toLocaleTimeString('en-US', {
@@ -221,10 +255,13 @@ function appendGCMessage(message, container, userMap = {}) {
     
     messageDiv.innerHTML = `
         <div class="message-avatar">
-            <img src="${escapeHTML(senderPhoto)}" alt="${escapeHTML(senderName)}" onerror="this.src='https://i.ibb.co/4T7YQcD/default-user.png'">
+            <img src="${escapeHTML(avatarUrl)}" 
+                 alt="${escapeHTML(senderName)}" 
+                 loading="lazy"
+                 onerror="this.onerror=null; this.src='${escapeHTML(fallbackAvatar)}';">
         </div>
         <div class="message-content">
-            <div class="message-sender">${escapeHTML(senderName)}</div>
+            <div class="message-sender">${escapeHTML(message.senderId === currentUser?.uid ? 'You' : senderName)}</div>
             <div class="message-text">${formatMessageText(message.text || '')}</div>
             <div class="message-time">${time}</div>
         </div>
@@ -233,25 +270,44 @@ function appendGCMessage(message, container, userMap = {}) {
     container.appendChild(messageDiv);
 }
 
-// Format message text (handle links, emoji, etc)
+// Format message text
 function formatMessageText(text) {
+    if (!text) return '';
+    
     // Convert URLs to clickable links
     const urlRegex = /(https?:\/\/[^\s]+)/g;
-    text = text.replace(urlRegex, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+    text = text.replace(urlRegex, '<a href="$1" target="_blank" rel="noopener noreferrer" class="message-link">$1</a>');
     
     // Convert line breaks
     text = text.replace(/\n/g, '<br>');
     
+    // Convert emoji shortcuts
+    const emojiMap = {
+        ':)': '😊',
+        ':(': '😢',
+        ':D': '😃',
+        ';)': '😉',
+        '<3': '❤️',
+        'lol': '😂',
+        'omg': '😱',
+        ':p': '😋',
+        ':P': '😋'
+    };
+    
+    Object.keys(emojiMap).forEach(key => {
+        const regex = new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+        text = text.replace(regex, emojiMap[key]);
+    });
+    
     return text;
 }
 
-// Send Group Chat Message - FIXED WITH ERROR HANDLING
+// ✅ FIXED: Send Group Chat Message - WITH LOADING STATE
 async function sendGCMessage() {
     const input = document.getElementById('gc-message-input');
     if (!input) return;
     
     const text = input.value.trim();
-    
     if (!text) {
         showToast('Please type a message', 'error');
         return;
@@ -262,9 +318,16 @@ async function sendGCMessage() {
         return;
     }
     
-    // Clear input immediately
+    // Disable input
+    input.disabled = true;
+    const sendBtn = document.querySelector('#gc-view .send-btn');
+    if (sendBtn) {
+        sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        sendBtn.disabled = true;
+    }
+    
+    // Clear input
     input.value = '';
-    input.focus();
     
     try {
         // Ensure group chat exists
@@ -275,7 +338,7 @@ async function sendGCMessage() {
             await gcRef.set({
                 name: 'General Chat',
                 description: 'Welcome to the group! 👋',
-                photoURL: 'https://i.ibb.co/4T7YQcD/default-group.png',
+                photoURL: 'https://ui-avatars.com/api/?name=G&background=4f46e5&color=fff&size=200&bold=true',
                 createdBy: currentUser.uid,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 members: [currentUser.uid],
@@ -287,19 +350,27 @@ async function sendGCMessage() {
         await gcRef.collection('messages').add({
             text: text,
             senderId: currentUser.uid,
-            senderName: currentUser.displayName || 'User',
-            senderPhoto: currentUser.photoURL || 'https://i.ibb.co/4T7YQcD/default-user.png',
+            senderName: currentUser.displayName || currentUser.email.split('@')[0] || 'User',
+            senderPhoto: currentUser.photoURL || '',
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
         
-        console.log('Message sent successfully');
+        console.log('✅ Message sent successfully');
         
     } catch (error) {
-        console.error('Error sending message:', error);
+        console.error('❌ Error sending message:', error);
         showToast('Failed to send message', 'error');
         
         // Restore text if failed
         input.value = text;
+    } finally {
+        // Re-enable input
+        input.disabled = false;
+        input.focus();
+        if (sendBtn) {
+            sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+            sendBtn.disabled = false;
+        }
     }
 }
 
@@ -312,8 +383,6 @@ function listenToGCMembers() {
         .onSnapshot(async (doc) => {
             if (doc.exists) {
                 const members = doc.data().members || [];
-                
-                // Load members list in modal
                 const membersList = document.getElementById('members-list');
                 if (!membersList) return;
                 
@@ -323,17 +392,22 @@ function listenToGCMembers() {
                     const userDoc = await db.collection('users').doc(memberId).get();
                     if (userDoc.exists) {
                         const user = userDoc.data();
+                        const firstLetter = (user.name || 'User').charAt(0).toUpperCase();
+                        const fallbackAvatar = `https://ui-avatars.com/api/?name=${firstLetter}&background=4f46e5&color=fff&size=100&bold=true`;
+                        const avatarUrl = user.photoURL || fallbackAvatar;
+                        
                         const memberDiv = document.createElement('div');
-                        memberDiv.className = 'user-item';
+                        memberDiv.className = 'member-item';
                         memberDiv.innerHTML = `
-                            <div class="user-item-avatar">
-                                <img src="${user.photoURL || 'https://i.ibb.co/4T7YQcD/default-user.png'}" 
+                            <div class="member-avatar">
+                                <img src="${escapeHTML(avatarUrl)}" 
                                      alt="${escapeHTML(user.name || 'User')}"
-                                     onerror="this.src='https://i.ibb.co/4T7YQcD/default-user.png'">
+                                     loading="lazy"
+                                     onerror="this.onerror=null; this.src='${escapeHTML(fallbackAvatar)}';">
                             </div>
-                            <div class="user-item-info">
-                                <div class="user-item-name">${escapeHTML(user.name || 'User')}</div>
-                                <div class="user-item-status">${memberId === currentUser?.uid ? '👑 You' : '👤 Member'}</div>
+                            <div class="member-info">
+                                <div class="member-name">${escapeHTML(user.name || 'User')}</div>
+                                <div class="member-role">${memberId === currentUser?.uid ? '👑 You' : '👤 Member'}</div>
                             </div>
                         `;
                         membersList.appendChild(memberDiv);
@@ -342,6 +416,10 @@ function listenToGCMembers() {
             }
         });
 }
+
+// ============================================
+// USERS & PRIVATE MESSAGES - FIXED
+// ============================================
 
 // Load Users for PM
 function loadUsers() {
@@ -352,7 +430,11 @@ function loadUsers() {
             const users = [];
             snapshot.forEach((doc) => {
                 if (doc.id !== currentUser?.uid) {
-                    users.push({ id: doc.id, ...doc.data() });
+                    users.push({ 
+                        id: doc.id, 
+                        ...doc.data(),
+                        unreadCount: 0 
+                    });
                 }
             });
             
@@ -374,7 +456,7 @@ function loadUsers() {
         });
 }
 
-// Display Users List
+// ✅ FIXED: Display Users List - WALANG BROKEN IMAGE
 function displayUsers(users) {
     const usersList = document.getElementById('users-list');
     if (!usersList) return;
@@ -389,25 +471,42 @@ function displayUsers(users) {
     users.forEach(user => {
         const userDiv = document.createElement('div');
         userDiv.className = 'user-item';
+        userDiv.setAttribute('data-user-id', user.id);
         userDiv.onclick = () => openPrivateChat(user);
+        
+        // Create fallback avatar
+        const firstLetter = (user.name || 'User').charAt(0).toUpperCase();
+        const fallbackAvatar = `https://ui-avatars.com/api/?name=${firstLetter}&background=4f46e5&color=fff&size=100&bold=true`;
+        const avatarUrl = user.photoURL || fallbackAvatar;
+        
+        const statusClass = user.online ? 'online' : 'offline';
+        const statusText = user.online ? '● Online' : '○ Offline';
+        
+        let unreadBadge = '';
+        if (user.unreadCount > 0) {
+            unreadBadge = `<span class="unread-badge">${user.unreadCount > 99 ? '99+' : user.unreadCount}</span>`;
+        }
+        
         userDiv.innerHTML = `
             <div class="user-item-avatar">
-                <img src="${user.photoURL || 'https://i.ibb.co/4T7YQcD/default-user.png'}" 
+                <img src="${escapeHTML(avatarUrl)}" 
                      alt="${escapeHTML(user.name || 'User')}"
-                     onerror="this.src='https://i.ibb.co/4T7YQcD/default-user.png'">
+                     loading="lazy"
+                     onerror="this.onerror=null; this.src='${escapeHTML(fallbackAvatar)}';">
+                <span class="status-indicator ${statusClass}"></span>
             </div>
             <div class="user-item-info">
                 <div class="user-item-name">${escapeHTML(user.name || 'User')}</div>
-                <div class="user-item-status ${user.online ? 'online' : 'offline'}">
-                    ${user.online ? '● Online' : '○ Offline'}
-                </div>
+                <div class="user-item-status ${statusClass}">${statusText}</div>
+                ${unreadBadge}
             </div>
         `;
+        
         usersList.appendChild(userDiv);
     });
 }
 
-// Display Sidebar Users
+// ✅ FIXED: Display Sidebar Users
 function displaySidebarUsers(users) {
     const sidebarUsers = document.getElementById('sidebar-users-list');
     if (!sidebarUsers) return;
@@ -416,39 +515,117 @@ function displaySidebarUsers(users) {
     
     users.forEach(user => {
         const userDiv = document.createElement('div');
-        userDiv.className = 'user-item';
+        userDiv.className = 'sidebar-user-item user-item';
+        userDiv.setAttribute('data-user-id', user.id);
         userDiv.onclick = () => {
             openPrivateChat(user);
             toggleSidebar();
         };
+        
+        const firstLetter = (user.name || 'User').charAt(0).toUpperCase();
+        const fallbackAvatar = `https://ui-avatars.com/api/?name=${firstLetter}&background=4f46e5&color=fff&size=100&bold=true`;
+        const avatarUrl = user.photoURL || fallbackAvatar;
+        
+        const statusClass = user.online ? 'online' : 'offline';
+        const statusText = user.online ? '● Online' : '○ Offline';
+        
+        let unreadBadge = '';
+        if (user.unreadCount > 0) {
+            unreadBadge = `<span class="unread-badge">${user.unreadCount > 99 ? '99+' : user.unreadCount}</span>`;
+        }
+        
         userDiv.innerHTML = `
             <div class="user-item-avatar">
-                <img src="${user.photoURL || 'https://i.ibb.co/4T7YQcD/default-user.png'}" 
+                <img src="${escapeHTML(avatarUrl)}" 
                      alt="${escapeHTML(user.name || 'User')}"
-                     onerror="this.src='https://i.ibb.co/4T7YQcD/default-user.png'">
+                     loading="lazy"
+                     onerror="this.onerror=null; this.src='${escapeHTML(fallbackAvatar)}';">
+                <span class="status-indicator ${statusClass}"></span>
             </div>
             <div class="user-item-info">
                 <div class="user-item-name">${escapeHTML(user.name || 'User')}</div>
-                <div class="user-item-status ${user.online ? 'online' : 'offline'}">
-                    ${user.online ? '● Online' : '○ Offline'}
-                </div>
+                <div class="user-item-status ${statusClass}">${statusText}</div>
+                ${unreadBadge}
             </div>
         `;
+        
         sidebarUsers.appendChild(userDiv);
     });
 }
 
-// Open Private Chat
-function openPrivateChat(user) {
+// Listen to Unread PMs
+function listenToUnreadPMs() {
+    if (!currentUser) return;
+    
+    if (unsubscribeUnreadPMs) unsubscribeUnreadPMs();
+    
+    unsubscribeUnreadPMs = db.collectionGroup('messages')
+        .where('receiverId', '==', currentUser.uid)
+        .where('read', '==', false)
+        .onSnapshot((snapshot) => {
+            const unreadMap = new Map();
+            
+            snapshot.forEach(doc => {
+                const msg = doc.data();
+                const senderId = msg.senderId;
+                unreadMap.set(senderId, (unreadMap.get(senderId) || 0) + 1);
+            });
+            
+            unreadMap.forEach((count, senderId) => {
+                updateUserUnreadBadge(senderId, count);
+            });
+            
+            const totalUnread = unreadMap.size;
+            document.title = totalUnread > 0 ? `(${totalUnread}) Mini Messenger` : 'Mini Messenger';
+        });
+}
+
+// Update Unread Badge
+function updateUserUnreadBadge(userId, count) {
+    const userItems = document.querySelectorAll(`.user-item[data-user-id="${userId}"]`);
+    userItems.forEach(item => {
+        let badge = item.querySelector('.unread-badge');
+        
+        if (count > 0) {
+            if (!badge) {
+                badge = document.createElement('span');
+                badge.className = 'unread-badge';
+                item.querySelector('.user-item-info').appendChild(badge);
+            }
+            badge.textContent = count > 99 ? '99+' : count;
+            badge.style.display = 'flex';
+        } else {
+            if (badge) badge.style.display = 'none';
+        }
+    });
+}
+
+// ✅ FIXED: Open Private Chat
+async function openPrivateChat(user) {
     if (!user) return;
     
     currentPMUser = user;
+    
+    // Mark messages as read when opening chat
+    await markMessagesAsRead(user.id);
     
     const pmNameEl = document.getElementById('pm-user-name');
     const pmPfpEl = document.getElementById('pm-user-pfp');
     
     if (pmNameEl) pmNameEl.textContent = user.name || 'User';
-    if (pmPfpEl) pmPfpEl.src = user.photoURL || 'https://i.ibb.co/4T7YQcD/default-user.png';
+    
+    // Set PM user avatar with fallback
+    if (pmPfpEl) {
+        const firstLetter = (user.name || 'User').charAt(0).toUpperCase();
+        const fallbackAvatar = `https://ui-avatars.com/api/?name=${firstLetter}&background=4f46e5&color=fff&size=100&bold=true`;
+        const avatarUrl = user.photoURL || fallbackAvatar;
+        
+        pmPfpEl.src = avatarUrl;
+        pmPfpEl.onerror = function() {
+            this.onerror = null;
+            this.src = fallbackAvatar;
+        };
+    }
     
     const usersList = document.getElementById('users-list');
     const pmChatArea = document.getElementById('pm-chat-area');
@@ -456,8 +633,35 @@ function openPrivateChat(user) {
     if (usersList) usersList.classList.add('hidden');
     if (pmChatArea) pmChatArea.classList.remove('hidden');
     
-    // Listen to PM messages
     listenToPMMessages(user.id);
+}
+
+// Mark Messages as Read
+async function markMessagesAsRead(senderId) {
+    if (!currentUser || !senderId) return;
+    
+    const chatId = [currentUser.uid, senderId].sort().join('_');
+    
+    try {
+        const messagesRef = db.collection('privateChats')
+            .doc(chatId)
+            .collection('messages')
+            .where('receiverId', '==', currentUser.uid)
+            .where('read', '==', false);
+        
+        const snapshot = await messagesRef.get();
+        
+        const batch = db.batch();
+        snapshot.forEach(doc => {
+            batch.update(doc.ref, { read: true });
+        });
+        
+        await batch.commit();
+        updateUserUnreadBadge(senderId, 0);
+        
+    } catch (error) {
+        console.error('Error marking messages as read:', error);
+    }
 }
 
 // Close Private Chat
@@ -473,7 +677,7 @@ function closePM() {
     if (unsubscribePM) unsubscribePM();
 }
 
-// Listen to Private Messages - FIXED REAL TIME
+// Listen to Private Messages
 function listenToPMMessages(otherUserId) {
     if (unsubscribePM) unsubscribePM();
     
@@ -500,18 +704,34 @@ function listenToPMMessages(otherUserId) {
             });
             
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            if (currentPMUser?.id === otherUserId) {
+                markMessagesAsRead(otherUserId);
+            }
         });
 }
 
-// Append Private Message
+// ✅ FIXED: Append Private Message - WALANG BROKEN IMAGE
 function appendPMMessage(message, container) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${message.senderId === currentUser?.uid ? 'sent' : 'received'}`;
     
-    const senderName = message.senderId === currentUser?.uid ? 'You' : (currentPMUser?.name || 'User');
-    const senderPhoto = message.senderId === currentUser?.uid ? 
-        currentUser?.photoURL : 
-        (currentPMUser?.photoURL || 'https://i.ibb.co/4T7YQcD/default-user.png');
+    const isSentByMe = message.senderId === currentUser?.uid;
+    
+    let senderName, senderPhoto, senderFirstLetter;
+    
+    if (isSentByMe) {
+        senderName = 'You';
+        senderFirstLetter = (currentUser?.displayName || 'U').charAt(0).toUpperCase();
+        senderPhoto = currentUser?.photoURL || '';
+    } else {
+        senderName = currentPMUser?.name || 'User';
+        senderFirstLetter = (currentPMUser?.name || 'U').charAt(0).toUpperCase();
+        senderPhoto = currentPMUser?.photoURL || '';
+    }
+    
+    const fallbackAvatar = `https://ui-avatars.com/api/?name=${senderFirstLetter}&background=${isSentByMe ? '4f46e5' : '64748b'}&color=fff&size=100&bold=true`;
+    const avatarUrl = senderPhoto || fallbackAvatar;
     
     const time = message.timestamp ? 
         new Date(message.timestamp.toDate()).toLocaleTimeString('en-US', {
@@ -520,21 +740,34 @@ function appendPMMessage(message, container) {
             hour12: true
         }) : 'Just now';
     
+    let readStatus = '';
+    if (isSentByMe) {
+        readStatus = message.read 
+            ? '<span class="status-read"><i class="fas fa-check-double"></i></span>' 
+            : '<span class="status-sent"><i class="fas fa-check"></i></span>';
+    }
+    
     messageDiv.innerHTML = `
         <div class="message-avatar">
-            <img src="${escapeHTML(senderPhoto)}" alt="${escapeHTML(senderName)}" onerror="this.src='https://i.ibb.co/4T7YQcD/default-user.png'">
+            <img src="${escapeHTML(avatarUrl)}" 
+                 alt="${escapeHTML(senderName)}"
+                 loading="lazy"
+                 onerror="this.onerror=null; this.src='${escapeHTML(fallbackAvatar)}';">
         </div>
         <div class="message-content">
             <div class="message-sender">${escapeHTML(senderName)}</div>
             <div class="message-text">${formatMessageText(message.text || '')}</div>
-            <div class="message-time">${time}</div>
+            <div class="message-time">
+                ${time}
+                ${readStatus}
+            </div>
         </div>
     `;
     
     container.appendChild(messageDiv);
 }
 
-// Send Private Message - FIXED REAL TIME
+// ✅ FIXED: Send Private Message
 async function sendPM() {
     if (!currentPMUser) {
         showToast('Select a user first', 'error');
@@ -545,15 +778,19 @@ async function sendPM() {
     if (!input) return;
     
     const text = input.value.trim();
-    
     if (!text) {
         showToast('Please type a message', 'error');
         return;
     }
     
-    // Clear input immediately
+    input.disabled = true;
+    const sendBtn = document.querySelector('#pm-view .send-btn');
+    if (sendBtn) {
+        sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        sendBtn.disabled = true;
+    }
+    
     input.value = '';
-    input.focus();
     
     try {
         const chatId = [currentUser.uid, currentPMUser.id].sort().join('_');
@@ -565,29 +802,35 @@ async function sendPM() {
                 text: text,
                 senderId: currentUser.uid,
                 senderName: currentUser.displayName || 'You',
-                senderPhoto: currentUser.photoURL || 'https://i.ibb.co/4T7YQcD/default-user.png',
+                senderPhoto: currentUser.photoURL || '',
                 receiverId: currentPMUser.id,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                 read: false
             });
             
-        console.log('PM sent successfully');
+        console.log('✅ PM sent successfully');
         
     } catch (error) {
-        console.error('Error sending PM:', error);
+        console.error('❌ Error sending PM:', error);
         showToast('Failed to send message', 'error');
         input.value = text;
+    } finally {
+        input.disabled = false;
+        input.focus();
+        if (sendBtn) {
+            sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+            sendBtn.disabled = false;
+        }
     }
 }
 
 // ============================================
-// ✅ FIXED IMAGE UPLOAD - WORKING 100%
+// IMAGE UPLOAD - FIXED
 // ============================================
 
 // Upload image to IMGBB
 async function uploadImageToIMGBB(file) {
     return new Promise((resolve, reject) => {
-        // Check if already uploading
         if (isUploading) {
             reject('Upload already in progress');
             return;
@@ -595,14 +838,12 @@ async function uploadImageToIMGBB(file) {
         
         isUploading = true;
         
-        // Validate file
         if (!file) {
             isUploading = false;
             reject('No file selected');
             return;
         }
         
-        // Check file type
         if (!file.type.match('image.*')) {
             isUploading = false;
             showToast('Please select an image file', 'error');
@@ -610,7 +851,6 @@ async function uploadImageToIMGBB(file) {
             return;
         }
         
-        // Check file size (max 5MB)
         if (file.size > 5 * 1024 * 1024) {
             isUploading = false;
             showToast('File too large. Max 5MB', 'error');
@@ -621,49 +861,38 @@ async function uploadImageToIMGBB(file) {
         const formData = new FormData();
         formData.append('image', file);
         
-        // Show loading toast
         showToast('📤 Uploading image...', 'info');
-        
-        console.log('Uploading to IMGBB...');
         
         fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
             method: 'POST',
             body: formData
         })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
+        .then(response => response.json())
         .then(data => {
             isUploading = false;
             
             if (data.success) {
-                console.log('Upload successful:', data.data.url);
                 showToast('✅ Image uploaded successfully!', 'success');
                 resolve(data.data.url);
             } else {
-                console.error('IMGBB error:', data.error);
-                showToast('❌ Upload failed: ' + (data.error?.message || 'Unknown error'), 'error');
+                showToast('❌ Upload failed', 'error');
                 reject(data.error);
             }
         })
         .catch(error => {
             isUploading = false;
             console.error('Upload error:', error);
-            showToast('❌ Upload failed. Using default image.', 'error');
-            // Return default image instead of failing
-            resolve('https://i.ibb.co/4T7YQcD/default-group.png');
+            showToast('❌ Upload failed', 'error');
+            reject(error);
         });
     });
 }
 
-// Change Group Chat PFP - FIXED WORKING
+// Change Group Chat PFP
 async function changeGCPFP() {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = 'image/jpeg,image/png,image/jpg,image/gif,image/webp';
+    input.accept = 'image/*';
     
     input.onchange = async (e) => {
         const file = e.target.files[0];
@@ -688,11 +917,11 @@ async function changeGCPFP() {
     input.click();
 }
 
-// Change User Profile Picture - FIXED WORKING
+// Change User Profile Picture
 async function changeProfilePicture() {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = 'image/jpeg,image/png,image/jpg,image/gif,image/webp';
+    input.accept = 'image/*';
     
     input.onchange = async (e) => {
         const file = e.target.files[0];
@@ -701,20 +930,19 @@ async function changeProfilePicture() {
         try {
             const imageUrl = await uploadImageToIMGBB(file);
             
-            // Update Firestore
             await db.collection('users').doc(currentUser.uid).update({
                 photoURL: imageUrl,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
             
-            // Update Auth profile
             await currentUser.updateProfile({
                 photoURL: imageUrl
             });
             
-            // Update UI
             const userPfpEl = document.getElementById('current-user-pfp');
-            if (userPfpEl) userPfpEl.src = imageUrl;
+            if (userPfpEl) {
+                userPfpEl.src = imageUrl;
+            }
             
             showToast('✅ Profile picture updated!', 'success');
             
@@ -733,7 +961,6 @@ async function changeProfilePicture() {
 
 // Toast notification
 function showToast(message, type = 'info') {
-    // Remove existing toast
     const existingToast = document.querySelector('.toast');
     if (existingToast) existingToast.remove();
     
@@ -745,18 +972,10 @@ function showToast(message, type = 'info') {
     if (type === 'error') icon = 'exclamation-circle';
     if (type === 'warning') icon = 'exclamation-triangle';
     
-    toast.innerHTML = `
-        <i class="fas fa-${icon}"></i>
-        <span>${message}</span>
-    `;
-    
+    toast.innerHTML = `<i class="fas fa-${icon}"></i><span>${message}</span>`;
     document.body.appendChild(toast);
     
-    // Force reflow
-    toast.offsetHeight;
-    
-    toast.classList.add('show');
-    
+    setTimeout(() => toast.classList.add('show'), 10);
     setTimeout(() => {
         toast.classList.remove('show');
         setTimeout(() => toast.remove(), 300);
@@ -765,14 +984,12 @@ function showToast(message, type = 'info') {
 
 // Setup Enter Key Listeners
 function setupEnterKeyListeners() {
-    // GC message enter key
     const gcInput = document.getElementById('gc-message-input');
     if (gcInput) {
         gcInput.removeEventListener('keypress', handleGCEnterKey);
         gcInput.addEventListener('keypress', handleGCEnterKey);
     }
     
-    // PM message enter key
     const pmInput = document.getElementById('pm-message-input');
     if (pmInput) {
         pmInput.removeEventListener('keypress', handlePMEnterKey);
@@ -827,8 +1044,9 @@ function closeModal(modalId) {
 
 // Edit GC Name
 async function editGCName() {
-    const newName = prompt('Enter new group name:', document.getElementById('display-gc-name')?.textContent || 'General Chat');
-    if (newName && newName.trim()) {
+    const currentName = document.getElementById('display-gc-name')?.textContent || 'General Chat';
+    const newName = prompt('Enter new group name:', currentName);
+    if (newName?.trim()) {
         await db.collection('groupChats').doc(GROUP_CHAT_ID).update({
             name: newName.trim()
         });
@@ -838,8 +1056,9 @@ async function editGCName() {
 
 // Edit GC Description
 async function editGCDesc() {
-    const newDesc = prompt('Enter new group description:', document.getElementById('display-gc-desc')?.textContent || 'Welcome to the group! 👋');
-    if (newDesc && newDesc.trim()) {
+    const currentDesc = document.getElementById('display-gc-desc')?.textContent || 'Welcome to the group! 👋';
+    const newDesc = prompt('Enter new group description:', currentDesc);
+    if (newDesc?.trim()) {
         await db.collection('groupChats').doc(GROUP_CHAT_ID).update({
             description: newDesc.trim()
         });
@@ -858,7 +1077,6 @@ function setupPresence() {
         }
     });
     
-    // Also handle page hide
     window.addEventListener('pagehide', () => {
         if (currentUser) {
             db.collection('users').doc(currentUser.uid).update({
@@ -888,7 +1106,7 @@ async function logout() {
     }
 }
 
-// Helper: Escape HTML
+// Escape HTML
 function escapeHTML(text) {
     if (!text) return '';
     const div = document.createElement('div');
