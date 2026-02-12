@@ -1,8 +1,3 @@
-/* ============================================
-   MINI MESSENGER - COMPLETE FIXED CSS
-   FLEXIBLE INPUT, KITA ANG ONLINE STATUS AT BADGE!
-   ============================================ */
-
 * {
     margin: 0;
     padding: 0;
@@ -135,12 +130,11 @@ body {
     color: white;
 }
 
-/* Chat Views */
 .chat-view {
     display: none;
     flex: 1;
     flex-direction: column;
-    min-height: 0; /* IMPORTANT: Para sa flexbox scrolling */
+    min-height: 0;
     height: 100%;
 }
 
@@ -148,7 +142,6 @@ body {
     display: flex;
 }
 
-/* GC Header */
 .gc-header {
     display: flex;
     align-items: center;
@@ -188,9 +181,6 @@ body {
     color: #666;
 }
 
-/* ============================================
-   MESSAGES CONTAINER - FLEXIBLE TO!
-   ============================================ */
 .messages-container {
     flex: 1 1 auto;
     overflow-y: auto;
@@ -199,20 +189,17 @@ body {
     display: flex;
     flex-direction: column;
     gap: 12px;
-    min-height: 0; /* IMPORTANT: Para gumana ang scrolling */
+    min-height: 0;
     height: 100%;
 }
 
-/* ============================================
-   MESSAGE INPUT - FLEXIBLE NA 'TO!
-   ============================================ */
 .message-input-container {
     display: flex;
     padding: 15px 20px;
     background: white;
     border-top: 1px solid #f0f0f0;
     gap: 10px;
-    flex-shrink: 0; /* Hindi lumiliit */
+    flex-shrink: 0;
     width: 100%;
 }
 
@@ -223,7 +210,7 @@ body {
     border-radius: 25px;
     font-size: 14px;
     outline: none;
-    min-width: 0; /* Para hindi magoverflow */
+    min-width: 0;
 }
 
 .message-input-container input:focus {
@@ -249,9 +236,6 @@ body {
     cursor: not-allowed;
 }
 
-/* ============================================
-   MESSAGES - AYOS NA AYOS!
-   ============================================ */
 .message {
     display: flex;
     align-items: flex-end;
@@ -279,6 +263,7 @@ body {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    border-radius: 50%;
 }
 
 .message-content {
@@ -327,9 +312,6 @@ body {
     color: rgba(255,255,255,0.7);
 }
 
-/* ============================================
-   USERS LIST - MAY BADGE AT STATUS!
-   ============================================ */
 .users-list-header {
     display: flex;
     justify-content: space-between;
@@ -361,9 +343,6 @@ body {
     min-height: 0;
 }
 
-/* ============================================
-   USER ITEM - KITA ANG ONLINE STATUS AT BADGE!
-   ============================================ */
 .user-item {
     display: flex;
     align-items: center;
@@ -382,13 +361,12 @@ body {
     box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 
-/* USER AVATAR - DITO NAKALAGAY ANG BADGE AT STATUS */
 .user-item-avatar {
     position: relative;
     width: 48px;
     height: 48px;
     border-radius: 50%;
-    overflow: hidden;
+    overflow: visible; 
     margin-right: 12px;
     flex-shrink: 0;
     border: 2px solid #4f46e5;
@@ -399,18 +377,18 @@ body {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    border-radius: 50%;
 }
 
-/* STATUS INDICATOR - NASA BABA NG PFP, KITA AGAD! */
 .status-indicator {
     position: absolute;
-    bottom: 2px;
-    right: 2px;
+    bottom: 0px;
+    right: 0px; 
     width: 14px;
     height: 14px;
     border-radius: 50%;
     border: 2px solid white;
-    z-index: 5;
+    z-index: 50;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
@@ -423,11 +401,10 @@ body {
     background: #94a3b8;
 }
 
-/* UNREAD BADGE - NASA ITAAS NG PFP, KITA AGAD! */
 .user-item-avatar .unread-badge {
     position: absolute;
-    top: -4px;
-    right: -4px;
+    top: -6px; 
+    right: -6px; 
     min-width: 22px;
     height: 22px;
     background: #ef4444;
@@ -441,14 +418,13 @@ body {
     justify-content: center;
     border: 2px solid white;
     box-shadow: 0 2px 8px rgba(239, 68, 68, 0.5);
-    z-index: 10;
+    z-index: 100; 
     animation: pulse 2s infinite;
 }
 
-/* USER INFO */
 .user-item-info {
     flex: 1;
-    min-width: 0; /* Para sa text overflow */
+    min-width: 0;
 }
 
 .user-item-name {
@@ -476,20 +452,21 @@ body {
     color: #94a3b8;
 }
 
-/* HIDE OLD BADGE SA INFO */
 .user-item-info .unread-badge {
     display: none !important;
 }
 
-/* ============================================
-   PM CHAT AREA - FLEXIBLE INPUT!
-   ============================================ */
+.sidebar-user-item .user-item-avatar {
+    position: relative;
+    overflow: visible !important; 
+}
+
 .pm-chat-area {
     display: flex;
     flex-direction: column;
     height: 100%;
     background: #f8f9fa;
-    min-height: 0; /* IMPORTANT */
+    min-height: 0;
 }
 
 .pm-chat-area.hidden {
@@ -535,7 +512,6 @@ body {
     color: #1e293b;
 }
 
-/* PM Messages Container */
 #pm-messages {
     flex: 1 1 auto;
     overflow-y: auto;
@@ -547,7 +523,6 @@ body {
     min-height: 0;
 }
 
-/* PM Message Input - FLEXIBLE! */
 .pm-chat-area .message-input-container {
     display: flex;
     padding: 15px 20px;
@@ -586,9 +561,6 @@ body {
     flex-shrink: 0;
 }
 
-/* ============================================
-   SIDEBAR
-   ============================================ */
 .sidebar {
     position: absolute;
     top: 0;
@@ -645,9 +617,6 @@ body {
     letter-spacing: 1px;
 }
 
-/* ============================================
-   ANIMATIONS
-   ============================================ */
 @keyframes pulse {
     0%, 100% {
         transform: scale(1);
@@ -673,9 +642,6 @@ body {
     }
 }
 
-/* ============================================
-   TOAST NOTIFICATIONS
-   ============================================ */
 .toast {
     position: fixed;
     bottom: 20px;
@@ -714,9 +680,6 @@ body {
     color: white;
 }
 
-/* ============================================
-   NO MESSAGES / NO USERS
-   ============================================ */
 .no-messages, .no-users {
     text-align: center;
     color: #94a3b8;
@@ -733,9 +696,6 @@ body {
     color: #cbd5e1;
 }
 
-/* ============================================
-   MODAL
-   ============================================ */
 .modal {
     display: none;
     position: absolute;
@@ -762,9 +722,6 @@ body {
     animation: slideUp 0.3s ease;
 }
 
-/* ============================================
-   RESPONSIVE
-   ============================================ */
 @media (max-width: 480px) {
     #app {
         height: 100vh;
@@ -781,15 +738,15 @@ body {
         min-width: 20px;
         height: 20px;
         font-size: 11px;
-        top: -3px;
-        right: -3px;
+        top: -5px; 
+        right: -5px; 
     }
     
     .status-indicator {
         width: 12px;
         height: 12px;
-        bottom: 1px;
-        right: 1px;
+        bottom: 0px;
+        right: 0px;
     }
     
     .message-input-container {
@@ -807,16 +764,10 @@ body {
     }
 }
 
-/* ============================================
-   HIDDEN CLASS
-   ============================================ */
 .hidden {
     display: none !important;
 }
 
-/* ============================================
-   SCROLLBAR - MAS MAGANDA
-   ============================================ */
 .messages-container::-webkit-scrollbar,
 .users-list::-webkit-scrollbar,
 .sidebar-content::-webkit-scrollbar {
@@ -840,4 +791,107 @@ body {
 .users-list::-webkit-scrollbar-thumb:hover,
 .sidebar-content::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
+}
+
+.user-item-avatar {
+    overflow: visible !important;
+}
+
+.user-item-avatar .unread-badge {
+    top: -6px !important;
+    right: -6px !important;
+    z-index: 999 !important;
+}
+
+.sidebar-user-item .user-item-avatar {
+    overflow: visible !important;
+}
+
+.message-avatar {
+    overflow: hidden !important;
+}
+
+.member-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    background: #f8fafc;
+    border-radius: 12px;
+    margin-bottom: 8px;
+}
+
+.member-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    margin-right: 12px;
+    border: 2px solid #4f46e5;
+    position: relative;
+}
+
+.member-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.member-info {
+    flex: 1;
+}
+
+.member-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: #1e293b;
+}
+
+.member-role {
+    font-size: 12px;
+    color: #64748b;
+}
+
+.message-link {
+    color: #4f46e5;
+    text-decoration: none;
+    word-break: break-all;
+}
+
+.message-link:hover {
+    text-decoration: underline;
+}
+
+.loading-dots {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.loading-dots span {
+    width: 4px;
+    height: 4px;
+    background: #64748b;
+    border-radius: 50%;
+    animation: bounce 1.4s infinite;
+}
+
+.loading-dots span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.loading-dots span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+.status-read {
+    color: #22c55e;
+    margin-left: 6px;
+    font-size: 12px;
+}
+
+.status-sent {
+    color: #94a3b8;
+    margin-left: 6px;
+    font-size: 12px;
 }
