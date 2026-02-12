@@ -844,31 +844,10 @@ body {
 
 
 /* ============================================
-   NOTIFICATION BADGE - PFP LANG (PARANG MESSENGER)
+   PINAKAMABILIS NA UNREAD BADGE - NASA PFP!
    ============================================ */
 
-/* Unread Badge - NASA PFP LANG */
-.unread-badge {
-    position: absolute;
-    top: -2px;
-    right: -2px;
-    min-width: 20px;
-    height: 20px;
-    background: #ef4444;
-    color: white;
-    border-radius: 20px;
-    padding: 0 6px;
-    font-size: 11px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 2px solid white;
-    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
-    z-index: 10;
-}
-
-/* Ilipat ang badge sa avatar imbes sa user-item-info */
+/* User Item Avatar - DITO LALAGAY ANG BADGE */
 .user-item-avatar {
     position: relative;
     width: 48px;
@@ -881,38 +860,41 @@ body {
     background: #f1f5f9;
 }
 
+/* BADGE - NASA PFP, KITA AGAD! */
 .user-item-avatar .unread-badge {
     position: absolute;
-    top: -2px;
-    right: -2px;
-    min-width: 20px;
-    height: 20px;
+    top: -4px;
+    right: -4px;
+    min-width: 22px;
+    height: 22px;
     background: #ef4444;
     color: white;
-    border-radius: 20px;
+    border-radius: 22px;
     padding: 0 6px;
-    font-size: 11px;
-    font-weight: 600;
+    font-size: 12px;
+    font-weight: 700;
     display: flex;
     align-items: center;
     justify-content: center;
     border: 2px solid white;
-    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.5);
     z-index: 10;
+    animation: pulse 2s infinite;
 }
 
-/* Sidebar user item */
-.sidebar-user-item .user-item-avatar {
-    position: relative;
+/* PULSE ANIMATION - PARA KITA AGAD */
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 2px 8px rgba(239, 68, 68, 0.5);
+    }
+    50% {
+        transform: scale(1.1);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.8);
+    }
 }
 
-.sidebar-user-item .user-item-avatar .unread-badge {
-    position: absolute;
-    top: -2px;
-    right: -2px;
-}
-
-/* Status Indicator - NASA PFP */
+/* STATUS INDICATOR - NASA BABA NG PFP */
 .status-indicator {
     position: absolute;
     bottom: 2px;
@@ -933,83 +915,41 @@ body {
     background: #94a3b8;
 }
 
-/* Siguraduhing nasa avatar ang badge, hindi sa info */
-.user-item .user-item-info .unread-badge {
+/* HIDE OLD BADGE SA INFO - WALA NA! */
+.user-item-info .unread-badge {
     display: none !important;
 }
 
-/* Animation para sa bagong message */
-@keyframes pulse {
-    0%, 100% {
-        transform: scale(1);
-    }
-    50% {
-        transform: scale(1.1);
-    }
+/* SIDEBAR USER ITEM */
+.sidebar-user-item .user-item-avatar {
+    position: relative;
 }
 
-.unread-badge {
-    animation: pulse 2s infinite;
-}
-
-/* Toast Notifications */
-.toast {
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%) translateY(100px);
-    background: white;
-    padding: 12px 24px;
-    border-radius: 50px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-    display: flex;
-    align-items: center;
-    gap: 12px;
+/* NO USERS */
+.no-users {
+    text-align: center;
+    color: #94a3b8;
+    padding: 30px 20px;
     font-size: 14px;
-    font-weight: 500;
-    z-index: 9999;
-    transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-    max-width: 90%;
 }
 
-.toast.show {
-    transform: translateX(-50%) translateY(0);
-}
-
-.toast.success {
-    background: #22c55e;
-    color: white;
-}
-
-.toast.error {
-    background: #ef4444;
-    color: white;
-}
-
-.toast.info {
-    background: #3b82f6;
-    color: white;
-}
-
-/* Responsive */
+/* RESPONSIVE */
 @media (max-width: 480px) {
     .user-item-avatar {
         width: 44px;
         height: 44px;
     }
     
-    .unread-badge {
-        min-width: 18px;
-        height: 18px;
-        font-size: 10px;
+    .user-item-avatar .unread-badge {
+        min-width: 20px;
+        height: 20px;
+        font-size: 11px;
+        top: -3px;
+        right: -3px;
     }
     
     .status-indicator {
         width: 10px;
         height: 10px;
-        bottom: 1px;
-        right: 1px;
     }
 }
-
-    
