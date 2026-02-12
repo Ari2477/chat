@@ -273,11 +273,19 @@ yourprojectname.onrender.com
 
 ---
 
-# 📸 PART 8: SCREENSHOTS
+## 📸 SCREENSHOTS
 
-![Login Screen](screenshots/login.png)
-![Chat Screen](screenshots/chat.png)
+| **Login Screen** | **Chat Screen** |
+|:----------------:|:---------------:|
+| ![Login](https://i.ibb.co/Hf9F1JFj/Screenshot-20260212-212246.png) | ![Chat](https://i.ibb.co/m595jbQn/Screenshot-20260212-212234.png) |
 
+### ✨ Features Shown:
+- ✅ Google Sign-In Interface
+- ✅ Real-time World Group Chat
+- ✅ Online User
+- ✅ Online/Offline Status Indicators
+- ✅ Clean design 
+- 
 ---
 
 # 🎯 QUICK REFERENCE CARD
