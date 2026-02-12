@@ -1,4 +1,9 @@
+/**
+ * Chat Module
+ * Handles all messaging and chat functionality
+ */
 
+// ===== CHAT STATE =====
 let currentChat = {
     id: 'global',
     type: 'group',
@@ -32,7 +37,11 @@ function loadGlobalChat() {
     document.querySelectorAll('.chat-item').forEach(item => {
         item.classList.remove('active');
     });
-    document.querySelector(`.chat-item[data-chat-id="global"]`)?.classList.add('active');
+    
+    const globalChatItem = document.querySelector(`.chat-item[data-chat-id="global"]`);
+    if (globalChatItem) {
+        globalChatItem.classList.add('active');
+    }
 }
 
 /**
@@ -60,6 +69,11 @@ function loadMessages(collection, chatId) {
             return;
         }
 
+        // Clear container for fresh load
+        if (snapshot.docChanges().length > 0 && snapshot.docChanges()[0].type === 'added') {
+            messagesContainer.innerHTML = '';
+        }
+
         // Process each message change
         snapshot.docChanges().forEach((change) => {
             if (change.type === 'added') {
@@ -85,6 +99,8 @@ async function displayMessage(message) {
     if (!messagesContainer) return;
 
     const currentUser = authModule.getCurrentUser();
+    if (!currentUser) return;
+
     const isOwnMessage = message.userId === currentUser?.uid;
 
     // Get user data
@@ -96,24 +112,32 @@ async function displayMessage(message) {
         };
     }
 
+    // Check if message already exists
+    if (document.querySelector(`.message[data-message-id="${message.id}"]`)) {
+        return;
+    }
+
     // Create message element
     const messageElement = document.createElement('div');
     messageElement.className = `message ${isOwnMessage ? 'message-own' : ''}`;
     messageElement.dataset.messageId = message.id;
 
     // Format timestamp
-    const timestamp = message.timestamp?.toDate() || new Date();
-    const timeString = formatTimestamp(timestamp);
+    let timeString = 'Just now';
+    if (message.timestamp) {
+        const timestamp = message.timestamp.toDate ? message.timestamp.toDate() : new Date(message.timestamp);
+        timeString = formatTimestamp(timestamp);
+    }
 
     messageElement.innerHTML = `
-        <img src="${userData.photo}" alt="${userData.name}" class="message-avatar">
+        <img src="${userData.photo}" alt="${userData.name}" class="message-avatar" onerror="this.src='https://via.placeholder.com/150'">
         <div class="message-content">
             <div class="message-header">
-                <span class="message-author">${userData.name}</span>
+                <span class="message-author">${escapeHtml(userData.name)}</span>
                 <span class="message-time">${timeString}</span>
             </div>
             <div class="message-text">${escapeHtml(message.text)}</div>
-            ${message.seen ? '<span class="message-seen"><i class="fas fa-check-double"></i></span>' : ''}
+            ${isOwnMessage ? '<span class="message-seen"><i class="fas fa-check"></i></span>' : ''}
         </div>
     `;
 
@@ -124,7 +148,7 @@ async function displayMessage(message) {
  * Send a message
  */
 async function sendMessage(text) {
-    if (!text.trim()) return;
+    if (!text || !text.trim()) return;
 
     const currentUser = authModule.getCurrentUser();
     if (!currentUser) return;
@@ -151,13 +175,10 @@ async function sendMessage(text) {
                 .doc(currentChat.id)
                 .collection('messages')
                 .add(message);
-
-            // Update seen status for private messages
-            updateSeenStatus(currentChat.id);
         }
 
         // Clear typing status
-        stopTyping();
+        await setTyping(false);
     } catch (error) {
         console.error('Error sending message:', error);
         showNotification('Failed to send message', 'error');
@@ -171,8 +192,13 @@ async function sendMessage(text) {
  */
 async function createPrivateChat(otherUserId) {
     const currentUser = authModule.getCurrentUser();
-    if (!currentUser || currentUser.uid === otherUserId) {
-        showNotification('Invalid user ID', 'error');
+    if (!currentUser) {
+        showNotification('Please login first', 'error');
+        return;
+    }
+    
+    if (currentUser.uid === otherUserId) {
+        showNotification('Cannot chat with yourself', 'error');
         return;
     }
 
@@ -195,10 +221,17 @@ async function createPrivateChat(otherUserId) {
             const chatRef = await db.collection('privateChats').add({
                 members: [currentUser.uid, otherUserId],
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                createdBy: currentUser.uid
+                createdBy: currentUser.uid,
+                lastSeen: {}
             });
 
             openPrivateChat(chatRef.id, otherUser);
+        }
+        
+        // Switch to chats tab
+        const chatsTab = document.querySelector('.tab-btn[data-tab="chats"]');
+        if (chatsTab) {
+            chatsTab.click();
         }
     } catch (error) {
         console.error('Error creating private chat:', error);
@@ -218,7 +251,7 @@ async function findExistingPrivateChat(uid1, uid2) {
 
         for (const doc of snapshot.docs) {
             const data = doc.data();
-            if (data.members.includes(uid2)) {
+            if (data.members && data.members.includes(uid2)) {
                 return { id: doc.id, ...data };
             }
         }
@@ -236,9 +269,9 @@ function openPrivateChat(chatId, otherUser) {
     currentChat = {
         id: chatId,
         type: 'private',
-        name: otherUser.name,
+        name: otherUser.name || 'User',
         otherUserId: otherUser.uid,
-        otherUserPhoto: otherUser.photo
+        otherUserPhoto: otherUser.photo || 'https://via.placeholder.com/150'
     };
 
     // Update UI
@@ -246,6 +279,16 @@ function openPrivateChat(chatId, otherUser) {
     loadMessages('privateChats', chatId);
     setupTypingIndicator('privateChats', chatId);
     addPrivateChatToList(chatId, otherUser);
+    
+    // Mark active chat
+    document.querySelectorAll('.chat-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    
+    const chatItem = document.querySelector(`.chat-item[data-chat-id="${chatId}"]`);
+    if (chatItem) {
+        chatItem.classList.add('active');
+    }
 }
 
 /**
@@ -268,11 +311,11 @@ function addPrivateChatToList(chatId, user) {
 
     chatItem.innerHTML = `
         <div class="chat-avatar">
-            <img src="${user.photo}" alt="${user.name}">
+            <img src="${user.photo || 'https://via.placeholder.com/150'}" alt="${user.name}" onerror="this.src='https://via.placeholder.com/150'">
         </div>
         <div class="chat-info">
-            <h4>${user.name}</h4>
-            <p>${user.email || 'Private chat'}</p>
+            <h4>${escapeHtml(user.name)}</h4>
+            <p>${user.email ? escapeHtml(user.email) : 'Private chat'}</p>
         </div>
         <div class="chat-badge">PM</div>
     `;
@@ -305,8 +348,8 @@ function setupTypingIndicator(collection, chatId) {
 
         snapshot.forEach((doc) => {
             const data = doc.data();
-            if (data.userId !== currentUser?.uid && data.typing) {
-                typingUsers.push(data.userName);
+            if (data.userId && data.userId !== currentUser?.uid && data.typing === true) {
+                typingUsers.push(data.userName || 'Someone');
             }
         });
 
@@ -352,7 +395,7 @@ function updateTypingIndicator(users) {
  */
 async function setTyping(isTyping) {
     const currentUser = authModule.getCurrentUser();
-    if (!currentUser) return;
+    if (!currentUser || !currentChat) return;
 
     const collection = currentChat.type === 'group' ? 'groupChats' : 'privateChats';
     const typingRef = db.collection(collection)
@@ -372,19 +415,6 @@ async function setTyping(isTyping) {
     }
 }
 
-/**
- * Stop typing (clear timeout)
- */
-function stopTyping() {
-    if (typingTimeouts[currentChat.id]) {
-        clearTimeout(typingTimeouts[currentChat.id]);
-    }
-
-    typingTimeouts[currentChat.id] = setTimeout(() => {
-        setTyping(false);
-    }, 1000);
-}
-
 // ===== ONLINE USERS =====
 
 /**
@@ -401,18 +431,26 @@ function loadOnlineUsers() {
         const usersList = document.getElementById('usersList');
         if (!usersList) return;
 
-        usersList.innerHTML = '';
+        usersList.innerHTML = '<h3 class="list-header">Online Users</h3>';
         const currentUser = authModule.getCurrentUser();
+        let onlineCount = 0;
 
         snapshot.forEach((doc) => {
             const user = doc.data();
             if (user.uid !== currentUser?.uid) {
                 usersList.appendChild(createOnlineUserElement(user));
+                onlineCount++;
             }
         });
 
+        if (onlineCount === 0) {
+            usersList.innerHTML += '<p class="no-users">No other users online</p>';
+        }
+
         // Update online count in GC info
         updateOnlineCount(snapshot.size);
+    }, (error) => {
+        console.error('Error loading online users:', error);
     });
 }
 
@@ -421,16 +459,16 @@ function loadOnlineUsers() {
  */
 function createOnlineUserElement(user) {
     const element = document.createElement('div');
-    element.className = 'chat-item';
+    element.className = 'chat-item online-user';
     element.dataset.userId = user.uid;
 
     element.innerHTML = `
         <div class="chat-avatar">
-            <img src="${user.photo}" alt="${user.name}">
+            <img src="${user.photo || 'https://via.placeholder.com/150'}" alt="${user.name}" onerror="this.src='https://via.placeholder.com/150'">
         </div>
         <div class="chat-info">
-            <h4>${user.name}</h4>
-            <p>${user.email || 'Online'}</p>
+            <h4>${escapeHtml(user.name)}</h4>
+            <p>${user.email ? escapeHtml(user.email) : 'Online'}</p>
         </div>
         <span class="status-dot online"></span>
     `;
@@ -448,29 +486,9 @@ function createOnlineUserElement(user) {
 function updateOnlineCount(count) {
     const onlineCount = document.getElementById('onlineCount');
     if (onlineCount) {
-        onlineCount.textContent = `${count - 1} online`; // Subtract current user
-    }
-}
-
-// ===== SEEN INDICATOR =====
-
-/**
- * Update seen status for private chat
- */
-async function updateSeenStatus(chatId) {
-    const currentUser = authModule.getCurrentUser();
-    if (!currentUser) return;
-
-    try {
-        await db.collection('privateChats')
-            .doc(chatId)
-            .update({
-                lastSeen: {
-                    [currentUser.uid]: firebase.firestore.FieldValue.serverTimestamp()
-                }
-            });
-    } catch (error) {
-        console.error('Error updating seen status:', error);
+        const currentUser = authModule.getCurrentUser();
+        const otherUsers = count - (currentUser ? 1 : 0);
+        onlineCount.textContent = `${otherUsers} online`;
     }
 }
 
@@ -482,22 +500,26 @@ async function updateSeenStatus(chatId) {
 function updateChatHeader() {
     const nameElement = document.getElementById('currentChatName');
     const avatarElement = document.getElementById('currentChatAvatar');
-    const modalChatName = document.getElementById('modalChatName');
+    const statusElement = document.getElementById('currentChatStatus');
 
     if (nameElement) {
-        nameElement.textContent = currentChat.name;
+        nameElement.textContent = currentChat.name || 'Global Group Chat';
     }
 
     if (avatarElement) {
         if (currentChat.type === 'private' && currentChat.otherUserPhoto) {
-            avatarElement.innerHTML = `<img src="${currentChat.otherUserPhoto}" alt="${currentChat.name}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+            avatarElement.innerHTML = `<img src="${currentChat.otherUserPhoto}" alt="${currentChat.name}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" onerror="this.src='https://via.placeholder.com/150'">`;
         } else {
             avatarElement.innerHTML = '<i class="fas fa-globe"></i>';
         }
     }
 
-    if (modalChatName) {
-        modalChatName.textContent = currentChat.name;
+    if (statusElement) {
+        if (currentChat.type === 'private') {
+            statusElement.innerHTML = '<span class="status-text">Private Chat</span>';
+        } else {
+            statusElement.innerHTML = '<span class="status-text">Group Chat</span>';
+        }
     }
 }
 
@@ -505,6 +527,8 @@ function updateChatHeader() {
  * Format timestamp
  */
 function formatTimestamp(date) {
+    if (!date) return 'Just now';
+    
     const now = new Date();
     const diff = now - date;
     const diffMinutes = Math.floor(diff / 60000);
@@ -539,7 +563,9 @@ function escapeHtml(unsafe) {
 function scrollToBottom() {
     const container = document.getElementById('messagesContainer');
     if (container) {
-        container.scrollTop = container.scrollHeight;
+        setTimeout(() => {
+            container.scrollTop = container.scrollHeight;
+        }, 100);
     }
 }
 
@@ -552,22 +578,109 @@ function showNotification(message, type = 'info') {
     }
 }
 
+// ===== CHAT INFO FUNCTIONS =====
+
+/**
+ * Load chat information into modal
+ */
+async function loadChatInfo() {
+    const content = document.getElementById('chatInfoContent');
+    if (!content) return;
+
+    if (currentChat.type === 'group') {
+        try {
+            const usersSnapshot = await db.collection('users')
+                .where('online', '==', true)
+                .get();
+
+            content.innerHTML = `
+                <div class="chat-info-section">
+                    <h4><i class="fas fa-globe"></i> Global Group Chat</h4>
+                    <div class="info-stats">
+                        <div class="stat-item">
+                            <i class="fas fa-users"></i>
+                            <span>${usersSnapshot.size} members online</span>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-calendar"></i>
+                            <span>Created: ${new Date().toLocaleDateString()}</span>
+                        </div>
+                    </div>
+                    <h5>Active Users</h5>
+                    <div class="active-users-list" id="activeUsersList"></div>
+                </div>
+            `;
+
+            const activeUsersList = document.getElementById('activeUsersList');
+            if (activeUsersList) {
+                const currentUser = authModule.getCurrentUser();
+                usersSnapshot.forEach((doc) => {
+                    const user = doc.data();
+                    if (user.uid !== currentUser?.uid) {
+                        const userElement = document.createElement('div');
+                        userElement.className = 'active-user';
+                        userElement.innerHTML = `
+                            <img src="${user.photo || 'https://via.placeholder.com/150'}" alt="${user.name}" onerror="this.src='https://via.placeholder.com/150'">
+                            <span>${escapeHtml(user.name)}</span>
+                            <span class="status-dot online"></span>
+                        `;
+                        activeUsersList.appendChild(userElement);
+                    }
+                });
+            }
+        } catch (error) {
+            console.error('Error loading chat info:', error);
+            content.innerHTML = '<p>Failed to load chat information</p>';
+        }
+    } else {
+        try {
+            const otherUser = await authModule.getUserByUid(currentChat.otherUserId);
+            
+            content.innerHTML = `
+                <div class="chat-info-section">
+                    <h4><i class="fas fa-user"></i> Private Chat</h4>
+                    <div class="user-profile-info">
+                        <img src="${otherUser.photo || 'https://via.placeholder.com/150'}" alt="${otherUser.name}" class="profile-image" onerror="this.src='https://via.placeholder.com/150'">
+                        <h5>${escapeHtml(otherUser.name)}</h5>
+                        <p>${otherUser.email || 'No email'}</p>
+                        <div class="info-item">
+                            <label>User ID</label>
+                            <code>${otherUser.uid}</code>
+                        </div>
+                        <div class="info-item">
+                            <label>Status</label>
+                            <span class="${otherUser.online ? 'online' : 'offline'}">
+                                ${otherUser.online ? 'Online' : 'Offline'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } catch (error) {
+            console.error('Error loading private chat info:', error);
+            content.innerHTML = '<p>Failed to load user information</p>';
+        }
+    }
+}
+
 // ===== EVENT LISTENERS =====
 
 // Initialize chat functionality
 document.addEventListener('DOMContentLoaded', () => {
     // Load global chat by default
-    loadGlobalChat();
+    setTimeout(() => {
+        loadGlobalChat();
+    }, 500);
 
     // Setup message form
     const messageForm = document.getElementById('messageForm');
     const messageInput = document.getElementById('messageInput');
 
     if (messageForm) {
-        messageForm.addEventListener('submit', (e) => {
+        messageForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            if (messageInput) {
-                sendMessage(messageInput.value);
+            if (messageInput && messageInput.value.trim()) {
+                await sendMessage(messageInput.value);
                 messageInput.value = '';
             }
         });
@@ -606,6 +719,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 userSearchInput.value = '';
             }
         });
+
+        userSearchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const uid = userSearchInput.value.trim();
+                if (uid) {
+                    createPrivateChat(uid);
+                    userSearchInput.value = '';
+                }
+            }
+        });
     }
 
     // Setup tab switching
@@ -613,11 +736,9 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => {
             const tab = btn.dataset.tab;
             
-            // Update active tab
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             
-            // Show corresponding list
             document.querySelectorAll('.chats-list, .users-list').forEach(list => {
                 list.classList.remove('active');
             });
@@ -633,8 +754,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Setup chat info button
     const chatInfoBtn = document.getElementById('chatInfoBtn');
     if (chatInfoBtn) {
-        chatInfoBtn.addEventListener('click', () => {
-            // Show chat info modal
+        chatInfoBtn.addEventListener('click', async () => {
+            await loadChatInfo();
             const modal = document.getElementById('chatInfoModal');
             if (modal) {
                 modal.classList.add('active');
@@ -650,5 +771,6 @@ window.chatModule = {
     createPrivateChat,
     openPrivateChat,
     setTyping,
-    stopTyping
+    loadChatInfo,
+    currentChat: () => currentChat
 };
