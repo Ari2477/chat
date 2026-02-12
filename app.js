@@ -1,9 +1,3 @@
-// ============================================
-// MINI MESSENGER - COMPLETE FIXED VERSION
-// REAL TIME NOTIFICATION - CROSS DEVICE!
-// ============================================
-
-// Global Variables
 let currentUser = null;
 let currentPMUser = null;
 let unsubscribeGC = null;
@@ -13,12 +7,8 @@ let unsubscribeMembers = null;
 let unsubscribeUnreadPMs = null;
 let isUploading = false;
 
-// GROUP CHAT ID (Fixed for demo)
 const GROUP_CHAT_ID = "general_chat";
 
-// ============================================
-// AUTHENTICATION
-// ============================================
 firebase.auth().onAuthStateChanged(async (user) => {
     if (!user) {
         window.location.href = 'login.html';
@@ -34,24 +24,18 @@ firebase.auth().onAuthStateChanged(async (user) => {
     }
 });
 
-// ============================================
-// INITIALIZATION - FIXED WITH PROPER FALLBACK
-// ============================================
 async function initializeApp() {
     try {
         console.log('Initializing app for user:', currentUser.uid);
         
-        // Get user's first letter for avatar fallback
         const userFirstLetter = (currentUser.displayName || currentUser.email || 'U').charAt(0).toUpperCase();
         const defaultAvatar = `https://ui-avatars.com/api/?name=${userFirstLetter}&background=4f46e5&color=fff&size=200&bold=true`;
-        
-        // Update user info with proper fallback
+
         const userNameEl = document.getElementById('current-user-name');
         const userPfpEl = document.getElementById('current-user-pfp');
         
         if (userNameEl) userNameEl.textContent = currentUser.displayName || currentUser.email.split('@')[0] || 'User';
-        
-        // Set profile picture with multiple fallbacks
+
         if (userPfpEl) {
             userPfpEl.src = currentUser.photoURL || defaultAvatar;
             userPfpEl.onerror = function() {
@@ -59,8 +43,7 @@ async function initializeApp() {
                 this.src = defaultAvatar;
             };
         }
-        
-        // Save/Update user in Firestore with fallback avatar
+
         await db.collection('users').doc(currentUser.uid).set({
             uid: currentUser.uid,
             name: currentUser.displayName || currentUser.email.split('@')[0] || 'Anonymous',
@@ -70,20 +53,15 @@ async function initializeApp() {
             lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
             lastActive: new Date().toISOString()
         }, { merge: true });
-        
-        // Initialize group chat
+
         await initializeGroupChat();
-        
-        // Load users for PM
+
         loadUsers();
-        
-        // ✅ LISTEN TO UNREAD MESSAGES - REAL TIME!
+
         listenToUnreadPMs();
-        
-        // Set up presence
+
         setupPresence();
         
-        // Setup enter key listeners
         setupEnterKeyListeners();
         
         console.log('✅ App initialized successfully');
@@ -96,15 +74,11 @@ async function initializeApp() {
     }
 }
 
-// ============================================
-// GROUP CHAT - FIXED WITH PROPER IMAGE HANDLING
-// ============================================
 async function initializeGroupChat() {
     const gcRef = db.collection('groupChats').doc(GROUP_CHAT_ID);
     const gcDoc = await gcRef.get();
     
     if (!gcDoc.exists) {
-        // Create default group chat with proper avatar
         await gcRef.set({
             name: 'World Chat 🌏',
             description: 'Welcome to the group! 👋',
@@ -115,7 +89,6 @@ async function initializeGroupChat() {
             memberCount: 1
         });
     } else {
-        // Add current user to members if not already
         const members = gcDoc.data().members || [];
         if (!members.includes(currentUser.uid)) {
             await gcRef.update({
@@ -130,24 +103,20 @@ async function initializeGroupChat() {
     listenToGCMembers();
 }
 
-// Load Group Chat Info - WITH FALLBACK
 function loadGCInfo() {
     db.collection('groupChats').doc(GROUP_CHAT_ID).onSnapshot((doc) => {
         if (doc.exists) {
             const data = doc.data();
-            
-            // Update all GC name elements
+
             const gcNameElements = ['gc-name', 'sidebar-gc-name', 'display-gc-name'];
             gcNameElements.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.textContent = data.name || 'World Chat 🌏';
             });
-            
-            // Update description
+
             const descEl = document.getElementById('display-gc-desc');
             if (descEl) descEl.textContent = data.description || 'Welcome to the group! 👋';
-            
-            // Update GC photo with fallback
+
             const gcPFP = data.photoURL || 'https://i.ibb.co/qYky078V/Screenshot-20260212-134936-1.jpg';
             const pfpElements = ['gc-pfp', 'sidebar-gc-pfp', 'modal-gc-pfp'];
             
@@ -161,8 +130,7 @@ function loadGCInfo() {
                     };
                 }
             });
-            
-            // Update member count
+
             const memberCount = data.members?.length || 0;
             const countElements = ['member-count', 'sidebar-member-count'];
             countElements.forEach(id => {
@@ -173,7 +141,6 @@ function loadGCInfo() {
     });
 }
 
-// Listen to Group Chat Messages - REAL TIME
 function listenToGCMessages() {
     if (unsubscribeGC) unsubscribeGC();
     
@@ -191,14 +158,12 @@ function listenToGCMessages() {
                 messagesContainer.innerHTML = '<div class="no-messages">👋 No messages yet. Say hello!</div>';
                 return;
             }
-            
-            // Get all unique sender IDs
+
             const senderIds = new Set();
             snapshot.forEach(doc => {
                 senderIds.add(doc.data().senderId);
             });
-            
-            // Load all sender data in parallel
+
             Promise.all(Array.from(senderIds).map(async (senderId) => {
                 if (senderId === currentUser?.uid) return null;
                 const userDoc = await db.collection('users').doc(senderId).get();
@@ -223,28 +188,23 @@ function listenToGCMessages() {
         });
 }
 
-// Append Group Chat Message - WALANG "M" NA BROKEN IMAGE
 function appendGCMessage(message, container, userMap = {}) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${message.senderId === currentUser?.uid ? 'sent' : 'received'}`;
-    
-    // Get sender info
+
     let senderName = message.senderName || 'Unknown';
     let senderPhoto = message.senderPhoto || '';
     let senderId = message.senderId;
-    
-    // Get proper sender info
+
     if (message.senderId !== currentUser?.uid && userMap[message.senderId]) {
         senderName = userMap[message.senderId].name || senderName;
         senderPhoto = userMap[message.senderId].photoURL || senderPhoto;
         senderId = message.senderId;
     }
-    
-    // Create fallback avatar using UI Avatars
+
     const firstLetter = senderName.charAt(0).toUpperCase();
     const fallbackAvatar = `https://ui-avatars.com/api/?name=${firstLetter}&background=${message.senderId === currentUser?.uid ? '4f46e5' : '64748b'}&color=fff&size=100&bold=true`;
-    
-    // Use sender photo or fallback
+
     const avatarUrl = senderPhoto || fallbackAvatar;
     
     const time = message.timestamp ? 
@@ -271,18 +231,14 @@ function appendGCMessage(message, container, userMap = {}) {
     container.appendChild(messageDiv);
 }
 
-// Format message text
 function formatMessageText(text) {
     if (!text) return '';
-    
-    // Convert URLs to clickable links
+
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     text = text.replace(urlRegex, '<a href="$1" target="_blank" rel="noopener noreferrer" class="message-link">$1</a>');
-    
-    // Convert line breaks
+
     text = text.replace(/\n/g, '<br>');
-    
-    // Convert emoji shortcuts
+
     const emojiMap = {
         ':)': '😊',
         ':(': '😢',
@@ -303,7 +259,6 @@ function formatMessageText(text) {
     return text;
 }
 
-// Send Group Chat Message - WITH LOADING STATE
 async function sendGCMessage() {
     const input = document.getElementById('gc-message-input');
     if (!input) return;
@@ -318,20 +273,17 @@ async function sendGCMessage() {
         showToast('You are not logged in', 'error');
         return;
     }
-    
-    // Disable input
+
     input.disabled = true;
     const sendBtn = document.querySelector('#gc-view .send-btn');
     if (sendBtn) {
         sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
         sendBtn.disabled = true;
     }
-    
-    // Clear input
+
     input.value = '';
     
     try {
-        // Ensure group chat exists
         const gcRef = db.collection('groupChats').doc(GROUP_CHAT_ID);
         const gcDoc = await gcRef.get();
         
@@ -346,8 +298,7 @@ async function sendGCMessage() {
                 memberCount: 1
             });
         }
-        
-        // Send message
+
         await gcRef.collection('messages').add({
             text: text,
             senderId: currentUser.uid,
@@ -361,11 +312,9 @@ async function sendGCMessage() {
     } catch (error) {
         console.error('❌ Error sending message:', error);
         showToast('Failed to send message', 'error');
-        
-        // Restore text if failed
+
         input.value = text;
     } finally {
-        // Re-enable input
         input.disabled = false;
         input.focus();
         if (sendBtn) {
@@ -375,7 +324,6 @@ async function sendGCMessage() {
     }
 }
 
-// Listen to Group Chat Members
 function listenToGCMembers() {
     if (unsubscribeMembers) unsubscribeMembers();
     
@@ -418,11 +366,6 @@ function listenToGCMembers() {
         });
 }
 
-// ============================================
-// USERS & PRIVATE MESSAGES - FIXED
-// ============================================
-
-// Load Users for PM
 function loadUsers() {
     if (unsubscribeUsers) unsubscribeUsers();
     
@@ -438,8 +381,7 @@ function loadUsers() {
                     });
                 }
             });
-            
-            // Sort: online first, then alphabetically
+
             users.sort((a, b) => {
                 if (a.online && !b.online) return -1;
                 if (!a.online && b.online) return 1;
@@ -457,7 +399,6 @@ function loadUsers() {
         });
 }
 
-// Display Users List - WALANG BROKEN IMAGE
 function displayUsers(users) {
     const usersList = document.getElementById('users-list');
     if (!usersList) return;
@@ -474,8 +415,7 @@ function displayUsers(users) {
         userDiv.className = 'user-item';
         userDiv.setAttribute('data-user-id', user.id);
         userDiv.onclick = () => openPrivateChat(user);
-        
-        // Create fallback avatar
+
         const firstLetter = (user.name || 'User').charAt(0).toUpperCase();
         const fallbackAvatar = `https://ui-avatars.com/api/?name=${firstLetter}&background=4f46e5&color=fff&size=100&bold=true`;
         const avatarUrl = user.photoURL || fallbackAvatar;
@@ -502,7 +442,6 @@ function displayUsers(users) {
     });
 }
 
-// Display Sidebar Users
 function displaySidebarUsers(users) {
     const sidebarUsers = document.getElementById('sidebar-users-list');
     if (!sidebarUsers) return;
@@ -544,9 +483,6 @@ function displaySidebarUsers(users) {
     });
 }
 
-// ============================================
-// 🔔 FIXED: REAL TIME UNREAD MESSAGES - CROSS DEVICE!
-// ============================================
 function listenToUnreadPMs() {
     if (!currentUser) {
         console.log('❌ No current user');
@@ -558,8 +494,7 @@ function listenToUnreadPMs() {
     if (unsubscribeUnreadPMs) {
         unsubscribeUnreadPMs();
     }
-    
-    // ✅ REAL TIME - FIRESTORE LISTENER PARA SA LAHAT NG DEVICE!
+
     unsubscribeUnreadPMs = db.collectionGroup('messages')
         .where('receiverId', '==', currentUser.uid)
         .where('read', '==', false)
@@ -574,13 +509,11 @@ function listenToUnreadPMs() {
                 unreadMap.set(senderId, (unreadMap.get(senderId) || 0) + 1);
                 console.log(`📩 Unread from ${senderId}: ${unreadMap.get(senderId)}`);
             });
-            
-            // ✅ REMOVE LAHAT NG OLD BADGES
+
             document.querySelectorAll('.user-item-avatar .unread-badge').forEach(badge => {
                 badge.remove();
             });
-            
-            // ✅ UPDATE BADGES - REAL TIME SA LAHAT NG DEVICE!
+
             if (unreadMap.size === 0) {
                 document.title = 'Mini Messenger';
             } else {
@@ -596,23 +529,18 @@ function listenToUnreadPMs() {
         });
 }
 
-// ============================================
-// ✅ FIXED: UPDATE UNREAD BADGE - REAL TIME!
-// ============================================
 function updateUserUnreadBadge(userId, count) {
     const userItems = document.querySelectorAll(`.user-item[data-user-id="${userId}"]`);
     
     userItems.forEach(item => {
         const avatarContainer = item.querySelector('.user-item-avatar');
         if (!avatarContainer) return;
-        
-        // ✅ REMOVE EXISTING BADGE
+
         const existingBadge = avatarContainer.querySelector('.unread-badge');
         if (existingBadge) {
             existingBadge.remove();
         }
-        
-        // ✅ ADD NEW BADGE KUNG MAY UNREAD
+
         if (count > 0) {
             const badge = document.createElement('span');
             badge.className = 'unread-badge';
@@ -640,9 +568,6 @@ function updateUserUnreadBadge(userId, count) {
     });
 }
 
-// ============================================
-// ✅ FIXED: MARK AS READ - REAL TIME SA LAHAT NG DEVICE!
-// ============================================
 async function markMessagesAsRead(senderId) {
     if (!currentUser || !senderId) {
         console.log('❌ No current user or senderId');
@@ -653,7 +578,6 @@ async function markMessagesAsRead(senderId) {
     console.log(`📖 Marking messages as read for chat: ${chatId}`);
     
     try {
-        // ✅ GET ALL UNREAD MESSAGES
         const messagesRef = db.collection('privateChats')
             .doc(chatId)
             .collection('messages')
@@ -664,8 +588,7 @@ async function markMessagesAsRead(senderId) {
         
         if (snapshot.size > 0) {
             console.log(`📖 Found ${snapshot.size} unread messages`);
-            
-            // ✅ BATCH UPDATE PARA MAS MABILIS!
+
             const batch = db.batch();
             snapshot.forEach(doc => {
                 batch.update(doc.ref, { 
@@ -676,11 +599,9 @@ async function markMessagesAsRead(senderId) {
             
             await batch.commit();
             console.log(`✅ REAL TIME: Marked ${snapshot.size} messages as read`);
-            
-            // ✅ REMOVE BADGE AGAD - LAHAT NG DEVICE!
+
             updateUserUnreadBadge(senderId, 0);
-            
-            // ✅ FORCE UPDATE NG UNREAD COUNT - PARA SURE!
+
             const unreadSnapshot = await db.collectionGroup('messages')
                 .where('receiverId', '==', currentUser.uid)
                 .where('read', '==', false)
@@ -702,19 +623,14 @@ async function markMessagesAsRead(senderId) {
     }
 }
 
-// ============================================
-// RESET NOTIFICATIONS
-// ============================================
 function resetPMNotifications(senderId) {
     updateUserUnreadBadge(senderId, 0);
-    
-    // Update document title
+
     const totalUnread = getTotalUnreadCount();
     document.title = totalUnread > 0 ? `(${totalUnread}) Mini Messenger` : 'Mini Messenger';
 }
 
 function resetGCNotifications() {
-    // Update document title
     const totalUnread = getTotalUnreadCount();
     document.title = totalUnread > 0 ? `(${totalUnread}) Mini Messenger` : 'Mini Messenger';
 }
@@ -735,26 +651,20 @@ function getTotalUnreadCount() {
     return total;
 }
 
-// ============================================
-// OPEN PRIVATE CHAT
-// ============================================
 async function openPrivateChat(user) {
     if (!user) return;
     
     currentPMUser = user;
-    
-    // Mark messages as read when opening chat
+
     await markMessagesAsRead(user.id);
-    
-    // Reset PM notifications for this user
+
     resetPMNotifications(user.id);
     
     const pmNameEl = document.getElementById('pm-user-name');
     const pmPfpEl = document.getElementById('pm-user-pfp');
     
     if (pmNameEl) pmNameEl.textContent = user.name || 'User';
-    
-    // Set PM user avatar with fallback
+
     if (pmPfpEl) {
         const firstLetter = (user.name || 'User').charAt(0).toUpperCase();
         const fallbackAvatar = `https://ui-avatars.com/api/?name=${firstLetter}&background=4f46e5&color=fff&size=100&bold=true`;
@@ -776,7 +686,6 @@ async function openPrivateChat(user) {
     listenToPMMessages(user.id);
 }
 
-// Close Private Chat
 function closePM() {
     currentPMUser = null;
     
@@ -789,7 +698,6 @@ function closePM() {
     if (unsubscribePM) unsubscribePM();
 }
 
-// Listen to Private Messages
 function listenToPMMessages(otherUserId) {
     if (unsubscribePM) unsubscribePM();
     
@@ -823,7 +731,6 @@ function listenToPMMessages(otherUserId) {
         });
 }
 
-// Append Private Message - WALANG BROKEN IMAGE
 function appendPMMessage(message, container) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${message.senderId === currentUser?.uid ? 'sent' : 'received'}`;
@@ -879,9 +786,6 @@ function appendPMMessage(message, container) {
     container.appendChild(messageDiv);
 }
 
-// ============================================
-// ✅ FIXED: SEND PRIVATE MESSAGE - REAL TIME!
-// ============================================
 async function sendPM() {
     if (!currentPMUser) {
         showToast('Select a user first', 'error');
@@ -909,8 +813,7 @@ async function sendPM() {
     
     try {
         const chatId = [currentUser.uid, currentPMUser.id].sort().join('_');
-        
-        // ✅ ENSURE NA MAY read: false PARA MA-TRIGGER ANG NOTIFICATION SA KABILANG DEVICE!
+
         await db.collection('privateChats')
             .doc(chatId)
             .collection('messages')
@@ -921,7 +824,7 @@ async function sendPM() {
                 senderPhoto: currentUser.photoURL || '',
                 receiverId: currentPMUser.id,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                read: false // ✅ IMPORTANT: PARA LUMABAS SA KABILANG DEVICE!
+                read: false 
             });
             
         console.log('✅ PM sent successfully - REAL TIME!');
@@ -940,11 +843,6 @@ async function sendPM() {
     }
 }
 
-// ============================================
-// IMAGE UPLOAD - FIXED
-// ============================================
-
-// Upload image to IMGBB
 async function uploadImageToIMGBB(file) {
     return new Promise((resolve, reject) => {
         if (isUploading) {
@@ -1004,7 +902,6 @@ async function uploadImageToIMGBB(file) {
     });
 }
 
-// Change Group Chat PFP
 async function changeGCPFP() {
     const input = document.createElement('input');
     input.type = 'file';
@@ -1033,7 +930,6 @@ async function changeGCPFP() {
     input.click();
 }
 
-// Change User Profile Picture
 async function changeProfilePicture() {
     const input = document.createElement('input');
     input.type = 'file';
@@ -1071,11 +967,6 @@ async function changeProfilePicture() {
     input.click();
 }
 
-// ============================================
-// UTILITY FUNCTIONS
-// ============================================
-
-// Toast notification
 function showToast(message, type = 'info') {
     const existingToast = document.querySelector('.toast');
     if (existingToast) existingToast.remove();
@@ -1098,7 +989,6 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
 
-// Setup Enter Key Listeners
 function setupEnterKeyListeners() {
     const gcInput = document.getElementById('gc-message-input');
     if (gcInput) {
@@ -1127,7 +1017,6 @@ function handlePMEnterKey(e) {
     }
 }
 
-// Switch Tab
 function switchTab(tab) {
     const gcTab = document.getElementById('gc-tab');
     const pmTab = document.getElementById('pm-tab');
@@ -1138,32 +1027,27 @@ function switchTab(tab) {
     if (pmTab) pmTab.classList.toggle('active', tab === 'pm');
     if (gcView) gcView.classList.toggle('active', tab === 'gc');
     if (pmView) pmView.classList.toggle('active', tab === 'pm');
-    
-    // Reset GC notifications when opening group chat
+
     if (tab === 'gc') {
         resetGCNotifications();
     }
 }
 
-// Toggle Sidebar
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
     if (sidebar) sidebar.classList.toggle('active');
 }
 
-// Show GC Info Modal
 function showGCInfo() {
     const modal = document.getElementById('gc-info-modal');
     if (modal) modal.classList.add('active');
 }
 
-// Close Modal
 function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) modal.classList.remove('active');
 }
 
-// Edit GC Name
 async function editGCName() {
     const currentName = document.getElementById('display-gc-name')?.textContent || 'World Chat 🌏';
     const newName = prompt('Enter new group name:', currentName);
@@ -1175,7 +1059,6 @@ async function editGCName() {
     }
 }
 
-// Edit GC Description
 async function editGCDesc() {
     const currentDesc = document.getElementById('display-gc-desc')?.textContent || 'Welcome to the group! 👋';
     const newDesc = prompt('Enter new group description:', currentDesc);
@@ -1187,7 +1070,6 @@ async function editGCDesc() {
     }
 }
 
-// Setup Presence
 function setupPresence() {
     window.addEventListener('beforeunload', () => {
         if (currentUser) {
@@ -1208,7 +1090,6 @@ function setupPresence() {
     });
 }
 
-// Logout
 async function logout() {
     try {
         if (currentUser) {
@@ -1227,7 +1108,6 @@ async function logout() {
     }
 }
 
-// Escape HTML
 function escapeHTML(text) {
     if (!text) return '';
     const div = document.createElement('div');
@@ -1235,7 +1115,6 @@ function escapeHTML(text) {
     return div.innerHTML;
 }
 
-// Test Function
 async function testMessenger() {
     console.log('🔍 TESTING MINI MESSENGER...');
     console.log('User:', currentUser?.email);
@@ -1257,5 +1136,4 @@ async function testMessenger() {
     }
 }
 
-// Auto test on load
 setTimeout(testMessenger, 3000);
