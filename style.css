@@ -795,6 +795,7 @@ body {
 
 .user-item-avatar {
     overflow: visible !important;
+    position: relative !important;
 }
 
 .user-item-avatar .unread-badge {
