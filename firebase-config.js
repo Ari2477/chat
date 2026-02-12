@@ -1,10 +1,10 @@
 const firebaseConfig = {
-  apiKey: "AIzaSyClPGh1yxz6qT6iYKvuuyHVvMo-bcrv4fo",
-  authDomain: "for-nothing-lastforever.firebaseapp.com",
-  projectId: "for-nothing-lastforever",
-  storageBucket: "for-nothing-lastforever.firebasestorage.app",
-  messagingSenderId: "737440293237",
-  appId: "1:737440293237:web:0acc447e43696f04a9733c"
+  apiKey: "AIzaSyBkR0E-PftBKDNkdpWS1niFRMRjcK64-P4",
+  authDomain: "mini-chat-app-1a2ca.firebaseapp.com",
+  projectId: "mini-chat-app-1a2ca",
+  storageBucket: "mini-chat-app-1a2ca.firebasestorage.app",
+  messagingSenderId: "638448934198",
+  appId: "1:638448934198:web:8e0dcbf8a4987642312797"
 };
 
 // Initialize Firebase
