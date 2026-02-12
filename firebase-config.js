@@ -15,7 +15,17 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 const storage = firebase.storage();
 
-// Export Firebase services
+// Enable Firestore offline persistence
+db.enablePersistence()
+  .catch((err) => {
+    if (err.code === 'failed-precondition') {
+      console.log('Persistence failed');
+    } else if (err.code === 'unimplemented') {
+      console.log('Persistence not available');
+    }
+  });
+
+// Export Firebase services globally
 window.firebase = firebase;
 window.auth = auth;
 window.db = db;
