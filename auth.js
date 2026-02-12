@@ -1,12 +1,25 @@
+/**
+ * Authentication Module
+ * Handles all Firebase authentication operations
+ */
 
+// ===== AUTH STATE MANAGEMENT =====
 let currentUser = null;
 
+/**
+ * Initialize auth state observer
+ */
 function initAuth() {
     auth.onAuthStateChanged(async (user) => {
         if (user) {
             currentUser = user;
             await saveUserToFirestore(user);
             await setUserOnline(true);
+            
+            // Update UI if on index page
+            if (window.location.pathname.includes('index.html') || window.location.pathname === '/') {
+                updateUserUI(user);
+            }
             
             // Redirect to index if on login page
             if (window.location.pathname.includes('login.html')) {
@@ -15,14 +28,47 @@ function initAuth() {
         } else {
             currentUser = null;
             // Redirect to login if on index page
-            if (window.location.pathname.includes('index.html')) {
+            if (window.location.pathname.includes('index.html') || window.location.pathname === '/') {
                 window.location.href = 'login.html';
             }
         }
     });
 }
 
-// ===== AUTHENTICATION METHODS =====
+/**
+ * Update UI with user data
+ */
+function updateUserUI(user) {
+    const userAvatar = document.getElementById('userAvatar');
+    const userName = document.getElementById('userName');
+    const modalAvatar = document.getElementById('modalAvatar');
+    const modalDisplayName = document.getElementById('modalDisplayName');
+    const modalEmail = document.getElementById('modalEmail');
+    const modalUid = document.getElementById('modalUid');
+
+    if (userAvatar) {
+        userAvatar.src = user.photoURL || 'https://via.placeholder.com/150';
+        userAvatar.alt = user.displayName || 'User';
+    }
+
+    if (userName) {
+        userName.textContent = user.displayName || 'Anonymous User';
+    }
+
+    // Update modal if it exists
+    if (modalAvatar) {
+        modalAvatar.src = user.photoURL || 'https://via.placeholder.com/150';
+    }
+    if (modalDisplayName) {
+        modalDisplayName.textContent = user.displayName || 'Anonymous User';
+    }
+    if (modalEmail) {
+        modalEmail.textContent = user.email || 'No email';
+    }
+    if (modalUid) {
+        modalUid.textContent = user.uid || 'No UID';
+    }
+}
 
 /**
  * Sign in with Google
@@ -57,8 +103,6 @@ async function signOut() {
     }
 }
 
-// ===== USER MANAGEMENT =====
-
 /**
  * Save user to Firestore after authentication
  */
@@ -67,7 +111,7 @@ async function saveUserToFirestore(user) {
     const userData = {
         uid: user.uid,
         name: user.displayName || 'Anonymous User',
-        email: user.email,
+        email: user.email || '',
         photo: user.photoURL || 'https://via.placeholder.com/150',
         online: true,
         lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
@@ -118,8 +162,6 @@ async function getUserByUid(uid) {
     }
 }
 
-// ===== ACCOUNT INFO MODAL =====
-
 /**
  * Show account information modal
  */
@@ -133,11 +175,17 @@ async function showAccountModal() {
     const userData = await getUserByUid(currentUser.uid);
 
     // Update modal content
-    document.getElementById('modalAvatar').src = currentUser.photoURL || 'https://via.placeholder.com/150';
-    document.getElementById('modalDisplayName').textContent = currentUser.displayName || 'Anonymous User';
-    document.getElementById('modalEmail').textContent = currentUser.email;
-    document.getElementById('modalUid').textContent = currentUser.uid;
-    document.getElementById('modalCreatedAt').textContent = userData?.createdAt || currentUser.metadata.creationTime || 'N/A';
+    const modalAvatar = document.getElementById('modalAvatar');
+    const modalDisplayName = document.getElementById('modalDisplayName');
+    const modalEmail = document.getElementById('modalEmail');
+    const modalUid = document.getElementById('modalUid');
+    const modalCreatedAt = document.getElementById('modalCreatedAt');
+
+    if (modalAvatar) modalAvatar.src = currentUser.photoURL || 'https://via.placeholder.com/150';
+    if (modalDisplayName) modalDisplayName.textContent = currentUser.displayName || 'Anonymous User';
+    if (modalEmail) modalEmail.textContent = currentUser.email || 'No email';
+    if (modalUid) modalUid.textContent = currentUser.uid || 'No UID';
+    if (modalCreatedAt) modalCreatedAt.textContent = userData?.createdAt || currentUser.metadata.creationTime || 'N/A';
 
     modal.classList.add('active');
 }
@@ -152,17 +200,24 @@ function hideAccountModal() {
     }
 }
 
-// ===== UTILITY FUNCTIONS =====
-
 /**
  * Show notification
  */
 function showNotification(message, type = 'info') {
+    // Remove existing notifications
+    const existingNotifications = document.querySelectorAll('.notification');
+    existingNotifications.forEach(notif => notif.remove());
+
     // Create notification element
     const notification = document.createElement('div');
-    notification.className = `notification ${type} glass-effect slide-up`;
+    notification.className = `notification ${type} glass-effect`;
+    
+    let icon = 'info-circle';
+    if (type === 'error') icon = 'exclamation-circle';
+    if (type === 'success') icon = 'check-circle';
+    
     notification.innerHTML = `
-        <i class="fas fa-${type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+        <i class="fas fa-${icon}"></i>
         <span>${message}</span>
     `;
 
@@ -171,14 +226,12 @@ function showNotification(message, type = 'info') {
 
     // Remove after 3 seconds
     setTimeout(() => {
-        notification.classList.add('slide-out');
+        notification.style.animation = 'slideOutRight 0.3s ease forwards';
         setTimeout(() => notification.remove(), 300);
     }, 3000);
 }
 
 // ===== EVENT LISTENERS =====
-
-// Initialize auth when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     initAuth();
 
@@ -236,5 +289,6 @@ window.authModule = {
     getUserByUid,
     showAccountModal,
     hideAccountModal,
-    showNotification
+    showNotification,
+    updateUserUI
 };
