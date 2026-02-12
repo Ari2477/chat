@@ -184,7 +184,7 @@ Build Command: npm install
 Start Command: npm start
 ```
 
-4. Click **"Create Static Site"**
+4. Click **"Create Web Service"**
 
 ---
 
@@ -311,7 +311,7 @@ const IMGBB_API_KEY = "YOUR_IMGBB_KEY";
 ```
 
 **Developer:** ARI
-**Role:** Full Stack Developer  
+**Role:** Developer  
 **Stack:** Firebase, JavaScript, CSS, HTML
 **Project:** Mini Messenger  
 **Year:** 2026  
@@ -323,4 +323,9 @@ const IMGBB_API_KEY = "YOUR_IMGBB_KEY";
 ```
 https://chat-d546.onrender.com
 ```
+# NOTE 
 
+```
+This is for mobile phone  📱
+```
+---
