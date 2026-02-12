@@ -4,20 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Mini Messenger - Chat</title>
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <!-- Custom CSS -->
+
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="app">
-        <!-- MAIN CHAT SCREEN -->
+
         <div id="main-screen" class="screen active">
-            <!-- HEADER -->
+
             <div class="chat-header">
                 <div class="user-info" onclick="toggleSidebar()">
                     <div class="user-avatar">
@@ -34,7 +32,6 @@
                 </div>
             </div>
 
-            <!-- CHAT TABS -->
             <div class="chat-tabs">
                 <button id="gc-tab" class="tab active" onclick="switchTab('gc')">
                     <i class="fas fa-users"></i> Group Chat
@@ -44,12 +41,10 @@
                 </button>
             </div>
 
-            <!-- GROUP CHAT VIEW -->
             <div id="gc-view" class="chat-view active">
-                <!-- GC Header -->
                 <div class="gc-header" onclick="showGCInfo()">
                     <div class="gc-avatar">
-                        <img id="gc-pfp" src="https://i.ibb.co/4T7YQcD/default-group.png" alt="GC">
+                        <img id="gc-pfp" src="https://i.ibb.co/qYky078V/Screenshot-20260212-134936-1.jpg" alt="GC">
                     </div>
                     <div class="gc-info">
                         <h3 id="gc-name">General Chat</h3>
@@ -58,10 +53,8 @@
                     <i class="fas fa-chevron-right"></i>
                 </div>
 
-                <!-- Messages -->
                 <div id="gc-messages" class="messages-container"></div>
 
-                <!-- Input -->
                 <div class="message-input-container">
                     <input type="text" id="gc-message-input" placeholder="Message #general" autocomplete="off">
                     <button onclick="sendGCMessage()" class="send-btn">
@@ -70,7 +63,7 @@
                 </div>
             </div>
 
-            <!-- PRIVATE MESSAGES VIEW -->
+
             <div id="pm-view" class="chat-view">
                 <div class="users-list-header">
                     <h4>Online Users</h4>
@@ -97,8 +90,7 @@
                 </div>
             </div>
         </div>
-
-        <!-- SIDEBAR (Users & GC Info) -->
+        
         <div id="sidebar" class="sidebar">
             <div class="sidebar-header">
                 <h3>Menu</h3>
@@ -108,7 +100,7 @@
                 <div class="sidebar-section">
                     <h4>Group Chat Info</h4>
                     <div class="gc-info-card" onclick="showGCInfo()">
-                        <img id="sidebar-gc-pfp" src="https://i.ibb.co/4T7YQcD/default-group.png" alt="GC">
+                        <img id="sidebar-gc-pfp" src="https://i.ibb.co/qYky078V/Screenshot-20260212-134936-1.jpg" alt="GC">
                         <div>
                             <strong id="sidebar-gc-name">General Chat</strong>
                             <span id="sidebar-member-count">0 members</span>
@@ -133,7 +125,6 @@
             </div>
         </div>
 
-        <!-- GC INFO MODAL -->
         <div id="gc-info-modal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">
