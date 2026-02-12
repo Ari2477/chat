@@ -10,7 +10,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    res.sendFile(path.join(__dirname, 'chat.html'));
 });
 
 app.get('/login', (req, res) => {
@@ -37,7 +37,7 @@ app.get('*', (req, res) => {
     if (req.path === '/login' || req.path === '/login.html') {
         res.sendFile(path.join(__dirname, 'login.html'));
     } else {
-        res.sendFile(path.join(__dirname, 'index.html'));
+        res.sendFile(path.join(__dirname, 'chat.html'));
     }
 });
 
