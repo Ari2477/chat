@@ -847,3 +847,192 @@ body {
 ::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.2);
 }
+
+/* Additional Fixes */
+.chat-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.list-header {
+    padding: 10px 0;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--glass-border);
+    color: var(--text-dim);
+    font-size: 0.9rem;
+}
+
+.no-users {
+    padding: 20px;
+    text-align: center;
+    color: var(--text-dim);
+    font-style: italic;
+}
+
+.online-user {
+    cursor: pointer;
+}
+
+#typingIndicator {
+    display: inline-block;
+    margin-left: 10px;
+}
+
+.typing-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    font-size: 0.8rem;
+    color: var(--accent-purple);
+}
+
+.status-text {
+    color: var(--text-dim);
+    font-size: 0.8rem;
+}
+
+.message[data-message-id] {
+    margin-bottom: 15px;
+}
+
+.message-own .message-content {
+    background: var(--primary-gradient);
+}
+
+.message-seen {
+    display: block;
+    text-align: right;
+    margin-top: 5px;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+}
+
+.message-seen i {
+    color: var(--accent-purple);
+}
+
+/* Loading State */
+.loading {
+    position: relative;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.loading::after {
+    content: '';
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--glass-border);
+    border-top-color: var(--accent-purple);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Active Users List in Modal */
+.active-users-list {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-top: 15px;
+}
+
+.active-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    margin-bottom: 8px;
+}
+
+.active-user img {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+/* Fix for undefined text */
+#userName:empty::before {
+    content: 'Loading...';
+    color: var(--text-dim);
+}
+
+#currentChatName:empty::before {
+    content: 'Global Group Chat';
+}
+
+/* Notification styles */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 25px;
+    background: rgba(26, 26, 46, 0.95);
+    border-left: 4px solid var(--accent-purple);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 9999;
+    animation: slideInRight 0.3s ease;
+}
+
+.notification.error {
+    border-left-color: #ff4444;
+}
+
+.notification.success {
+    border-left-color: #4caf50;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+/* Fix for chat items */
+.chat-item[data-chat-id="global"] .chat-avatar {
+    background: var(--primary-gradient);
+}
+
+.chat-item[data-chat-id="global"] .chat-avatar i {
+    color: white;
+    font-size: 1.5rem;
+}
+
+/* Ensure messages container has proper spacing */
+.messages-container {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
