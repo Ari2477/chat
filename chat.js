@@ -1,5 +1,5 @@
 /**
- * Chat Module
+ * Chat Module - FULLY FIXED
  * Handles all messaging and chat functionality
  */
 
@@ -27,13 +27,12 @@ function loadGlobalChat() {
         name: 'Global Group Chat'
     };
 
-    // Update UI
     updateChatHeader();
     loadMessages('groupChats', 'global');
     setupTypingIndicator('groupChats', 'global');
     loadOnlineUsers();
     
-    // Mark active chat in sidebar
+    // Mark active chat
     document.querySelectorAll('.chat-item').forEach(item => {
         item.classList.remove('active');
     });
@@ -44,11 +43,236 @@ function loadGlobalChat() {
     }
 }
 
+// ===== PRIVATE CHAT FUNCTIONS - COMPLETELY FIXED =====
+
+/**
+ * Create or get private chat - FIXED VERSION
+ */
+async function createPrivateChat(otherUserId) {
+    const currentUser = authModule.getCurrentUser();
+    
+    // VALIDATION CHECKS
+    if (!currentUser) {
+        authModule.showNotification('Please login first', 'error');
+        return;
+    }
+    
+    if (!otherUserId || otherUserId.trim() === '') {
+        authModule.showNotification('Please enter a valid User ID', 'error');
+        return;
+    }
+    
+    if (currentUser.uid === otherUserId.trim()) {
+        authModule.showNotification('Cannot chat with yourself', 'error');
+        return;
+    }
+
+    try {
+        authModule.showNotification('Looking for user...', 'info');
+        
+        // CHECK IF USER EXISTS
+        const otherUser = await authModule.getUserByUid(otherUserId.trim());
+        if (!otherUser) {
+            authModule.showNotification('User not found! Please check the UID', 'error');
+            return;
+        }
+
+        authModule.showNotification(`User found! Creating chat with ${otherUser.name}...`, 'info');
+
+        // CHECK IF CHAT ALREADY EXISTS
+        const existingChat = await findExistingPrivateChat(currentUser.uid, otherUserId.trim());
+        
+        let chatId;
+        
+        if (existingChat) {
+            // USE EXISTING CHAT
+            chatId = existingChat.id;
+            authModule.showNotification('Opening existing chat...', 'success');
+            openPrivateChat(chatId, otherUser);
+        } else {
+            // CREATE NEW PRIVATE CHAT - FIXED VERSION
+            const chatData = {
+                members: [currentUser.uid, otherUserId.trim()],
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                createdBy: currentUser.uid,
+                lastMessage: null,
+                lastMessageTime: null
+            };
+            
+            const chatRef = await db.collection('privateChats').add(chatData);
+            chatId = chatRef.id;
+            
+            authModule.showNotification('Private chat created successfully!', 'success');
+            openPrivateChat(chatId, otherUser);
+        }
+        
+        // SWITCH TO CHATS TAB
+        const chatsTab = document.querySelector('.tab-btn[data-tab="chats"]');
+        if (chatsTab) {
+            chatsTab.click();
+        }
+        
+        // CLOSE MOBILE SIDEBAR IF OPEN
+        if (window.innerWidth <= 768) {
+            const sidebar = document.getElementById('sidebar');
+            const mobileToggle = document.getElementById('mobileMenuToggle');
+            if (sidebar && sidebar.classList.contains('active')) {
+                sidebar.classList.remove('active');
+                const icon = mobileToggle?.querySelector('i');
+                if (icon) icon.className = 'fas fa-bars';
+            }
+        }
+        
+    } catch (error) {
+        console.error('Error creating private chat:', error);
+        authModule.showNotification('Failed to create private chat: ' + error.message, 'error');
+    }
+}
+
+/**
+ * Find existing private chat between two users - FIXED VERSION
+ */
+async function findExistingPrivateChat(uid1, uid2) {
+    try {
+        console.log('Searching for existing chat between:', uid1, 'and', uid2);
+        
+        // QUERY 1: Find chats where uid1 is a member
+        const chatsRef = db.collection('privateChats');
+        const snapshot1 = await chatsRef
+            .where('members', 'array-contains', uid1)
+            .get();
+
+        // Check each chat if it contains uid2
+        for (const doc of snapshot1.docs) {
+            const data = doc.data();
+            if (data.members && Array.isArray(data.members)) {
+                if (data.members.includes(uid2)) {
+                    console.log('Found existing chat:', doc.id);
+                    return { id: doc.id, ...data };
+                }
+            }
+        }
+        
+        // QUERY 2: Try the other way around just to be sure
+        const snapshot2 = await chatsRef
+            .where('members', 'array-contains', uid2)
+            .get();
+            
+        for (const doc of snapshot2.docs) {
+            const data = doc.data();
+            if (data.members && Array.isArray(data.members)) {
+                if (data.members.includes(uid1)) {
+                    console.log('Found existing chat (reverse):', doc.id);
+                    return { id: doc.id, ...data };
+                }
+            }
+        }
+        
+        console.log('No existing chat found');
+        return null;
+    } catch (error) {
+        console.error('Error finding private chat:', error);
+        return null;
+    }
+}
+
+/**
+ * Open private chat - FIXED VERSION
+ */
+function openPrivateChat(chatId, otherUser) {
+    if (!otherUser) {
+        console.error('No user data provided');
+        return;
+    }
+    
+    currentChat = {
+        id: chatId,
+        type: 'private',
+        name: otherUser.name || 'User',
+        otherUserId: otherUser.uid,
+        otherUserPhoto: otherUser.photo || 'https://via.placeholder.com/150'
+    };
+
+    // UPDATE UI
+    updateChatHeader();
+    loadMessages('privateChats', chatId);
+    setupTypingIndicator('privateChats', chatId);
+    addPrivateChatToList(chatId, otherUser);
+    
+    // MARK ACTIVE CHAT
+    document.querySelectorAll('.chat-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    
+    const chatItem = document.querySelector(`.chat-item[data-chat-id="${chatId}"]`);
+    if (chatItem) {
+        chatItem.classList.add('active');
+    }
+    
+    // CLEAR MESSAGE INPUT
+    const messageInput = document.getElementById('messageInput');
+    if (messageInput) {
+        messageInput.value = '';
+        messageInput.focus();
+    }
+}
+
+/**
+ * Add private chat to sidebar list - FIXED VERSION
+ */
+function addPrivateChatToList(chatId, user) {
+    const chatsList = document.getElementById('chatsList');
+    if (!chatsList) return;
+
+    // CHECK IF ALREADY EXISTS
+    if (document.querySelector(`.chat-item[data-chat-id="${chatId}"]`)) {
+        return;
+    }
+
+    const chatItem = document.createElement('div');
+    chatItem.className = 'chat-item';
+    chatItem.dataset.chatId = chatId;
+    chatItem.dataset.chatType = 'private';
+    chatItem.dataset.userId = user.uid;
+
+    chatItem.innerHTML = `
+        <div class="chat-avatar">
+            <img src="${user.photo || 'https://via.placeholder.com/150'}" 
+                 alt="${escapeHtml(user.name)}" 
+                 onerror="this.src='https://via.placeholder.com/150'">
+        </div>
+        <div class="chat-info">
+            <h4>${escapeHtml(user.name)}</h4>
+            <p>${user.email ? escapeHtml(user.email) : 'Private chat'}</p>
+        </div>
+        <div class="chat-badge">PM</div>
+    `;
+
+    chatItem.addEventListener('click', (e) => {
+        e.preventDefault();
+        openPrivateChat(chatId, user);
+        
+        // CLOSE SIDEBAR ON MOBILE
+        if (window.innerWidth <= 768) {
+            const sidebar = document.getElementById('sidebar');
+            const mobileToggle = document.getElementById('mobileMenuToggle');
+            if (sidebar) {
+                sidebar.classList.remove('active');
+                const icon = mobileToggle?.querySelector('i');
+                if (icon) icon.className = 'fas fa-bars';
+            }
+        }
+    });
+
+    chatsList.appendChild(chatItem);
+}
+
+// ===== MESSAGE FUNCTIONS =====
+
 /**
  * Load messages for current chat
  */
 function loadMessages(collection, chatId) {
-    // Clear existing listener
     if (messageListener) {
         messageListener();
     }
@@ -63,36 +287,31 @@ function loadMessages(collection, chatId) {
         const messagesContainer = document.getElementById('messagesContainer');
         if (!messagesContainer) return;
 
-        // Clear container if no messages
         if (snapshot.empty) {
             messagesContainer.innerHTML = '<div class="no-messages">No messages yet. Start the conversation!</div>';
             return;
         }
 
-        // Clear container for fresh load
-        if (snapshot.docChanges().length > 0 && snapshot.docChanges()[0].type === 'added') {
+        // CLEAR AND REBUILD FOR SIMPLICITY
+        if (snapshot.docChanges().length > 0) {
             messagesContainer.innerHTML = '';
+            
+            snapshot.forEach((doc) => {
+                const message = doc.data();
+                message.id = doc.id;
+                displayMessage(message);
+            });
         }
 
-        // Process each message change
-        snapshot.docChanges().forEach((change) => {
-            if (change.type === 'added') {
-                const message = change.doc.data();
-                message.id = change.doc.id;
-                displayMessage(message);
-            }
-        });
-
-        // Scroll to bottom
         scrollToBottom();
     }, (error) => {
         console.error('Error loading messages:', error);
-        showNotification('Failed to load messages', 'error');
+        authModule.showNotification('Failed to load messages', 'error');
     });
 }
 
 /**
- * Display a message in the chat
+ * Display a message - FIXED VERSION
  */
 async function displayMessage(message) {
     const messagesContainer = document.getElementById('messagesContainer');
@@ -101,9 +320,9 @@ async function displayMessage(message) {
     const currentUser = authModule.getCurrentUser();
     if (!currentUser) return;
 
-    const isOwnMessage = message.userId === currentUser?.uid;
+    const isOwnMessage = message.userId === currentUser.uid;
 
-    // Get user data
+    // GET USER DATA
     let userData = message.userData;
     if (!userData) {
         userData = await authModule.getUserByUid(message.userId) || {
@@ -112,17 +331,16 @@ async function displayMessage(message) {
         };
     }
 
-    // Check if message already exists
+    // CHECK FOR DUPLICATES
     if (document.querySelector(`.message[data-message-id="${message.id}"]`)) {
         return;
     }
 
-    // Create message element
     const messageElement = document.createElement('div');
     messageElement.className = `message ${isOwnMessage ? 'message-own' : ''}`;
     messageElement.dataset.messageId = message.id;
 
-    // Format timestamp
+    // FORMAT TIMESTAMP
     let timeString = 'Just now';
     if (message.timestamp) {
         const timestamp = message.timestamp.toDate ? message.timestamp.toDate() : new Date(message.timestamp);
@@ -130,14 +348,16 @@ async function displayMessage(message) {
     }
 
     messageElement.innerHTML = `
-        <img src="${userData.photo}" alt="${userData.name}" class="message-avatar" onerror="this.src='https://via.placeholder.com/150'">
+        <img src="${userData.photo}" 
+             alt="${escapeHtml(userData.name)}" 
+             class="message-avatar" 
+             onerror="this.src='https://via.placeholder.com/150'">
         <div class="message-content">
             <div class="message-header">
                 <span class="message-author">${escapeHtml(userData.name)}</span>
                 <span class="message-time">${timeString}</span>
             </div>
             <div class="message-text">${escapeHtml(message.text)}</div>
-            ${isOwnMessage ? '<span class="message-seen"><i class="fas fa-check"></i></span>' : ''}
         </div>
     `;
 
@@ -145,16 +365,24 @@ async function displayMessage(message) {
 }
 
 /**
- * Send a message
+ * Send a message - FIXED VERSION
  */
 async function sendMessage(text) {
-    if (!text || !text.trim()) return;
+    if (!text || !text.trim()) {
+        authModule.showNotification('Cannot send empty message', 'error');
+        return;
+    }
 
     const currentUser = authModule.getCurrentUser();
-    if (!currentUser) return;
+    if (!currentUser) {
+        authModule.showNotification('Please login first', 'error');
+        return;
+    }
+
+    const messageText = text.trim();
 
     const message = {
-        text: text.trim(),
+        text: messageText,
         userId: currentUser.uid,
         userData: {
             name: currentUser.displayName || 'Anonymous',
@@ -175,165 +403,56 @@ async function sendMessage(text) {
                 .doc(currentChat.id)
                 .collection('messages')
                 .add(message);
+            
+            // UPDATE LAST MESSAGE IN PRIVATE CHAT
+            await db.collection('privateChats')
+                .doc(currentChat.id)
+                .update({
+                    lastMessage: messageText,
+                    lastMessageTime: firebase.firestore.FieldValue.serverTimestamp()
+                });
         }
 
-        // Clear typing status
+        // STOP TYPING
         await setTyping(false);
+        
     } catch (error) {
         console.error('Error sending message:', error);
-        showNotification('Failed to send message', 'error');
+        authModule.showNotification('Failed to send message', 'error');
     }
-}
-
-// ===== PRIVATE CHAT FUNCTIONS =====
-
-/**
- * Create or get private chat
- */
-async function createPrivateChat(otherUserId) {
-    const currentUser = authModule.getCurrentUser();
-    if (!currentUser) {
-        showNotification('Please login first', 'error');
-        return;
-    }
-    
-    if (currentUser.uid === otherUserId) {
-        showNotification('Cannot chat with yourself', 'error');
-        return;
-    }
-
-    try {
-        // Check if user exists
-        const otherUser = await authModule.getUserByUid(otherUserId);
-        if (!otherUser) {
-            showNotification('User not found', 'error');
-            return;
-        }
-
-        // Check if chat already exists
-        const existingChat = await findExistingPrivateChat(currentUser.uid, otherUserId);
-        
-        if (existingChat) {
-            // Load existing chat
-            openPrivateChat(existingChat.id, otherUser);
-        } else {
-            // Create new private chat
-            const chatRef = await db.collection('privateChats').add({
-                members: [currentUser.uid, otherUserId],
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                createdBy: currentUser.uid,
-                lastSeen: {}
-            });
-
-            openPrivateChat(chatRef.id, otherUser);
-        }
-        
-        // Switch to chats tab
-        const chatsTab = document.querySelector('.tab-btn[data-tab="chats"]');
-        if (chatsTab) {
-            chatsTab.click();
-        }
-    } catch (error) {
-        console.error('Error creating private chat:', error);
-        showNotification('Failed to create private chat', 'error');
-    }
-}
-
-/**
- * Find existing private chat between two users
- */
-async function findExistingPrivateChat(uid1, uid2) {
-    try {
-        const chatsRef = db.collection('privateChats');
-        const snapshot = await chatsRef
-            .where('members', 'array-contains', uid1)
-            .get();
-
-        for (const doc of snapshot.docs) {
-            const data = doc.data();
-            if (data.members && data.members.includes(uid2)) {
-                return { id: doc.id, ...data };
-            }
-        }
-        return null;
-    } catch (error) {
-        console.error('Error finding private chat:', error);
-        return null;
-    }
-}
-
-/**
- * Open private chat
- */
-function openPrivateChat(chatId, otherUser) {
-    currentChat = {
-        id: chatId,
-        type: 'private',
-        name: otherUser.name || 'User',
-        otherUserId: otherUser.uid,
-        otherUserPhoto: otherUser.photo || 'https://via.placeholder.com/150'
-    };
-
-    // Update UI
-    updateChatHeader();
-    loadMessages('privateChats', chatId);
-    setupTypingIndicator('privateChats', chatId);
-    addPrivateChatToList(chatId, otherUser);
-    
-    // Mark active chat
-    document.querySelectorAll('.chat-item').forEach(item => {
-        item.classList.remove('active');
-    });
-    
-    const chatItem = document.querySelector(`.chat-item[data-chat-id="${chatId}"]`);
-    if (chatItem) {
-        chatItem.classList.add('active');
-    }
-}
-
-/**
- * Add private chat to sidebar list
- */
-function addPrivateChatToList(chatId, user) {
-    const chatsList = document.getElementById('chatsList');
-    if (!chatsList) return;
-
-    // Check if chat already exists in list
-    if (document.querySelector(`.chat-item[data-chat-id="${chatId}"]`)) {
-        return;
-    }
-
-    const chatItem = document.createElement('div');
-    chatItem.className = 'chat-item';
-    chatItem.dataset.chatId = chatId;
-    chatItem.dataset.chatType = 'private';
-    chatItem.dataset.userId = user.uid;
-
-    chatItem.innerHTML = `
-        <div class="chat-avatar">
-            <img src="${user.photo || 'https://via.placeholder.com/150'}" alt="${user.name}" onerror="this.src='https://via.placeholder.com/150'">
-        </div>
-        <div class="chat-info">
-            <h4>${escapeHtml(user.name)}</h4>
-            <p>${user.email ? escapeHtml(user.email) : 'Private chat'}</p>
-        </div>
-        <div class="chat-badge">PM</div>
-    `;
-
-    chatItem.addEventListener('click', () => {
-        openPrivateChat(chatId, user);
-    });
-
-    chatsList.appendChild(chatItem);
 }
 
 // ===== TYPING INDICATOR =====
 
 /**
+ * Set typing status
+ */
+async function setTyping(isTyping) {
+    const currentUser = authModule.getCurrentUser();
+    if (!currentUser || !currentChat) return;
+
+    const collection = currentChat.type === 'group' ? 'groupChats' : 'privateChats';
+    const typingRef = db.collection(collection)
+        .doc(currentChat.id)
+        .collection('typing')
+        .doc(currentUser.uid);
+
+    try {
+        await typingRef.set({
+            userId: currentUser.uid,
+            userName: currentUser.displayName || 'Anonymous',
+            typing: isTyping,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    } catch (error) {
+        console.error('Error setting typing status:', error);
+    }
+}
+
+/**
  * Setup typing indicator listener
  */
 function setupTypingIndicator(collection, chatId) {
-    // Clear existing listener
     if (typingListener) {
         typingListener();
     }
@@ -358,7 +477,7 @@ function setupTypingIndicator(collection, chatId) {
 }
 
 /**
- * Update typing indicator in UI
+ * Update typing indicator
  */
 function updateTypingIndicator(users) {
     const indicator = document.getElementById('typingIndicator');
@@ -390,31 +509,6 @@ function updateTypingIndicator(users) {
     `;
 }
 
-/**
- * Set typing status
- */
-async function setTyping(isTyping) {
-    const currentUser = authModule.getCurrentUser();
-    if (!currentUser || !currentChat) return;
-
-    const collection = currentChat.type === 'group' ? 'groupChats' : 'privateChats';
-    const typingRef = db.collection(collection)
-        .doc(currentChat.id)
-        .collection('typing')
-        .doc(currentUser.uid);
-
-    try {
-        await typingRef.set({
-            userId: currentUser.uid,
-            userName: currentUser.displayName || 'Anonymous',
-            typing: isTyping,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
-    } catch (error) {
-        console.error('Error setting typing status:', error);
-    }
-}
-
 // ===== ONLINE USERS =====
 
 /**
@@ -444,13 +538,13 @@ function loadOnlineUsers() {
         });
 
         if (onlineCount === 0) {
-            usersList.innerHTML += '<p class="no-users">No other users online</p>';
+            const noUsers = document.createElement('p');
+            noUsers.className = 'no-users';
+            noUsers.textContent = 'No other users online';
+            usersList.appendChild(noUsers);
         }
 
-        // Update online count in GC info
         updateOnlineCount(snapshot.size);
-    }, (error) => {
-        console.error('Error loading online users:', error);
     });
 }
 
@@ -464,7 +558,9 @@ function createOnlineUserElement(user) {
 
     element.innerHTML = `
         <div class="chat-avatar">
-            <img src="${user.photo || 'https://via.placeholder.com/150'}" alt="${user.name}" onerror="this.src='https://via.placeholder.com/150'">
+            <img src="${user.photo || 'https://via.placeholder.com/150'}" 
+                 alt="${escapeHtml(user.name)}" 
+                 onerror="this.src='https://via.placeholder.com/150'">
         </div>
         <div class="chat-info">
             <h4>${escapeHtml(user.name)}</h4>
@@ -481,7 +577,7 @@ function createOnlineUserElement(user) {
 }
 
 /**
- * Update online users count
+ * Update online count
  */
 function updateOnlineCount(count) {
     const onlineCount = document.getElementById('onlineCount');
@@ -495,7 +591,7 @@ function updateOnlineCount(count) {
 // ===== UTILITY FUNCTIONS =====
 
 /**
- * Update chat header UI
+ * Update chat header
  */
 function updateChatHeader() {
     const nameElement = document.getElementById('currentChatName');
@@ -508,7 +604,10 @@ function updateChatHeader() {
 
     if (avatarElement) {
         if (currentChat.type === 'private' && currentChat.otherUserPhoto) {
-            avatarElement.innerHTML = `<img src="${currentChat.otherUserPhoto}" alt="${currentChat.name}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" onerror="this.src='https://via.placeholder.com/150'">`;
+            avatarElement.innerHTML = `<img src="${currentChat.otherUserPhoto}" 
+                                           alt="${escapeHtml(currentChat.name)}" 
+                                           style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;"
+                                           onerror="this.src='https://via.placeholder.com/150'">`;
         } else {
             avatarElement.innerHTML = '<i class="fas fa-globe"></i>';
         }
@@ -545,11 +644,11 @@ function formatTimestamp(date) {
 }
 
 /**
- * Escape HTML to prevent XSS
+ * Escape HTML
  */
 function escapeHtml(unsafe) {
     if (!unsafe) return '';
-    return unsafe
+    return String(unsafe)
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
@@ -558,7 +657,7 @@ function escapeHtml(unsafe) {
 }
 
 /**
- * Scroll messages to bottom
+ * Scroll to bottom
  */
 function scrollToBottom() {
     const container = document.getElementById('messagesContainer');
@@ -570,18 +669,7 @@ function scrollToBottom() {
 }
 
 /**
- * Show notification
- */
-function showNotification(message, type = 'info') {
-    if (window.authModule) {
-        authModule.showNotification(message, type);
-    }
-}
-
-// ===== CHAT INFO FUNCTIONS =====
-
-/**
- * Load chat information into modal
+ * Load chat info
  */
 async function loadChatInfo() {
     const content = document.getElementById('chatInfoContent');
@@ -620,7 +708,9 @@ async function loadChatInfo() {
                         const userElement = document.createElement('div');
                         userElement.className = 'active-user';
                         userElement.innerHTML = `
-                            <img src="${user.photo || 'https://via.placeholder.com/150'}" alt="${user.name}" onerror="this.src='https://via.placeholder.com/150'">
+                            <img src="${user.photo || 'https://via.placeholder.com/150'}" 
+                                 alt="${escapeHtml(user.name)}"
+                                 onerror="this.src='https://via.placeholder.com/150'">
                             <span>${escapeHtml(user.name)}</span>
                             <span class="status-dot online"></span>
                         `;
@@ -640,7 +730,10 @@ async function loadChatInfo() {
                 <div class="chat-info-section">
                     <h4><i class="fas fa-user"></i> Private Chat</h4>
                     <div class="user-profile-info">
-                        <img src="${otherUser.photo || 'https://via.placeholder.com/150'}" alt="${otherUser.name}" class="profile-image" onerror="this.src='https://via.placeholder.com/150'">
+                        <img src="${otherUser.photo || 'https://via.placeholder.com/150'}" 
+                             alt="${escapeHtml(otherUser.name)}" 
+                             class="profile-image"
+                             onerror="this.src='https://via.placeholder.com/150'">
                         <h5>${escapeHtml(otherUser.name)}</h5>
                         <p>${otherUser.email || 'No email'}</p>
                         <div class="info-item">
@@ -665,14 +758,15 @@ async function loadChatInfo() {
 
 // ===== EVENT LISTENERS =====
 
-// Initialize chat functionality
 document.addEventListener('DOMContentLoaded', () => {
-    // Load global chat by default
+    // LOAD GLOBAL CHAT
     setTimeout(() => {
-        loadGlobalChat();
-    }, 500);
+        if (window.location.pathname.includes('index.html') || window.location.pathname === '/') {
+            loadGlobalChat();
+        }
+    }, 1000);
 
-    // Setup message form
+    // MESSAGE FORM
     const messageForm = document.getElementById('messageForm');
     const messageInput = document.getElementById('messageInput');
 
@@ -686,7 +780,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Setup typing detection
+    // TYPING DETECTION
     if (messageInput) {
         let typingTimeout;
         
@@ -707,21 +801,25 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Setup add user button
+    // ADD USER BUTTON - FIXED
     const addUserBtn = document.getElementById('addUserBtn');
     const userSearchInput = document.getElementById('userSearchInput');
 
     if (addUserBtn && userSearchInput) {
-        addUserBtn.addEventListener('click', () => {
+        addUserBtn.addEventListener('click', (e) => {
+            e.preventDefault();
             const uid = userSearchInput.value.trim();
             if (uid) {
                 createPrivateChat(uid);
                 userSearchInput.value = '';
+            } else {
+                authModule.showNotification('Please enter a User ID', 'error');
             }
         });
 
         userSearchInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
+                e.preventDefault();
                 const uid = userSearchInput.value.trim();
                 if (uid) {
                     createPrivateChat(uid);
@@ -731,7 +829,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Setup tab switching
+    // TAB SWITCHING
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const tab = btn.dataset.tab;
@@ -751,7 +849,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Setup chat info button
+    // CHAT INFO BUTTON
     const chatInfoBtn = document.getElementById('chatInfoBtn');
     if (chatInfoBtn) {
         chatInfoBtn.addEventListener('click', async () => {
@@ -764,7 +862,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Export functions for use in other modules
+// EXPORT MODULE
 window.chatModule = {
     loadGlobalChat,
     sendMessage,
@@ -772,5 +870,5 @@ window.chatModule = {
     openPrivateChat,
     setTyping,
     loadChatInfo,
-    currentChat: () => currentChat
+    getCurrentChat: () => currentChat
 };
