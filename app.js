@@ -1074,7 +1074,7 @@ function loadUsers() {
                 const userData = doc.data();
                 
                 if (doc.id !== currentUser?.uid) {                
-                    if (doc.id === BOT_IDS.AI_BOT) {
+                    if (doc.id === "ai_bot") {
                         users.push({ 
                             id: doc.id, 
                             ...userData,
@@ -1083,8 +1083,8 @@ function loadUsers() {
                             online: true
                         });
                     } 
-                    
-                    else if (doc.id !== BOT_IDS.WELCOME_BOT) {
+
+                    else if (doc.id !== "welcome_bot") {
                         users.push({ 
                             id: doc.id, 
                             ...userData,
@@ -1095,8 +1095,8 @@ function loadUsers() {
             });
 
             users.sort((a, b) => {
-                if (a.id === BOT_IDS.AI_BOT) return -1;
-                if (b.id === BOT_IDS.AI_BOT) return 1;
+                if (a.id === "ai_bot") return -1;
+                if (b.id === "ai_bot") return 1;
                 if (a.online && !b.online) return -1;
                 if (!a.online && b.online) return 1;
                 return (a.name || '').localeCompare(b.name || '');
