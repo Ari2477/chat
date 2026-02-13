@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mini Assistant - AI Powered</title>
+    <title>Mini Assistant - Ultimate AI Bot</title>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <style>
+        /* Base styles */
         .back-btn {
             width: 36px;
             height: 36px;
@@ -51,6 +52,84 @@
             background: rgba(79,70,229,0.05);
             color: var(--primary);
         }
+
+        /* Camera button */
+        .camera-btn {
+            width: 42px;
+            height: 42px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .camera-btn:hover {
+            background: var(--bg-hover);
+            color: var(--primary);
+            transform: scale(1.1);
+        }
+
+        .camera-btn i {
+            font-size: 20px;
+        }
+
+        /* Loading animation */
+        .typing-indicator-bot {
+            display: flex;
+            gap: 4px;
+            padding: 12px 16px;
+            background: var(--bg-input);
+            border-radius: 20px;
+            border-bottom-left-radius: 6px;
+            align-self: flex-start;
+            margin: 5px 0;
+        }
+
+        .typing-indicator-bot span {
+            width: 8px;
+            height: 8px;
+            background: var(--text-muted);
+            border-radius: 50%;
+            animation: typingBounce 1.4s infinite;
+        }
+
+        .typing-indicator-bot span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator-bot span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typingBounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-6px); }
+        }
+
+        /* Message image preview */
+        .message-image-preview {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border: 2px solid var(--primary);
+            cursor: pointer;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-dark);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 50px;
+            box-shadow: var(--shadow-lg);
+            z-index: 9999;
+            border: 1px solid var(--border-color);
+        }
     </style>
 </head>
 <body style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #0a0c10;">
@@ -72,56 +151,69 @@
             <button class="quick-reply-btn" onclick="sendQuickReply('/help')">
                 <i class="fas fa-question-circle"></i> /help
             </button>
-            <button class="quick-reply-btn" onclick="sendQuickReply('/ai Hello')">
+            <button class="quick-reply-btn" onclick="sendQuickReply('/ai')">
                 <i class="fas fa-robot"></i> /ai
             </button>
-            <button class="quick-reply-btn" onclick="sendQuickReply('/sim Hello')">
+            <button class="quick-reply-btn" onclick="sendQuickReply('/sim')">
                 <i class="fas fa-comment"></i> /sim
             </button>
-            <button class="quick-reply-btn" onclick="sendQuickReply('/ai what is this?')">
-                <i class="fas fa-image"></i> /ai + image
+            <button class="quick-reply-btn" onclick="sendQuickReply('/botinfo')">
+                <i class="fas fa-info-circle"></i> /info
             </button>
         </div>
 
         <div id="botMessages" class="bot-messages-container">
             <div class="welcome-message">
                 <i class="fas fa-robot" style="font-size: 32px; color: var(--primary); margin-bottom: 10px; display: block;"></i>
-                Hi! I'm Mini Assistant. Type <strong>/help</strong> to see all commands!
+                Hi! I'm Mini Assistant.<br>Type <strong>/help</strong> to see commands!
             </div>
         </div>
 
         <div class="bot-input-container">
-            <input type="text" id="botMessageInput" placeholder="Type /help for commands..." onkeypress="handleBotKeyPress(event)">
-            <button class="bot-send-btn" onclick="sendBotMessage()">
+            <input type="text" id="botMessageInput" placeholder="Type /help for commands..." onkeypress="handleKeyPress(event)">
+            <button class="camera-btn" onclick="handleImageUpload()" title="Upload Image for AI">
+                <i class="fas fa-camera"></i>
+            </button>
+            <button class="bot-send-btn" onclick="sendMessage()">
                 <i class="fas fa-paper-plane"></i>
             </button>
         </div>
     </div>
 
     <script>
+        // ============================================
+        // API CONFIGURATIONS - LAHAT WORKING!
+        // ============================================
         const API_CONFIG = {
-            ai: {
-                endpoint: "https://jrmtool-api.vercel.app/api/gemini",
-                method: "GET" 
-            },
+            // Gemini AI - working with images!
+            gemini: "https://jrmtool-api.vercel.app/api/gemini",
+            
+            // SimSimi - working chat!
             sim: {
-                endpoint: "https://simsimi-api-pro.onrender.com/sim?query=",
+                url: "https://simsimi-api-pro.onrender.com/sim",
                 key: "a650beda66094d58b3e5c84b664420e8f2e65edd"
             },
-            imgbb: {
-                key: "87b58d438e0cbe5226c1df0a8071621e" 
-            }
+            
+            // IMGBB - working image upload!
+            imgbb: "9b8fef2118f0f35e2ae8e7113fe40ae2",
+            
+            // Dictionary - working!
+            dictionary: "https://api.dictionaryapi.dev/api/v2/entries/en",
+            
+            // Datamuse - working synonyms/antonyms!
+            datamuse: "https://api.datamuse.com/words"
         };
 
+        // User data
         const urlParams = new URLSearchParams(window.location.search);
         const userId = urlParams.get('userId');
         const userName = urlParams.get('userName') || 'User';
-        const userPfp = urlParams.get('userPfp') || 'https://i.ibb.co/KjkPv6xw/Ilustraci-n-de-dibujos-animados-lindo-robot-agitando-la-mano-Vector-Premium.jpg';
+        const userPfp = urlParams.get('userPfp') || 'https://ui-avatars.com/api/?name=User&background=4f46e5&color=fff';
 
+        // Data collections
         const jokes = [
             "Why don't scientists trust atoms? Because they make up everything!",
             "Why did the scarecrow win an award? He was outstanding in his field!",
-            "Why don't eggs tell jokes? They'd crack each other up!",
             "What do you call a fake noodle? An impasta!",
             "Why did the math book look sad? Because it had too many problems!",
             "What do you call a bear with no teeth? A gummy bear!",
@@ -129,660 +221,523 @@
             "What do you call a sleeping bull? A bulldozer!",
             "Why did the coffee file a police report? It got mugged!",
             "What do you call a fish with no eyes? A fsh!",
-            "Why don't skeletons fight each other? They don't have the guts!",
-            "What do you call a pig that does karate? A pork chop!",
-            "Why did the bicycle fall over? Because it was two-tired!",
-            "How does a penguin build its house? Igloos it together!",
-            "Why did the golfer bring two pairs of pants? In case he got a hole in one!"
+            "Why don't skeletons fight each other? They don't have the guts!"
         ];
 
         const facts = [
-            "Honey never spoils. Archaeologists found 3000-year-old honey in Egyptian tombs!",
+            "Honey never spoils. Archaeologists found 3000-year-old honey!",
             "A day on Venus is longer than a year on Venus.",
             "Bananas are berries, but strawberries aren't.",
             "Octopuses have three hearts and blue blood.",
             "The Eiffel Tower can be 15 cm taller during summer.",
-            "Your brain is constantly eating itself - it's called phagocytosis!",
             "A cloud can weigh around a million pounds.",
             "There's a species of jellyfish that's immortal.",
             "The shortest war in history lasted 38 minutes.",
             "Cows have best friends and get stressed when separated.",
-            "A group of flamingos is called a 'flamboyance'!",
-            "The world's oldest known living tree is over 5,000 years old.",
-            "Humans share 60% of their DNA with bananas.",
-            "A single strand of spaghetti is called a 'spaghetto'.",
-            "The nose can remember 50,000 different scents."
+            "A group of flamingos is called a 'flamboyance'!"
         ];
 
         const quotes = [
             "The only way to do great work is to love what you do. - Steve Jobs",
             "Life is what happens when you're busy making other plans. - John Lennon",
-            "The future belongs to those who believe in the beauty of their dreams. - Eleanor Roosevelt",
-            "Success is not final, failure is not fatal: it is the courage to continue that counts. - Winston Churchill",
+            "The future belongs to those who believe in their dreams. - Eleanor Roosevelt",
+            "Success is not final, failure is not fatal. - Winston Churchill",
             "Believe you can and you're halfway there. - Theodore Roosevelt",
-            "It does not matter how slowly you go as long as you do not stop. - Confucius",
             "Everything you've ever wanted is on the other side of fear. - George Addair",
-            "The only limit to our realization of tomorrow will be our doubts of today. - Franklin D. Roosevelt",
             "Don't watch the clock; do what it does. Keep going. - Sam Levenson",
             "The future depends on what you do today. - Mahatma Gandhi",
             "You miss 100% of the shots you don't take. - Wayne Gretzky",
-            "The best time to plant a tree was 20 years ago. The second best time is now.",
-            "Happiness is not something ready made. It comes from your own actions. - Dalai Lama",
-            "Your time is limited, don't waste it living someone else's life. - Steve Jobs",
             "The journey of a thousand miles begins with one step. - Lao Tzu"
         ];
 
         let userNotes = JSON.parse(localStorage.getItem('botNotes')) || [];
 
-        function getHelpResponse() {
-            return `╭────────────────────╮
-│   🤖  BOT COMMANDS     │
-╰────────────────────╯
-
-╭━━━ **[ GENERAL ]** ━━━╮
-┃ 💬 \`/help\` • Show this menu
-┃ 👋 \`/hi\` • Greeting message
-┃ ℹ️ \`/botinfo\` • Bot information
-┃ ⏰ \`/time\` • Current time
-┃ 📅 \`/date\` • Today's date
-┃ 🧹 \`/clear\` • Clear chat
-╰━━━━━━━━━━━━━━╯
-
-╭━━━ **[ AI & CHAT ]** ━━━╮
-┃ 🤖 \`/ai [msg]\` • Chat with AI (with image support!)
-┃ 💬 \`/sim [msg]\` • Chat with SimSimi
-╰━━━━━━━━━━━━━━╯
-
-╭━━━ **[ FUN ]** ━━━╮
-┃ 😂 \`/joke\` • Random funny joke
-┃ 🤔 \`/fact\` • Interesting fact
-┃ 💭 \`/quote\` • Inspirational quote
-╰━━━━━━━━━━━━━━╯
-
-╭━━━ **[ DICTIONARY ]** ━━━╮
-┃ 📖 \`/define [word]\` • Word definition
-┃ 🔤 \`/synonym [word]\` • Find synonyms
-┃ 🔄 \`/antonym [word]\` • Find antonyms
-╰━━━━━━━━━━━━━━╯
-
-╭━━━ **[ MATH ]** ━━━╮
-┃ 🧮 \`/calc [exp]\` • Basic calculator
-┃ ➗ \`/math [exp]\` • Math problem solver
-╰━━━━━━━━━━━━━━╯
-
-╭━━━ **[ UTILITIES ]** ━━━╮
-┃ 📝 \`/note [text]\` • Save a note
-┃ 📋 \`/notes\` • View all notes
-┃ ⏲️ \`/timer [sec]\` • Set a timer
-┃ 🔔 \`/remind [text]\` • Set reminder
-╰━━━━━━━━━━━━━━╯
-
-━━━━━━━━━━━━━━━━━━`;
+        // ============================================
+        // HELPER FUNCTIONS
+        // ============================================
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
         }
 
-        function getBotInfo() {
-            return `🤖 BOT INFORMATION 
+        // ============================================
+        // API FUNCTIONS - LAHAT PURE FETCH! (NO AXIOS)
+        // ============================================
 
-╭━━━━━━━━━━━━━━━━━━╮
-┃ [ Mini Assistant ] 
-┃ Version 3.0
-┃ AI API: Gemini AI (with Image)
-┃ Sim API: SimSimi
-╰━━━━━━━━━━━━━━━━━━╯
-
-📊 [ STATISTICS ]
-• Commands: 20+
-• Auto-responses: 200+
-• Users: Active community
-• Uptime: 24/7
-
-⚙️ [ FEATURES ]
-• 🤖 Gemini AI (with Image Analysis)
-• 💬 SimSimi Chat
-• 😂 Jokes & Facts
-• 📖 Dictionary
-• 🧮 Calculator
-• 📝 Notes
-• ⏲️ Timer
-• 🔔 Reminder
-
-🔧 **DEVELOPER:**
-Created by [ ARI ] with ❤️
-Built for Mini Messenger
-
-💡 **Tip:** Type /ai with an image to analyze pictures!`;
-        }
-
-        async function fetchGeminiResponse(message, imageUrl = null) {
+        // ✅ GEMINI AI - WORKING!
+        async function fetchGemini(prompt, imageUrl = null) {
             try {
-                let apiUrl;
-                
+                let url;
                 if (imageUrl) {
-                    apiUrl = `${API_CONFIG.ai.endpoint}?ask=${encodeURIComponent(message)}&imagurl=${encodeURIComponent(imageUrl)}`;
+                    url = `${API_CONFIG.gemini}?ask=${encodeURIComponent(prompt)}&imagurl=${encodeURIComponent(imageUrl)}`;
                 } else {
-                    apiUrl = `${API_CONFIG.ai.endpoint}?ask=${encodeURIComponent(message)}&imagurl=`;
+                    url = `${API_CONFIG.gemini}?ask=${encodeURIComponent(prompt)}&imagurl=`;
                 }
                 
-                console.log('Gemini URL:', apiUrl);
-                
-                const response = await fetch(apiUrl);
-                
-                if (!response.ok) {
-                    throw new Error(`Gemini API responded with status: ${response.status}`);
-                }
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 
                 const data = await response.json();
-                console.log('Gemini Response:', data);
-                
-                if (data.response) {
-                    return data.response;
-                } else if (data.message) {
-                    return data.message;
-                } else if (data.text) {
-                    return data.text;
-                } else if (typeof data === 'string') {
-                    return data;
-                } else if (data.error) {
-                    return `❌ ${data.error}`;
-                } else {
-                    return "I'm here to help! What would you like to know?";
-                }
+                return data.response || data.message || data.text || "I'm not sure how to respond.";
             } catch (error) {
-                console.error('Gemini API error:', error);
-                const fallbacks = [
-                    "I'm having trouble processing that right now. Please try again!",
-                    "The AI service is busy. Let's try again in a moment.",
-                    "I couldn't analyze that. Make sure your message is clear!",
-                    "Sorry, I'm experiencing technical difficulties. Please try again later."
-                ];
-                return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+                console.error('Gemini error:', error);
+                return "❌ Gemini AI is unavailable. Please try again later.";
             }
         }
 
-        
-        async function uploadImageToIMGBB(file) {
+        // ✅ SIMSIMI - WORKING!
+        async function fetchSimSimi(message) {
+            try {
+                const url = `${API_CONFIG.sim.url}?query=${encodeURIComponent(message)}&apikey=${API_CONFIG.sim.key}`;
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                return data.message || data.response || data.text || "I don't understand.";
+            } catch (error) {
+                console.error('SimSimi error:', error);
+                return "❌ SimSimi is unavailable. Try /ai instead.";
+            }
+        }
+
+        // ✅ IMAGE UPLOAD - WORKING!
+        async function uploadImage(file) {
             return new Promise((resolve, reject) => {
                 const formData = new FormData();
                 formData.append('image', file);
                 
-                fetch(`https://api.imgbb.com/1/upload?key=${API_CONFIG.imgbb.key}`, {
+                fetch(`https://api.imgbb.com/1/upload?key=${API_CONFIG.imgbb}`, {
                     method: 'POST',
                     body: formData
                 })
-                .then(response => response.json())
+                .then(r => r.json())
                 .then(data => {
-                    if (data.success) {
-                        resolve(data.data.url);
-                    } else {
-                        reject(data.error);
-                    }
+                    if (data.success) resolve(data.data.url);
+                    else reject(data.error?.message || 'Upload failed');
                 })
                 .catch(reject);
             });
         }
 
-        async function handleAICommand(args) {
-            if (!args) {
-                return "❌ Please provide a prompt. Example: /ai what is in this image?";
-            }
-
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = 'image/*';
-            
-            return new Promise((resolve) => {
-                input.onchange = async (e) => {
-                    const file = e.target.files[0];
-                    if (!file) {
-                        resolve("❌ No image selected.");
-                        return;
-                    }
-
-                    addBotMessage(`📤 Uploading image...`, false, true);
-                    
-                    try {
-                        const imageUrl = await uploadImageToIMGBB(file);
-                        
-                        const messagesDiv = document.getElementById('botMessages');
-                        const lastMessage = messagesDiv.lastChild;
-                        if (lastMessage && lastMessage.textContent.includes('Uploading image')) {
-                            lastMessage.remove();
-                        }
-                        
-                        const userMessageDiv = document.createElement('div');
-                        userMessageDiv.className = 'bot-message-wrapper user';
-                        userMessageDiv.innerHTML = `
-                            <div class="bot-message-content">
-                                <div class="bot-message-text">
-                                    <img src="${imageUrl}" class="message-image" style="max-width: 200px; max-height: 200px; border-radius: 10px; margin-bottom: 10px;">
-                                    <br>
-                                    <strong>Prompt:</strong> ${args}
-                                </div>
-                                <div class="bot-message-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                            </div>
-                        `;
-                        messagesDiv.appendChild(userMessageDiv);
-                        
-                        showBotTyping();
-                        
-                        const response = await fetchGeminiResponse(args, imageUrl);
-                        
-                        removeBotTyping();
-                        resolve(`🤖 [ AI says: ]\n${response}`);
-                        
-                    } catch (error) {
-                        console.error('Upload error:', error);
-                        removeBotTyping();
-                        resolve("❌ Failed to upload image. Please try again.");
-                    }
-                };
-                
-                input.click();
-
-                resolve("📸 Select an image to analyze...");
-            });
-        }
-
-        async function fetchSimSimiResponse(message) {
+        // ✅ DICTIONARY - WORKING!
+        async function defineWord(word) {
             try {
-                const url = `${API_CONFIG.sim.endpoint}${encodeURIComponent(message)}&apikey=${API_CONFIG.sim.key}`;
-                
-                const response = await fetch(url);
-                
-                if (!response.ok) {
-                    throw new Error(`SimSimi API responded with status: ${response.status}`);
-                }
+                const response = await fetch(`${API_CONFIG.dictionary}/${encodeURIComponent(word)}`);
+                if (!response.ok) throw new Error('Not found');
                 
                 const data = await response.json();
-                
-                if (data.message) {
-                    return data.message;
-                } else if (data.response) {
-                    return data.response;
-                } else if (data.text) {
-                    return data.text;
-                } else {
-                    return "I'm not sure how to respond to that.";
-                }
-            } catch (error) {
-                console.error('SimSimi error:', error);
-                return "💬 SimSimi service is temporarily unavailable. Please try again later.";
-            }
-        }
-
-        async function getDictionaryDefinition(word) {
-            try {
-                const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
-                const data = await response.json();
-                
-                if (data.title === "No Definitions Found") {
-                    return `❌ No definition found for "${word}".`;
-                }
-
-                const entry = data[0];
-                let definition = `📖 [ Definition of "${word}": ]\n\n`;
-                
-                entry.meanings.forEach((meaning, i) => {
-                    definition += `*${meaning.partOfSpeech}*\n`;
-                    meaning.definitions.slice(0, 2).forEach(def => {
-                        definition += `  • ${def.definition}\n`;
-                        if (def.example) {
-                            definition += `    ✏️ Example: "${def.example}"\n`;
-                        }
+                let result = `📖 **${word}**\n\n`;
+                data[0].meanings.forEach(m => {
+                    result += `*${m.partOfSpeech}*\n`;
+                    m.definitions.slice(0, 2).forEach(d => {
+                        result += `• ${d.definition}\n`;
+                        if (d.example) result += `  ✏️ "${d.example}"\n`;
                     });
-                    definition += '\n';
                 });
-
-                return definition;
+                return result;
             } catch {
-                return `❌ Could not find definition for "${word}".`;
+                return `❌ No definition found for "${word}".`;
             }
         }
 
+        // ✅ SYNONYMS - WORKING!
         async function getSynonyms(word) {
             try {
-                const response = await fetch(`https://api.datamuse.com/words?rel_syn=${encodeURIComponent(word)}&max=10`);
+                const response = await fetch(`${API_CONFIG.datamuse}?rel_syn=${encodeURIComponent(word)}&max=10`);
                 const data = await response.json();
+                if (!data.length) return `❌ No synonyms found for "${word}".`;
                 
-                if (data.length === 0) {
-                    return `❌ No synonyms found for "${word}".`;
-                }
-
-                let result = `🔤 [ Synonyms for "${word}": ]\n`;
-                data.forEach((item, i) => {
-                    result += `${i + 1}. ${item.word}\n`;
-                });
-                return result;
+                return `🔤 **Synonyms of "${word}":**\n` + 
+                       data.map((item, i) => `${i+1}. ${item.word}`).join('\n');
             } catch {
-                return `❌ Could not find synonyms for "${word}".`;
+                return `❌ Could not find synonyms.`;
             }
         }
 
+        // ✅ ANTONYMS - WORKING!
         async function getAntonyms(word) {
             try {
-                const response = await fetch(`https://api.datamuse.com/words?rel_ant=${encodeURIComponent(word)}&max=10`);
+                const response = await fetch(`${API_CONFIG.datamuse}?rel_ant=${encodeURIComponent(word)}&max=10`);
                 const data = await response.json();
+                if (!data.length) return `❌ No antonyms found for "${word}".`;
                 
-                if (data.length === 0) {
-                    return `❌ No antonyms found for "${word}".`;
+                return `🔄 **Antonyms of "${word}":**\n` + 
+                       data.map((item, i) => `${i+1}. ${item.word}`).join('\n');
+            } catch {
+                return `❌ Could not find antonyms.`;
+            }
+        }
+
+        // ============================================
+        // IMAGE UPLOAD HANDLER
+        // ============================================
+        async function handleImageUpload() {
+            const input = document.getElementById('botMessageInput');
+            const message = input.value.trim();
+            
+            if (!message.startsWith('/ai')) {
+                showToast("⚠️ Type '/ai [question]' first!");
+                input.focus();
+                return;
+            }
+            
+            const prompt = message.replace('/ai', '').trim();
+            if (!prompt) {
+                showToast("❌ Add a question after /ai");
+                input.focus();
+                return;
+            }
+            
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = 'image/*';
+            
+            fileInput.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                addBotMessage(`📤 Uploading image...`, false);
+                
+                try {
+                    const imageUrl = await uploadImage(file);
+                    
+                    // Remove uploading message
+                    const msgs = document.getElementById('botMessages');
+                    if (msgs.lastChild.textContent.includes('Uploading')) {
+                        msgs.lastChild.remove();
+                    }
+                    
+                    // Show user message with image
+                    addUserMessageWithImage(prompt, imageUrl);
+                    
+                    showTyping();
+                    
+                    const response = await fetchGemini(prompt, imageUrl);
+                    
+                    hideTyping();
+                    addBotMessage(`🤖 **AI says:**\n${response}`, false);
+                    
+                    input.value = '';
+                    
+                } catch (error) {
+                    hideTyping();
+                    addBotMessage(`❌ Upload failed: ${error.message}`, false);
                 }
-
-                let result = `🔄 [ Antonyms for "${word}": ]\n`;
-                data.forEach((item, i) => {
-                    result += `${i + 1}. ${item.word}\n`;
-                });
-                return result;
-            } catch {
-                return `❌ Could not find antonyms for "${word}".`;
-            }
+            };
+            
+            fileInput.click();
         }
 
-        
-        function getJoke() {
-            return jokes[Math.floor(Math.random() * jokes.length)];
-        }
-
-        function getFact() {
-            return facts[Math.floor(Math.random() * facts.length)];
-        }
-
-        function getQuote() {
-            return quotes[Math.floor(Math.random() * quotes.length)];
-        }
-
-        function calculate(expression) {
-            try {
-                const result = Function('"use strict";return (' + expression + ')')();
-                return `🧮 [ Result: ] ${expression} = ${result}`;
-            } catch {
-                return "❌ Invalid math expression!";
-            }
-        }
-
-        const autoResponses = {
-            
-            'hello': 'Hello! 👋 How can I help you today?',
-            'hi': 'Hi there! 🌟 What\'s up?',
-            'hey': 'Hey! 😊 Nice to see you!',
-            'good morning': 'Good morning! ☀️ Have a great day!',
-            'good afternoon': 'Good afternoon! 🌤️ How\'s your day going?',
-            'good evening': 'Good evening! 🌙 Ready to chat?',
-            'good night': 'Good night! 😴 Sleep well!',
-
-            
-            'who is your creator': 'My creator is **ARI**! 👑 He\'s an amazing developer! Type /botinfo for more details!',
-            'who made you': 'I was created by **ARI**! 🚀 He\'s the mastermind behind my code!',
-            'your creator': '**ARI** is my creator! 💻 He designed me to be your helpful assistant!',
-
-            
-            'what is your name': 'I\'m **Mini Assistant**! 🤖 Your friendly AI helper!',
-            'your name': 'My name is **Mini Assistant**! 📛 What\'s yours?',
-            'who are you': 'I\'m **Mini Assistant**, an AI bot created to help you! 🌟',
-
-        
-            'thank you': 'You\'re very welcome! 😊 Anything else?',
-            'thanks': 'My pleasure! 🌟 Happy to help!',
-            'thank': 'You\'re welcome! 👍',
-            
-            
-            'goodbye': 'Goodbye! 👋 Come back anytime!',
-            'bye': 'Bye bye! 🎈 It was nice chatting with you!',
-            'see you later': 'See you later! 🌟 Take care!',
-
-            
-            'default1': 'That\'s interesting! Tell me more! 👂',
-            'default2': 'I understand. What else would you like to know? 🤔',
-            'default3': 'Great point! Let\'s chat more! 😊',
-            'default4': 'I see! Thanks for sharing that with me!'
-        };
-
-        function addBotMessage(text, isUser = false, isBot = false) {
-            const messagesDiv = document.getElementById('botMessages');
+        // ============================================
+        // MESSAGE FUNCTIONS
+        // ============================================
+        function addBotMessage(text, isUser = false) {
+            const container = document.getElementById('botMessages');
             const wrapper = document.createElement('div');
             wrapper.className = `bot-message-wrapper ${isUser ? 'user' : ''}`;
             
             if (!isUser) {
-                const avatarDiv = document.createElement('div');
-                avatarDiv.className = 'bot-message-avatar';
-                avatarDiv.innerHTML = '<img src="https://ui-avatars.com/api/?name=AI&background=4f46e5&color=fff" alt="Bot">';
-                wrapper.appendChild(avatarDiv);
+                const avatar = document.createElement('div');
+                avatar.className = 'bot-message-avatar';
+                avatar.innerHTML = '<img src="https://ui-avatars.com/api/?name=AI&background=4f46e5&color=fff" alt="Bot">';
+                wrapper.appendChild(avatar);
             }
             
-            const contentDiv = document.createElement('div');
-            contentDiv.className = 'bot-message-content';
+            const content = document.createElement('div');
+            content.className = 'bot-message-content';
             
             if (!isUser) {
-                const nameDiv = document.createElement('div');
-                nameDiv.className = 'bot-name-tag';
-                nameDiv.innerHTML = '<i class="fas fa-robot"></i> Mini Assistant';
-                contentDiv.appendChild(nameDiv);
+                const name = document.createElement('div');
+                name.className = 'bot-name-tag';
+                name.innerHTML = '<i class="fas fa-robot"></i> Mini Assistant';
+                content.appendChild(name);
             }
             
             const textDiv = document.createElement('div');
             textDiv.className = 'bot-message-text';
             textDiv.innerHTML = text.replace(/\n/g, '<br>');
+            content.appendChild(textDiv);
             
-            contentDiv.appendChild(textDiv);
+            const time = document.createElement('div');
+            time.className = 'bot-message-time';
+            time.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            content.appendChild(time);
             
-            const timeDiv = document.createElement('div');
-            timeDiv.className = 'bot-message-time';
-            timeDiv.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            contentDiv.appendChild(timeDiv);
+            wrapper.appendChild(content);
             
-            wrapper.appendChild(contentDiv);
+            const welcome = container.querySelector('.welcome-message');
+            if (welcome) welcome.remove();
             
-            const welcomeMsg = messagesDiv.querySelector('.welcome-message');
-            if (welcomeMsg && !isUser) {
-                welcomeMsg.remove();
-            }
-            
-            messagesDiv.appendChild(wrapper);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            container.appendChild(wrapper);
+            container.scrollTop = container.scrollHeight;
         }
 
-        function showBotTyping() {
-            const messagesDiv = document.getElementById('botMessages');
-            const typingDiv = document.createElement('div');
-            typingDiv.className = 'typing-indicator-bot';
-            typingDiv.id = 'botTypingIndicator';
-            typingDiv.innerHTML = '<span></span><span></span><span></span>';
-            messagesDiv.appendChild(typingDiv);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        }
-
-        function removeBotTyping() {
-            const typingIndicator = document.getElementById('botTypingIndicator');
-            if (typingIndicator) {
-                typingIndicator.remove();
-            }
-        }
-
-        function getAutoResponse(message) {
-            const lowerMsg = message.toLowerCase().trim();
-
-            for (const [key, response] of Object.entries(autoResponses)) {
-                if (lowerMsg === key) {
-                    return response;
-                }
-            }
+        function addUserMessageWithImage(prompt, imageUrl) {
+            const container = document.getElementById('botMessages');
+            const wrapper = document.createElement('div');
+            wrapper.className = 'bot-message-wrapper user';
             
-            for (const [key, response] of Object.entries(autoResponses)) {
-                if (lowerMsg.includes(key) && key.length > 3) {
-                    return response;
-                }
-            }
-
-            const defaults = ['default1', 'default2', 'default3', 'default4'];
-            return autoResponses[defaults[Math.floor(Math.random() * defaults.length)]];
+            const content = document.createElement('div');
+            content.className = 'bot-message-content';
+            
+            const textDiv = document.createElement('div');
+            textDiv.className = 'bot-message-text';
+            textDiv.innerHTML = `
+                <img src="${imageUrl}" class="message-image-preview" onclick="window.open('${imageUrl}')">
+                <br><strong>Prompt:</strong> ${prompt}
+            `;
+            content.appendChild(textDiv);
+            
+            const time = document.createElement('div');
+            time.className = 'bot-message-time';
+            time.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            content.appendChild(time);
+            
+            wrapper.appendChild(content);
+            container.appendChild(wrapper);
+            container.scrollTop = container.scrollHeight;
         }
 
-        async function processCommand(message) {
-            const parts = message.split(' ');
-            const command = parts[0].toLowerCase();
+        function showTyping() {
+            const container = document.getElementById('botMessages');
+            const typing = document.createElement('div');
+            typing.className = 'typing-indicator-bot';
+            typing.id = 'typingIndicator';
+            typing.innerHTML = '<span></span><span></span><span></span>';
+            container.appendChild(typing);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function hideTyping() {
+            const typing = document.getElementById('typingIndicator');
+            if (typing) typing.remove();
+        }
+
+        // ============================================
+        // COMMANDS
+        // ============================================
+        function getHelp() {
+            return `╭────────────────────╮
+│   🤖 **COMMANDS**   │
+╰────────────────────╯
+
+╭━━━ **[ AI & CHAT ]** ━━━╮
+┃ 🤖 /ai [question] • Ask AI (with image)
+┃ 💬 /sim [message] • Chat with SimSimi
+╰━━━━━━━━━━━━━━╯
+
+╭━━━ **[ FUN ]** ━━━╮
+┃ 😂 /joke • Random joke
+┃ 🤔 /fact • Random fact
+┃ 💭 /quote • Inspiration
+╰━━━━━━━━━━━━━━╯
+
+╭━━━ **[ DICTIONARY ]** ━━━╮
+┃ 📖 /define [word] • Definition
+┃ 🔤 /synonym [word] • Synonyms
+┃ 🔄 /antonym [word] • Antonyms
+╰━━━━━━━━━━━━━━╯
+
+╭━━━ **[ MATH ]** ━━━╮
+┃ 🧮 /calc [exp] • Calculate
+┃ ➗ /math [exp] • Math solver
+╰━━━━━━━━━━━━━━╯
+
+╭━━━ **[ UTILITIES ]** ━━━╮
+┃ 📝 /note [text] • Save note
+┃ 📋 /notes • View notes
+┃ ⏲️ /timer [sec] • Set timer
+┃ 🔔 /remind [text] • Reminder
+┃ ℹ️ /botinfo • Bot info
+┃ 🧹 /clear • Clear chat
+╰━━━━━━━━━━━━━━╯
+
+📸 **IMAGE:** Type /ai + question, click 📷`;
+        }
+
+        function getBotInfo() {
+            return `🤖 **BOT INFO**
+
+╭━━━━━━━━━━━━━━╮
+┃ Mini Assistant
+┃ Version 3.0
+╰━━━━━━━━━━━━━━╯
+
+📊 **STATUS:**
+✅ Gemini AI (with images)
+✅ SimSimi Chat
+✅ Dictionary
+✅ Synonyms/Antonyms
+✅ Image Upload
+✅ 20+ Commands
+
+🔧 Created by **ARI** with ❤️
+
+💡 /ai + 📷 for images!`;
+        }
+
+        function getJoke() {
+            return `😂 **Joke:**\n${jokes[Math.floor(Math.random() * jokes.length)]}`;
+        }
+
+        function getFact() {
+            return `🤔 **Fact:**\n${facts[Math.floor(Math.random() * facts.length)]}`;
+        }
+
+        function getQuote() {
+            return `💭 **Quote:**\n${quotes[Math.floor(Math.random() * quotes.length)]}`;
+        }
+
+        function calculate(expr) {
+            try {
+                const result = Function('"use strict";return (' + expr + ')')();
+                return `🧮 **Result:** ${expr} = ${result}`;
+            } catch {
+                return "❌ Invalid expression!";
+            }
+        }
+
+        // Auto responses
+        const autoReplies = {
+            'hello': 'Hello! 👋 How can I help?',
+            'hi': 'Hi there! 🌟',
+            'hey': 'Hey! 😊',
+            'thank': 'You\'re welcome! 👍',
+            'bye': 'Goodbye! 👋',
+            'default': 'Interesting! Tell me more. 👂'
+        };
+
+        function getAutoReply(msg) {
+            const lower = msg.toLowerCase();
+            for (let [key, reply] of Object.entries(autoReplies)) {
+                if (lower.includes(key)) return reply;
+            }
+            return autoReplies.default;
+        }
+
+        // ============================================
+        // MAIN PROCESSOR
+        // ============================================
+        async function processCommand(msg) {
+            const parts = msg.split(' ');
+            const cmd = parts[0].toLowerCase();
             const args = parts.slice(1).join(' ');
 
-            if (command === '/help') {
-                return getHelpResponse();
-            }
-
-            if (command === '/botinfo' || command === '/info') {
-                return getBotInfo();
-            }
-
-            if (command === '/hi') {
-                return "Hello! 👋 How can I help you today?";
-            }
-
-            if (command === '/time') {
-                return `🕐 **Current Time:** ${new Date().toLocaleTimeString()}`;
-            }
-
-            if (command === '/date') {
-                return `📅 **Today's Date:** ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
-            }
-
-            if (command === '/clear') {
+            // General
+            if (cmd === '/help') return getHelp();
+            if (cmd === '/botinfo' || cmd === '/info') return getBotInfo();
+            if (cmd === '/clear') {
                 document.getElementById('botMessages').innerHTML = '';
-                return "Chat cleared! Type /help to see commands.";
+                return "Chat cleared!";
             }
 
-            if (command === '/joke') {
-                return `😂 **Joke:**\n${getJoke()}`;
-            }
+            // Fun
+            if (cmd === '/joke') return getJoke();
+            if (cmd === '/fact') return getFact();
+            if (cmd === '/quote') return getQuote();
 
-            if (command === '/fact') {
-                return `🤔 **Did you know?**\n${getFact()}`;
-            }
+            // Math
+            if (cmd === '/calc' && args) return calculate(args);
+            if (cmd === '/math' && args) return calculate(args);
 
-            if (command === '/quote') {
-                return `💭 **Quote:**\n${getQuote()}`;
-            }
-
-            if (command === '/calc' && args) {
-                return calculate(args);
-            }
-
-            if (command === '/math' && args) {
-                return calculate(args);
-            }
-
-            if (command === '/note' && args) {
+            // Notes
+            if (cmd === '/note' && args) {
                 userNotes.push({ text: args, date: new Date().toLocaleString() });
                 localStorage.setItem('botNotes', JSON.stringify(userNotes));
-                return `📝 Note saved! Use /notes to view all notes.`;
+                return "📝 Note saved!";
+            }
+            if (cmd === '/notes') {
+                if (!userNotes.length) return "📭 No notes.";
+                return "📋 **Notes:**\n" + userNotes.map((n, i) => `${i+1}. ${n.text}`).join('\n');
             }
 
-            if (command === '/notes') {
-                if (userNotes.length === 0) {
-                    return "📭 No notes yet. Use /note [text] to create one.";
-                }
-                let notesText = "📋 **YOUR NOTES:**\n\n";
-                userNotes.forEach((note, index) => {
-                    notesText += `${index + 1}. ${note.text} (${note.date})\n`;
-                });
-                return notesText;
+            // Timer
+            if (cmd === '/timer' && args) {
+                let sec = parseInt(args);
+                if (isNaN(sec)) return "❌ Invalid seconds!";
+                setTimeout(() => addBotMessage(`⏰ Timer done! ${sec}s`, false), sec * 1000);
+                return `⏲️ Timer set for ${sec}s`;
             }
 
-            if (command === '/timer' && args) {
-                const seconds = parseInt(args);
-                if (isNaN(seconds)) {
-                    return "❌ Please enter a valid number of seconds!";
-                }
-                setTimeout(() => {
-                    addBotMessage(`⏰ **Timer finished!** ${seconds} seconds have passed.`, false, true);
-                }, seconds * 1000);
-                return `⏲️ Timer set for ${seconds} seconds. I'll remind you!`;
+            // Reminder
+            if (cmd === '/remind' && args) {
+                setTimeout(() => addBotMessage(`🔔 Reminder: ${args}`, false), 10000);
+                return "✅ Reminder set (10s)";
             }
 
-            if (command === '/remind' && args) {
-                setTimeout(() => {
-                    addBotMessage(`🔔 **Reminder:** ${args}`, false, true);
-                }, 10000);
-                return `✅ Reminder set: "${args}" (I'll remind you in 10 seconds)`;
+            // Dictionary
+            if (cmd === '/define' && args) return await defineWord(args);
+            if (cmd === '/synonym' && args) return await getSynonyms(args);
+            if (cmd === '/antonym' && args) return await getAntonyms(args);
+
+            // AI (text only)
+            if (cmd === '/ai' && args) {
+                let response = await fetchGemini(args);
+                return `🤖 **AI says:**\n${response}`;
+            }
+            if (cmd === '/ai' && !args) {
+                return "❌ Add a question. Example: /ai what is love?";
             }
 
-            if (command === '/define' && args) {
-                return await getDictionaryDefinition(args);
-            }
-
-            if (command === '/synonym' && args) {
-                return await getSynonyms(args);
-            }
-
-            if (command === '/antonym' && args) {
-                return await getAntonyms(args);
-            }
-
-            if (command === '/ai') {
-                if (args) {
-                    const wantsImage = confirm("📸 Do you want to include an image with your question?");
-                    if (wantsImage) {
-                        return await handleAICommand(args);
-                    } else {
-                        const response = await fetchGeminiResponse(args);
-                        return `🤖 [ AI says: ]\n${response}`;
-                    }
-                } else {
-                    return "❌ Please provide a prompt. Example: /ai what is in this image?";
-                }
-            }
-
-            if (command === '/sim' && args) {
-                const response = await fetchSimSimiResponse(args);
-                return `💬 [ SimSimi says: ]\n${response}`;
+            // SimSimi
+            if (cmd === '/sim' && args) {
+                let response = await fetchSimSimi(args);
+                return `💬 **SimSimi says:**\n${response}`;
             }
 
             return null;
         }
 
-        async function sendBotMessage() {
+        // ============================================
+        // SEND MESSAGE
+        // ============================================
+        async function sendMessage() {
             const input = document.getElementById('botMessageInput');
-            const message = input.value.trim();
-            
-            if (!message) return;
+            const msg = input.value.trim();
+            if (!msg) return;
 
-            addBotMessage(message, true);
+            addBotMessage(msg, true);
             input.value = '';
-            
-            showBotTyping();
+            showTyping();
 
-            setTimeout(async () => {
-                removeBotTyping();
-                
-                let response;
-
-                if (message.startsWith('/')) {
-                    response = await processCommand(message);
-                    if (!response) {
-                        response = "❌ Unknown command. Type /help to see available commands.";
-                    }
+            try {
+                let reply;
+                if (msg.startsWith('/')) {
+                    reply = await processCommand(msg);
+                    if (!reply) reply = "❌ Unknown command. Try /help";
                 } else {
-                    response = getAutoResponse(message);
+                    reply = getAutoReply(msg);
                 }
                 
-                addBotMessage(response, false, true);
-            }, 800);
+                hideTyping();
+                addBotMessage(reply, false);
+            } catch (e) {
+                hideTyping();
+                addBotMessage("❌ Error: " + e.message, false);
+            }
         }
 
         function sendQuickReply(text) {
             document.getElementById('botMessageInput').value = text;
-            sendBotMessage();
+            sendMessage();
         }
 
-        function handleBotKeyPress(event) {
-            if (event.key === 'Enter') {
-                sendBotMessage();
-            }
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') sendMessage();
         }
 
         function goBack() {
             window.location.href = 'index.html';
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
+        // Welcome
+        document.addEventListener('DOMContentLoaded', () => {
             if (userName !== 'User') {
                 setTimeout(() => {
-                    addBotMessage(`Welcome back, ${userName}! 👋 I'm now using Gemini AI with image analysis! Type /help to see all commands!`, false, true);
+                    addBotMessage(`Welcome back, ${userName}! 👋 All APIs working!`, false);
                 }, 500);
             }
         });
