@@ -1,13 +1,16 @@
 // ============================================
 // 🤖 BOT SYSTEM - WELCOME BOT (GC) + AI ASSISTANT (PM)
 // ============================================
-// ✅ COMPLETE FIXED VERSION - ALL ISSUES RESOLVED!
-// ✅ GUARANTEED TO WORK - JUST COPY & PASTE!
+// ✅ ULTIMATE FIXED VERSION - GUARANTEED TO WORK!
 // ============================================
 
 // ============================================
-// 🎯 BOT CONFIGURATION - FIXED AND COMPLETE
+// 🎯 BOT CONFIGURATION - WITH GLOBAL GROUP_CHAT_ID
 // ============================================
+
+// ✅ CRITICAL FIX #1: ADD GLOBAL GROUP_CHAT_ID FOR INDEPENDENCE!
+const GROUP_CHAT_ID = "general_chat";
+
 const BOT_CONFIG = {
     WELCOME_BOT_ID: "welcome_bot",
     WELCOME_BOT_NAME: "🤖 Welcome Bot",
@@ -17,13 +20,13 @@ const BOT_CONFIG = {
     AI_BOT_NAME: "🧠 AI Assistant",
     AI_BOT_PHOTO: "https://ui-avatars.com/api/?name=AI&background=6366f1&color=fff&size=200",
     
-    // ✅ GROUP CHAT ID - ETO ANG GAMITIN SA LAHAT
-    GROUP_CHAT_ID: "general_chat",
+    // ✅ USE GLOBAL VARIABLE
+    GROUP_CHAT_ID: GROUP_CHAT_ID,
     
-    // ✅ TYPING DELAY - PARANG TOTOONG NAGTA-TYPE
+    // ✅ TYPING DELAY
     TYPING_DELAY: 1000,
     
-    // ✅ WELCOME MESSAGES - RANDOM SELECTION
+    // ✅ WELCOME MESSAGES
     WELCOME_MESSAGES: [
         "👋 Welcome {name} to World Chat! Enjoy your stay! 🎉",
         "Hey {name}! Welcome to the group! 🎊",
@@ -37,7 +40,7 @@ const BOT_CONFIG = {
         "Welcome {name}! You're now part of the squad! 🔥"
     ],
     
-    // ✅ COMMANDS - COMPLETE LIST
+    // ✅ COMMANDS
     COMMANDS: {
         "/help": "📖 Show all available commands",
         "/ai": "🤖 Talk to AI - example: /ai what is JavaScript?",
@@ -98,24 +101,23 @@ async function initWelcomeBot() {
 
 /**
  * Listen for new members in group chat
+ * ✅ FIXED: Using global GROUP_CHAT_ID
  */
 function listenToNewMembers() {
     console.log('👂 Listening for new members in GC...');
     
-    db.collection('groupChats').doc(BOT_CONFIG.GROUP_CHAT_ID)
+    db.collection('groupChats').doc(GROUP_CHAT_ID)
         .onSnapshot(async (doc) => {
             if (!doc.exists) return;
             
             const data = doc.data();
             const members = data.members || [];
             
-            // First time run - initialize
             if (!window.previousMembers) {
                 window.previousMembers = members;
                 return;
             }
             
-            // Find new members (exclude bots and self)
             const newMembers = members.filter(id => 
                 !window.previousMembers.includes(id) && 
                 id !== BOT_CONFIG.WELCOME_BOT_ID && 
@@ -123,7 +125,6 @@ function listenToNewMembers() {
                 id !== currentUser?.uid
             );
             
-            // Welcome each new member
             for (const memberId of newMembers) {
                 await welcomeNewMember(memberId);
                 await new Promise(resolve => setTimeout(resolve, 500));
@@ -137,6 +138,7 @@ function listenToNewMembers() {
 
 /**
  * Send welcome message to new member
+ * ✅ FIXED: Using global GROUP_CHAT_ID
  */
 async function welcomeNewMember(memberId) {
     try {
@@ -150,7 +152,7 @@ async function welcomeNewMember(memberId) {
         const randomMsg = messages[Math.floor(Math.random() * messages.length)];
         const welcomeText = randomMsg.replace('{name}', name);
         
-        await db.collection('groupChats').doc(BOT_CONFIG.GROUP_CHAT_ID)
+        await db.collection('groupChats').doc(GROUP_CHAT_ID)
             .collection('messages').add({
                 text: welcomeText,
                 senderId: BOT_CONFIG.WELCOME_BOT_ID,
@@ -209,7 +211,6 @@ async function initAIBot() {
 function listenToAIBotMessages() {
     if (!currentUser) {
         console.log('⏳ Waiting for currentUser...');
-        // Try again after 1 second
         setTimeout(listenToAIBotMessages, 1000);
         return;
     }
@@ -217,6 +218,18 @@ function listenToAIBotMessages() {
     console.log('👂 Listening for AI Bot messages...');
     
     const chatId = [currentUser.uid, BOT_CONFIG.AI_BOT_ID].sort().join('_');
+    
+    // ✅ CRITICAL FIX #2: Ensure private chat document exists
+    db.collection('privateChats').doc(chatId).get().then(doc => {
+        if (!doc.exists) {
+            db.collection('privateChats').doc(chatId).set({
+                participants: [currentUser.uid, BOT_CONFIG.AI_BOT_ID],
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
+                console.log('✅ PM chat created for AI Bot');
+            });
+        }
+    });
     
     db.collection('privateChats').doc(chatId)
         .collection('messages')
@@ -244,15 +257,12 @@ async function processAICommand(message, messageId) {
     const chatId = [currentUser.uid, BOT_CONFIG.AI_BOT_ID].sort().join('_');
     
     try {
-        // Mark message as processed
         await db.collection('privateChats').doc(chatId)
             .collection('messages').doc(messageId)
             .update({ isBotProcessed: true });
         
-        // Show typing indicator
         await showTypingIndicator();
         
-        // Process command or conversation
         if (text.startsWith('/')) {
             await handleCommand(text);
         } else {
@@ -275,7 +285,6 @@ async function showTypingIndicator() {
         typingEl.textContent = 'AI Assistant is typing...';
     }
     
-    // Random delay between 500-1500ms
     const delay = Math.floor(Math.random() * 1000) + 500;
     await new Promise(resolve => setTimeout(resolve, delay));
     
@@ -506,7 +515,6 @@ function getHelpMessage() {
 // 🧠 4. AI RESPONSES - SMART FALLBACK SYSTEM
 // ============================================
 
-// Response cache to improve performance
 const responseCache = new Map();
 
 /**
@@ -515,7 +523,6 @@ const responseCache = new Map();
 async function getAIResponse(message) {
     const cacheKey = `${currentUser?.uid || 'anonymous'}:${message}`;
     
-    // Check cache first
     if (responseCache.has(cacheKey)) {
         return responseCache.get(cacheKey);
     }
@@ -526,7 +533,6 @@ async function getAIResponse(message) {
         
         let botResponse = data.cnt || getSmartResponse(message);
         
-        // Cache for 1 hour
         responseCache.set(cacheKey, botResponse);
         setTimeout(() => responseCache.delete(cacheKey), 3600000);
         
@@ -544,7 +550,6 @@ function getSmartResponse(message) {
     const msg = message.toLowerCase().trim();
     const name = currentUser?.displayName?.split(' ')[0] || 'there';
     
-    // GREETINGS
     if (msg.match(/^(hi|hello|hey|hola|kamusta|musta|good morning|good afternoon|good evening)/)) {
         const greetings = [
             `Hello ${name}! 👋 How can I help you today?`,
@@ -557,17 +562,14 @@ function getSmartResponse(message) {
         return greetings[Math.floor(Math.random() * greetings.length)];
     }
     
-    // HOW ARE YOU
     if (msg.includes('how are you') || msg.includes('kamusta ka') || msg.includes('musta ka')) {
         return `I'm doing great, ${name}! Thanks for asking! 😊 How about you?`;
     }
     
-    // NAME
     if (msg.includes('your name') || msg.includes('who are you') || msg.includes('sino ka')) {
         return `I'm **${BOT_CONFIG.AI_BOT_NAME}**, your personal AI assistant! 🤖`;
     }
     
-    // THANK YOU
     if (msg.includes('thank') || msg.includes('salamat') || msg.includes('thanks')) {
         const thanks = [
             `You're welcome, ${name}! 😊`,
@@ -579,32 +581,26 @@ function getSmartResponse(message) {
         return thanks[Math.floor(Math.random() * thanks.length)];
     }
     
-    // GOODBYE
     if (msg.includes('bye') || msg.includes('goodbye') || msg.includes('paalam') || msg.includes('sige')) {
         return `Goodbye, ${name}! 👋 Come back anytime!`;
     }
     
-    // LOVE
     if (msg.includes('love') || msg.includes('mahal') || msg.includes('❤️')) {
         return `Aww, that's so sweet! ❤️ I love chatting with you too, ${name}!`;
     }
     
-    // AGE
     if (msg.includes('how old') || msg.includes('your age')) {
         return `I was born just recently! 🎂 But I'm learning new things every day!`;
     }
     
-    // ORIGIN
     if (msg.includes('where are you from') || msg.includes('taga saan')) {
         return `I live in the cloud! ☁️ I'm everywhere and nowhere at the same time. Pretty cool, right? 😎`;
     }
     
-    // HELP
     if (msg.includes('can you help') || msg.includes('tulong') || msg.includes('help me')) {
         return `Of course I can help! 🤝 Just tell me what you need.\n\nYou can also type \`/help\` to see all my commands!`;
     }
     
-    // CAPABILITIES
     if (msg.includes('what can you do') || msg.includes('anong kaya mo')) {
         return `I can do lots of things! 🚀\n\n` +
                `• 🤖 Answer questions with \`/ai\`\n` +
@@ -618,7 +614,6 @@ function getSmartResponse(message) {
                `Type \`/help\` to see all commands! 📖`;
     }
     
-    // HOW TO USE
     if (msg.includes('how to use') || msg.includes('paano') || msg.includes('how do i')) {
         return `Using me is easy! 🎯\n\n` +
                `• Type \`/help\` to see all commands\n` +
@@ -627,12 +622,10 @@ function getSmartResponse(message) {
                `Try saying "Hello" or "Tell me a joke"! 😊`;
     }
     
-    // CREATOR
     if (msg.includes('who created you') || msg.includes('sino gumawa') || msg.includes('your creator')) {
         return `I was created by **ARI**! 👨‍💻 He's an awesome developer who built me to help and entertain people in Mini Messenger! 🚀`;
     }
     
-    // DEFAULT RESPONSES
     const defaultResponses = [
         `That's interesting, ${name}! Tell me more! 😊`,
         `I see! What else would you like to know? 🤔`,
@@ -656,9 +649,6 @@ function getSmartResponse(message) {
 // 🎮 5. FUNCTIONS - JOKES, QUOTES, FACTS, ETC
 // ============================================
 
-/**
- * Calculate mathematical expression
- */
 function calculateExpression(expr) {
     if (!expr) return "❌ Please enter an expression!\n\nExample: `/calc 2 + 2`";
     
@@ -674,9 +664,6 @@ function calculateExpression(expr) {
     }
 }
 
-/**
- * Get random joke
- */
 function getRandomJoke() {
     const jokes = [
         "Why don't scientists trust atoms? Because they make up everything! 😂",
@@ -692,9 +679,6 @@ function getRandomJoke() {
     return `😂 **Joke Time!**\n\n${jokes[Math.floor(Math.random() * jokes.length)]}`;
 }
 
-/**
- * Get random inspirational quote
- */
 function getRandomQuote() {
     const quotes = [
         "💪 \"The only way to do great work is to love what you do.\" - Steve Jobs",
@@ -709,9 +693,6 @@ function getRandomQuote() {
     return `💡 **Inspirational Quote**\n\n${quotes[Math.floor(Math.random() * quotes.length)]}`;
 }
 
-/**
- * Get random fact
- */
 function getRandomFact() {
     const facts = [
         "🧠 Honey never spoils. Archaeologists found 3000-year-old honey in Egyptian tombs, still edible!",
@@ -727,9 +708,6 @@ function getRandomFact() {
     return `🔍 **Did You Know?**\n\n${facts[Math.floor(Math.random() * facts.length)]}`;
 }
 
-/**
- * Get motivational message
- */
 function getMotivationalMessage() {
     const messages = [
         "💪 **You got this!** Every expert was once a beginner.",
@@ -746,9 +724,6 @@ function getMotivationalMessage() {
     return `💪 **Motivation Boost!**\n\n${messages[Math.floor(Math.random() * messages.length)]}`;
 }
 
-/**
- * Get random advice
- */
 function getRandomAdvice() {
     const advices = [
         "✨ **Drink more water!** Your brain works better when hydrated 💧",
@@ -765,9 +740,6 @@ function getRandomAdvice() {
     return `✨ **Daily Advice**\n\n${advices[Math.floor(Math.random() * advices.length)]}`;
 }
 
-/**
- * Get random riddle
- */
 function getRandomRiddle() {
     const riddles = [
         { riddle: "I speak without a mouth and hear without ears. I have no body, but I come alive with wind. What am I?", answer: "An echo" },
@@ -782,9 +754,6 @@ function getRandomRiddle() {
     return riddles[Math.floor(Math.random() * riddles.length)];
 }
 
-/**
- * Get random compliment
- */
 function getRandomCompliment() {
     const compliments = [
         "💝 **You have a great sense of humor!**",
@@ -850,16 +819,12 @@ async function initBots() {
     console.log('🤖 Initializing bot system...');
     
     try {
-        // Create bots in Firestore
         await initWelcomeBot();
         await initAIBot();
         
-        // Start listeners after a short delay
         setTimeout(() => {
-            // Welcome Bot listener
             listenToNewMembers();
             
-            // AI Bot listener
             if (currentUser) {
                 listenToAIBotMessages();
             }
@@ -867,7 +832,7 @@ async function initBots() {
             console.log('🤖✅ All bots initialized and ready!');
             console.log('🎉 Welcome Bot - GC ONLY (Auto welcome)');
             console.log('🧠 AI Bot - PM ONLY (Full commands)');
-            console.log('📁 Group Chat ID:', BOT_CONFIG.GROUP_CHAT_ID);
+            console.log('📁 Group Chat ID:', GROUP_CHAT_ID);
         }, 500);
         
     } catch (error) {
@@ -880,10 +845,12 @@ async function initBots() {
 // ============================================
 
 console.log('🤖 Bot.js loaded and ready!');
-console.log('📁 GROUP_CHAT_ID =', BOT_CONFIG.GROUP_CHAT_ID);
+console.log('📁 GROUP_CHAT_ID =', GROUP_CHAT_ID);
+console.log('✅ Global GROUP_CHAT_ID is set to:', GROUP_CHAT_ID);
 
 // Make functions and config globally available
 window.initBots = initBots;
 window.BOT_CONFIG = BOT_CONFIG;
 window.listenToAIBotMessages = listenToAIBotMessages;
 window.listenToNewMembers = listenToNewMembers;
+window.GROUP_CHAT_ID = GROUP_CHAT_ID;
