@@ -1,19 +1,9 @@
-/* ============================================
-   MINI MESSENGER - ULTIMATE FLEXIBLE TELEGRAM THEME
-   🧸 ULTRA HD TEDDY BEAR CONVERSATION PATTERN 🧸
-   PERFECT FLEXIBLE PM UI - PC, TABLET, MOBILE
-   KEYBOARD FIXED - BALANCED - PREMIUM ANIMATIONS
-   ============================================ */
-
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
-/* ============================================
-   FLEXIBLE ROOT VARIABLES - ADAPTIVE
-   ============================================ */
 :root {
     --app-width-pc: 400px;
     --app-height-pc: 750px;
@@ -61,7 +51,6 @@ body {
     position: relative;
 }
 
-/* Animated Background */
 body::before {
     content: '';
     position: absolute;
@@ -77,9 +66,6 @@ body::before {
     100% { background-position: 50px 50px; }
 }
 
-/* ============================================
-   LIGHT MODE - TELEGRAM PREMIUM
-   ============================================ */
 body.light-mode {
     background: #f0f2f5;
     background: radial-gradient(circle at 20% 30%, #ffffff, #f0f2f5);
@@ -137,9 +123,6 @@ body.light-mode .user-item:hover {
     background: #f1f5f9;
 }
 
-/* ============================================
-   FLEXIBLE APP CONTAINER - PC & MOBILE PERFECT
-   ============================================ */
 #app {
     width: 100%;
     background: var(--bg-dark);
@@ -151,7 +134,6 @@ body.light-mode .user-item:hover {
     flex-direction: column;
 }
 
-/* PC / Desktop Mode (≥ 768px) */
 @media (min-width: 768px) {
     #app {
         max-width: var(--app-width-pc);
@@ -162,7 +144,6 @@ body.light-mode .user-item:hover {
     }
 }
 
-/* Mobile Mode (≤ 767px) */
 @media (max-width: 767px) {
     #app {
         max-width: var(--app-width-mobile);
@@ -172,9 +153,6 @@ body.light-mode .user-item:hover {
     }
 }
 
-/* ============================================
-   SCREENS - FLEXIBLE LAYOUT
-   ============================================ */
 .screen {
     display: none;
     width: 100%;
@@ -192,9 +170,6 @@ body.light-mode .user-item:hover {
     100% { opacity: 1; transform: scale(1); }
 }
 
-/* ============================================
-   CHAT HEADER - PREMIUM
-   ============================================ */
 .chat-header {
     display: flex;
     justify-content: space-between;
@@ -208,14 +183,12 @@ body.light-mode .user-item:hover {
     transition: var(--transition);
 }
 
-/* PC Mode */
 @media (min-width: 768px) {
     .chat-header {
         padding: 14px 20px;
     }
 }
 
-/* Mobile Mode */
 @media (max-width: 767px) {
     .chat-header {
         padding: 12px 16px;
@@ -250,7 +223,6 @@ body.light-mode .user-item:hover {
     box-shadow: 0 0 10px rgba(79,70,229,0.2);
 }
 
-/* PC Mode */
 @media (min-width: 768px) {
     .user-avatar {
         width: 48px;
@@ -258,7 +230,6 @@ body.light-mode .user-item:hover {
     }
 }
 
-/* Mobile Mode */
 @media (max-width: 767px) {
     .user-avatar {
         width: 42px;
@@ -329,7 +300,6 @@ body.light-mode .user-item:hover {
     flex-shrink: 0;
 }
 
-/* PC Mode */
 @media (min-width: 768px) {
     .header-actions button {
         width: 42px;
@@ -338,7 +308,6 @@ body.light-mode .user-item:hover {
     }
 }
 
-/* Mobile Mode */
 @media (max-width: 767px) {
     .header-actions button {
         width: 36px;
@@ -375,9 +344,6 @@ body.light-mode .user-item:hover {
     transform: scale(0.9);
 }
 
-/* ============================================
-   SEARCH BAR - ANIMATED
-   ============================================ */
 .search-bar {
     display: flex;
     align-items: center;
@@ -491,9 +457,6 @@ body.light-mode .user-item:hover {
     margin-top: 4px;
 }
 
-/* ============================================
-   CHAT TABS
-   ============================================ */
 .chat-tabs {
     display: flex;
     padding: 10px 16px;
@@ -502,7 +465,6 @@ body.light-mode .user-item:hover {
     flex-shrink: 0;
 }
 
-/* PC Mode */
 @media (min-width: 768px) {
     .chat-tabs {
         padding: 12px 20px;
@@ -580,9 +542,6 @@ body.light-mode .user-item:hover {
     display: flex;
 }
 
-/* ============================================
-   GROUP CHAT HEADER
-   ============================================ */
 .gc-header {
     display: flex;
     align-items: center;
@@ -594,7 +553,6 @@ body.light-mode .user-item:hover {
     transition: var(--transition);
 }
 
-/* PC Mode */
 @media (min-width: 768px) {
     .gc-header {
         padding: 14px 20px;
@@ -622,7 +580,6 @@ body.light-mode .user-item:hover {
     flex-shrink: 0;
 }
 
-/* PC Mode */
 @media (min-width: 768px) {
     .gc-avatar {
         width: 54px;
@@ -666,9 +623,6 @@ body.light-mode .user-item:hover {
     gap: 4px;
 }
 
-/* ============================================
-   PINNED MESSAGE
-   ============================================ */
 .pinned-message {
     display: flex;
     align-items: center;
@@ -717,28 +671,20 @@ body.light-mode .user-item:hover {
     transform: rotate(90deg);
 }
 
-/* ============================================
-   🧸 ULTRA HD TEDDY BEAR CONVERSATION THEME 🧸
-   CRYSTAL CLEAR - 4K QUALITY PATTERN
-   ============================================ */
 .messages-container,
 #pm-messages {
     flex: 1 1 auto;
     overflow-y: auto;
     padding: 20px 16px;
     background: #0e0f16;
-    
-    /* 🧸 ULTRA HD TEDDY BEAR PATTERN - 4K CRYSTAL CLEAR */
     background-image: 
-        /* Purple Glow Orbs - Premium Depth */
         radial-gradient(circle at 8% 15%, rgba(139, 92, 246, 0.14) 0%, transparent 32%),
         radial-gradient(circle at 92% 72%, rgba(79, 70, 229, 0.14) 0%, transparent 35%),
         radial-gradient(circle at 25% 82%, rgba(99, 102, 241, 0.12) 0%, transparent 30%),
         radial-gradient(circle at 75% 28%, rgba(79, 70, 229, 0.12) 0%, transparent 33%),
         radial-gradient(circle at 45% 45%, rgba(139, 92, 246, 0.1) 0%, transparent 40%),
         radial-gradient(circle at 60% 60%, rgba(99, 102, 241, 0.1) 0%, transparent 38%),
-        
-        /* 🧸 Teddy Bear Face Pattern - Ultra HD (4K Quality) */
+
         repeating-radial-gradient(circle at 12% 18%, rgba(139, 92, 246, 0.09) 2.5px, transparent 3.5px, transparent 32px),
         repeating-radial-gradient(circle at 88% 68%, rgba(99, 102, 241, 0.09) 2.5px, transparent 3.5px, transparent 35px),
         repeating-radial-gradient(circle at 32% 78%, rgba(79, 70, 229, 0.08) 2px, transparent 3px, transparent 28px),
@@ -748,18 +694,15 @@ body.light-mode .user-item:hover {
         repeating-radial-gradient(circle at 40% 30%, rgba(79, 70, 229, 0.06) 1.5px, transparent 2.5px, transparent 24px),
         repeating-radial-gradient(circle at 55% 85%, rgba(79, 70, 229, 0.06) 1.5px, transparent 2.5px, transparent 25px),
         repeating-radial-gradient(circle at 70% 50%, rgba(139, 92, 246, 0.06) 1.5px, transparent 2.5px, transparent 27px),
-        
-        /* 🧸 Teddy Bear Paw Prints - Clear Pattern */
+
         repeating-linear-gradient(45deg, rgba(139, 92, 246, 0.05) 0px, rgba(139, 92, 246, 0.05) 2px, transparent 2px, transparent 22px),
         repeating-linear-gradient(-45deg, rgba(79, 70, 229, 0.05) 0px, rgba(79, 70, 229, 0.05) 2px, transparent 2px, transparent 24px),
         repeating-linear-gradient(135deg, rgba(99, 102, 241, 0.04) 0px, rgba(99, 102, 241, 0.04) 1.5px, transparent 1.5px, transparent 18px),
         repeating-linear-gradient(225deg, rgba(139, 92, 246, 0.04) 0px, rgba(139, 92, 246, 0.04) 1.5px, transparent 1.5px, transparent 20px),
-        
-        /* Teddy Bear Ear Pattern */
+
         repeating-radial-gradient(ellipse at 15% 22%, rgba(79,70,229,0.05) 1px, transparent 2px, transparent 20px),
         repeating-radial-gradient(ellipse at 85% 75%, rgba(99,102,241,0.05) 1px, transparent 2px, transparent 22px),
-        
-        /* Base Dark Gradient - Deep Premium */
+
         linear-gradient(145deg, #0e0f16 0%, #1a1b26 100%);
     
     display: flex;
@@ -769,7 +712,6 @@ body.light-mode .user-item:hover {
     position: relative;
 }
 
-/* PC Mode - More comfortable spacing */
 @media (min-width: 768px) {
     .messages-container,
     #pm-messages {
@@ -778,7 +720,6 @@ body.light-mode .user-item:hover {
     }
 }
 
-/* Mobile Mode - Optimized spacing */
 @media (max-width: 767px) {
     .messages-container,
     #pm-messages {
@@ -787,7 +728,6 @@ body.light-mode .user-item:hover {
     }
 }
 
-/* Premium Gradient Overlay - Smooth Edges */
 .messages-container::before,
 #pm-messages::before {
     content: '';
@@ -814,9 +754,6 @@ body.light-mode .user-item:hover {
     z-index: 5;
 }
 
-/* ============================================
-   MESSAGES - CRYSTAL CLEAR WITH ANIMATIONS
-   ============================================ */
 .message {
     display: flex;
     align-items: flex-end;
@@ -837,14 +774,12 @@ body.light-mode .user-item:hover {
     flex-direction: row-reverse;
 }
 
-/* PC Mode - Wider messages */
 @media (min-width: 768px) {
     .message {
         max-width: 75%;
     }
 }
 
-/* Mobile Mode - More space efficient */
 @media (max-width: 767px) {
     .message {
         max-width: 90%;
@@ -867,7 +802,6 @@ body.light-mode .user-item:hover {
     box-shadow: 0 3px 10px rgba(0,0,0,0.2);
 }
 
-/* PC Mode - Larger avatars */
 @media (min-width: 768px) {
     .message-avatar {
         width: 42px;
@@ -875,7 +809,6 @@ body.light-mode .user-item:hover {
     }
 }
 
-/* Mobile Mode - Compact avatars */
 @media (max-width: 767px) {
     .message-avatar {
         width: 34px;
@@ -906,14 +839,12 @@ body.light-mode .user-item:hover {
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
-/* PC Mode - More padding */
 @media (min-width: 768px) {
     .message-content {
         padding: 14px 20px;
     }
 }
 
-/* Mobile Mode - Compact padding */
 @media (max-width: 767px) {
     .message-content {
         padding: 10px 14px;
@@ -940,7 +871,6 @@ body.light-mode .user-item:hover {
     box-shadow: 0 10px 25px rgba(79,70,229,0.5);
 }
 
-/* Message Tail - Premium */
 .message.received .message-content::before {
     content: '';
     position: absolute;
@@ -997,9 +927,6 @@ body.light-mode .user-item:hover {
     color: rgba(255,255,255,0.85);
 }
 
-/* ============================================
-   MESSAGE IMAGES - PREMIUM
-   ============================================ */
 .message-image {
     max-width: 220px;
     max-height: 220px;
@@ -1016,9 +943,6 @@ body.light-mode .user-item:hover {
     box-shadow: 0 5px 20px rgba(79,70,229,0.4);
 }
 
-/* ============================================
-   MESSAGE REACTIONS - PREMIUM
-   ============================================ */
 .message-reactions {
     display: flex;
     gap: 8px;
@@ -1059,9 +983,6 @@ body.light-mode .user-item:hover {
     background: rgba(255,255,255,0.15);
 }
 
-/* ============================================
-   MESSAGE ACTIONS - SMOOTH
-   ============================================ */
 .message-footer {
     display: flex;
     align-items: center;
@@ -1104,9 +1025,6 @@ body.light-mode .user-item:hover {
     color: white;
 }
 
-/* ============================================
-   FORWARD INDICATOR
-   ============================================ */
 .forward-indicator {
     display: flex;
     align-items: center;
@@ -1121,9 +1039,6 @@ body.light-mode .user-item:hover {
     color: var(--primary);
 }
 
-/* ============================================
-   TYPING INDICATOR - ANIMATED
-   ============================================ */
 .typing-indicator {
     font-size: 11px;
     color: var(--primary);
@@ -1164,15 +1079,6 @@ body.light-mode .user-item:hover {
     display: none;
 }
 
-/* ============================================
-   ============================================
-   🚀 ULTIMATE FLEXIBLE PM UI - 100% RESPONSIVE
-   ============================================
-   ============================================ */
-
-/* ============================================
-   PM CHAT AREA - ULTIMATE FLEXIBLE CONTAINER
-   ============================================ */
 .pm-chat-area {
     display: flex;
     flex-direction: column;
@@ -1188,9 +1094,6 @@ body.light-mode .user-item:hover {
     display: none !important;
 }
 
-/* ============================================
-   PM HEADER - PERFECTLY FLEXIBLE
-   ============================================ */
 .pm-header {
     display: flex;
     align-items: center;
@@ -1204,7 +1107,6 @@ body.light-mode .user-item:hover {
     z-index: 10;
 }
 
-/* PC Mode */
 @media (min-width: 768px) {
     .pm-header {
         padding: 14px 20px;
@@ -1212,7 +1114,6 @@ body.light-mode .user-item:hover {
     }
 }
 
-/* Mobile Mode */
 @media (max-width: 767px) {
     .pm-header {
         padding: 10px 14px;
@@ -1221,7 +1122,6 @@ body.light-mode .user-item:hover {
     }
 }
 
-/* Back Button */
 .pm-header button {
     background: transparent;
     border: none;
@@ -1240,7 +1140,6 @@ body.light-mode .user-item:hover {
     flex-shrink: 0;
 }
 
-/* PC Mode */
 @media (min-width: 768px) {
     .pm-header button {
         width: 44px;
@@ -1249,7 +1148,6 @@ body.light-mode .user-item:hover {
     }
 }
 
-/* Mobile Mode */
 @media (max-width: 767px) {
     .pm-header button {
         width: 38px;
@@ -1286,30 +1184,26 @@ body.light-mode .user-item:hover {
     transform: scale(0.95);
 }
 
-/* PM User Info - Flexible */
 .pm-user-info {
     display: flex;
     align-items: center;
     gap: 12px;
     flex: 1;
-    min-width: 0; /* CRITICAL for flex truncation */
+    min-width: 0; 
 }
 
-/* PC Mode */
 @media (min-width: 768px) {
     .pm-user-info {
         gap: 14px;
     }
 }
 
-/* Mobile Mode */
 @media (max-width: 767px) {
     .pm-user-info {
         gap: 10px;
     }
 }
 
-/* PM User Avatar - Responsive */
 .pm-user-info img {
     width: 44px;
     height: 44px;
@@ -1321,7 +1215,6 @@ body.light-mode .user-item:hover {
     flex-shrink: 0;
 }
 
-/* PC Mode */
 @media (min-width: 768px) {
     .pm-user-info img {
         width: 48px;
@@ -1329,7 +1222,6 @@ body.light-mode .user-item:hover {
     }
 }
 
-/* Mobile Mode */
 @media (max-width: 767px) {
     .pm-user-info img {
         width: 40px;
@@ -1343,15 +1235,13 @@ body.light-mode .user-item:hover {
     box-shadow: 0 8px 25px rgba(79,70,229,0.4);
 }
 
-/* PM User Text Container - Flexible */
 .pm-user-info div {
     display: flex;
     flex-direction: column;
-    min-width: 0; /* CRITICAL for flex truncation */
+    min-width: 0; 
     flex: 1;
 }
 
-/* PM User Name - Truncated */
 .pm-user-info span {
     font-weight: 700;
     font-size: clamp(14px, 4vw, 16px);
@@ -1362,28 +1252,24 @@ body.light-mode .user-item:hover {
     letter-spacing: -0.2px;
 }
 
-/* PM Actions - Right Side */
 .pm-actions {
     display: flex;
     gap: 6px;
     flex-shrink: 0;
 }
 
-/* PC Mode */
 @media (min-width: 768px) {
     .pm-actions {
         gap: 8px;
     }
 }
 
-/* PM Action Buttons */
 .pm-actions button {
     width: 38px;
     height: 38px;
     font-size: 18px;
 }
 
-/* PC Mode */
 @media (min-width: 768px) {
     .pm-actions button {
         width: 42px;
@@ -1392,26 +1278,19 @@ body.light-mode .user-item:hover {
     }
 }
 
-/* ============================================
-   PM MESSAGES CONTAINER - ULTRA HD TEDDY BEAR
-   ============================================ */
 #pm-messages {
     flex: 1 1 auto;
     overflow-y: auto;
     padding: 20px 16px;
     background: #0e0f16;
-    
-    /* 🧸 ULTRA HD TEDDY BEAR PATTERN - 4K CRYSTAL CLEAR */
     background-image: 
-        /* Purple Glow Orbs - Premium Depth */
         radial-gradient(circle at 8% 15%, rgba(139, 92, 246, 0.14) 0%, transparent 32%),
         radial-gradient(circle at 92% 72%, rgba(79, 70, 229, 0.14) 0%, transparent 35%),
         radial-gradient(circle at 25% 82%, rgba(99, 102, 241, 0.12) 0%, transparent 30%),
         radial-gradient(circle at 75% 28%, rgba(79, 70, 229, 0.12) 0%, transparent 33%),
         radial-gradient(circle at 45% 45%, rgba(139, 92, 246, 0.1) 0%, transparent 40%),
         radial-gradient(circle at 60% 60%, rgba(99, 102, 241, 0.1) 0%, transparent 38%),
-        
-        /* 🧸 Teddy Bear Face Pattern - Ultra HD (4K Quality) */
+
         repeating-radial-gradient(circle at 12% 18%, rgba(139, 92, 246, 0.09) 2.5px, transparent 3.5px, transparent 32px),
         repeating-radial-gradient(circle at 88% 68%, rgba(99, 102, 241, 0.09) 2.5px, transparent 3.5px, transparent 35px),
         repeating-radial-gradient(circle at 32% 78%, rgba(79, 70, 229, 0.08) 2px, transparent 3px, transparent 28px),
@@ -1421,18 +1300,15 @@ body.light-mode .user-item:hover {
         repeating-radial-gradient(circle at 40% 30%, rgba(79, 70, 229, 0.06) 1.5px, transparent 2.5px, transparent 24px),
         repeating-radial-gradient(circle at 55% 85%, rgba(79, 70, 229, 0.06) 1.5px, transparent 2.5px, transparent 25px),
         repeating-radial-gradient(circle at 70% 50%, rgba(139, 92, 246, 0.06) 1.5px, transparent 2.5px, transparent 27px),
-        
-        /* 🧸 Teddy Bear Paw Prints - Clear Pattern */
+
         repeating-linear-gradient(45deg, rgba(139, 92, 246, 0.05) 0px, rgba(139, 92, 246, 0.05) 2px, transparent 2px, transparent 22px),
         repeating-linear-gradient(-45deg, rgba(79, 70, 229, 0.05) 0px, rgba(79, 70, 229, 0.05) 2px, transparent 2px, transparent 24px),
         repeating-linear-gradient(135deg, rgba(99, 102, 241, 0.04) 0px, rgba(99, 102, 241, 0.04) 1.5px, transparent 1.5px, transparent 18px),
         repeating-linear-gradient(225deg, rgba(139, 92, 246, 0.04) 0px, rgba(139, 92, 246, 0.04) 1.5px, transparent 1.5px, transparent 20px),
-        
-        /* Teddy Bear Ear Pattern */
+
         repeating-radial-gradient(ellipse at 15% 22%, rgba(79,70,229,0.05) 1px, transparent 2px, transparent 20px),
         repeating-radial-gradient(ellipse at 85% 75%, rgba(99,102,241,0.05) 1px, transparent 2px, transparent 22px),
-        
-        /* Base Dark Gradient - Deep Premium */
+
         linear-gradient(145deg, #0e0f16 0%, #1a1b26 100%);
     
     display: flex;
@@ -1442,7 +1318,6 @@ body.light-mode .user-item:hover {
     position: relative;
 }
 
-/* PC Mode - More comfortable spacing */
 @media (min-width: 768px) {
     #pm-messages {
         padding: 24px 20px;
@@ -1450,7 +1325,6 @@ body.light-mode .user-item:hover {
     }
 }
 
-/* Mobile Mode - Optimized spacing */
 @media (max-width: 767px) {
     #pm-messages {
         padding: 16px 12px;
@@ -1458,7 +1332,6 @@ body.light-mode .user-item:hover {
     }
 }
 
-/* Premium Gradient Overlay */
 #pm-messages::before {
     content: '';
     position: absolute;
@@ -1483,9 +1356,6 @@ body.light-mode .user-item:hover {
     z-index: 5;
 }
 
-/* ============================================
-   PM MESSAGES - PERFECTLY FLEXIBLE
-   ============================================ */
 #pm-messages .message {
     display: flex;
     align-items: flex-end;
@@ -1496,14 +1366,12 @@ body.light-mode .user-item:hover {
     z-index: 10;
 }
 
-/* PC Mode - Wider messages */
 @media (min-width: 768px) {
     #pm-messages .message {
         max-width: 75%;
     }
 }
 
-/* Mobile Mode - More space efficient */
 @media (max-width: 767px) {
     #pm-messages .message {
         max-width: 90%;
@@ -1519,7 +1387,6 @@ body.light-mode .user-item:hover {
     flex-direction: row-reverse;
 }
 
-/* PM Message Avatar */
 #pm-messages .message-avatar {
     width: 36px;
     height: 36px;
@@ -1532,7 +1399,6 @@ body.light-mode .user-item:hover {
     box-shadow: 0 3px 10px rgba(0,0,0,0.2);
 }
 
-/* PC Mode */
 @media (min-width: 768px) {
     #pm-messages .message-avatar {
         width: 42px;
@@ -1540,7 +1406,6 @@ body.light-mode .user-item:hover {
     }
 }
 
-/* Mobile Mode */
 @media (max-width: 767px) {
     #pm-messages .message-avatar {
         width: 34px;
@@ -1560,7 +1425,6 @@ body.light-mode .user-item:hover {
     object-fit: cover;
 }
 
-/* PM Message Content */
 #pm-messages .message-content {
     background: #2a2b36;
     padding: 12px 16px;
@@ -1572,14 +1436,12 @@ body.light-mode .user-item:hover {
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
-/* PC Mode */
 @media (min-width: 768px) {
     #pm-messages .message-content {
         padding: 14px 20px;
     }
 }
 
-/* Mobile Mode */
 @media (max-width: 767px) {
     #pm-messages .message-content {
         padding: 10px 14px;
@@ -1606,7 +1468,6 @@ body.light-mode .user-item:hover {
     box-shadow: 0 10px 25px rgba(79,70,229,0.5);
 }
 
-/* Message Tail */
 #pm-messages .message.received .message-content::before {
     content: '';
     position: absolute;
@@ -1631,7 +1492,6 @@ body.light-mode .user-item:hover {
     box-shadow: 2px 2px 0 0 rgba(0,0,0,0.05);
 }
 
-/* PM Message Sender */
 #pm-messages .message-sender {
     font-size: 12px;
     font-weight: 800;
@@ -1644,7 +1504,6 @@ body.light-mode .user-item:hover {
     color: rgba(255,255,255,0.95);
 }
 
-/* PM Message Text */
 #pm-messages .message-text {
     font-size: clamp(13px, 4vw, 14px);
     line-height: 1.55;
@@ -1652,7 +1511,6 @@ body.light-mode .user-item:hover {
     font-weight: 450;
 }
 
-/* PM Message Time */
 #pm-messages .message-time {
     font-size: 10px;
     color: var(--text-muted);
@@ -1666,9 +1524,6 @@ body.light-mode .user-item:hover {
     color: rgba(255,255,255,0.85);
 }
 
-/* ============================================
-   PM READ STATUS
-   ============================================ */
 #pm-messages .status-read {
     color: var(--success);
     margin-left: 4px;
@@ -1681,9 +1536,6 @@ body.light-mode .user-item:hover {
     font-size: 11px;
 }
 
-/* ============================================
-   PM TYPING INDICATOR
-   ============================================ */
 #pm-messages .typing-indicator {
     font-size: 11px;
     color: var(--primary);
@@ -1694,9 +1546,6 @@ body.light-mode .user-item:hover {
     margin-top: 2px;
 }
 
-/* ============================================
-   PM MESSAGE INPUT - PERFECT KEYBOARD FIX!
-   ============================================ */
 .pm-chat-area .message-input-container {
     display: flex;
     padding: 12px 16px;
@@ -1710,7 +1559,6 @@ body.light-mode .user-item:hover {
     transition: var(--transition);
 }
 
-/* PC Mode */
 @media (min-width: 768px) {
     .pm-chat-area .message-input-container {
         padding: 14px 20px;
@@ -1718,7 +1566,6 @@ body.light-mode .user-item:hover {
     }
 }
 
-/* Mobile Mode - PERFECT KEYBOARD FIX! */
 @media (max-width: 767px) {
     .pm-chat-area .message-input-container {
         padding: 10px 14px;
@@ -1730,7 +1577,6 @@ body.light-mode .user-item:hover {
     }
 }
 
-/* PM Attach & Voice Buttons */
 .pm-chat-area .attach-btn,
 .pm-chat-area .voice-btn {
     width: 42px;
@@ -1749,7 +1595,6 @@ body.light-mode .user-item:hover {
     flex-shrink: 0;
 }
 
-/* PC Mode */
 @media (min-width: 768px) {
     .pm-chat-area .attach-btn,
     .pm-chat-area .voice-btn {
@@ -1758,7 +1603,6 @@ body.light-mode .user-item:hover {
     }
 }
 
-/* Mobile Mode */
 @media (max-width: 767px) {
     .pm-chat-area .attach-btn,
     .pm-chat-area .voice-btn {
@@ -1794,7 +1638,6 @@ body.light-mode .user-item:hover {
     transform: scale(1.1);
 }
 
-/* PM Input Field */
 .pm-chat-area .message-input-container input {
     flex: 1;
     padding: 12px 18px;
@@ -1809,7 +1652,6 @@ body.light-mode .user-item:hover {
     min-width: 50px;
 }
 
-/* PC Mode */
 @media (min-width: 768px) {
     .pm-chat-area .message-input-container input {
         padding: 14px 22px;
@@ -1817,7 +1659,6 @@ body.light-mode .user-item:hover {
     }
 }
 
-/* Mobile Mode - Prevent zoom on iOS */
 @media (max-width: 767px) {
     .pm-chat-area .message-input-container input {
         padding: 12px 16px;
@@ -1841,7 +1682,6 @@ body.light-mode .user-item:hover {
     opacity: 0.6;
 }
 
-/* PM Send Button */
 .pm-chat-area .send-btn {
     width: 42px;
     height: 42px;
@@ -1860,7 +1700,6 @@ body.light-mode .user-item:hover {
     flex-shrink: 0;
 }
 
-/* PC Mode */
 @media (min-width: 768px) {
     .pm-chat-area .send-btn {
         width: 48px;
@@ -1868,7 +1707,6 @@ body.light-mode .user-item:hover {
     }
 }
 
-/* Mobile Mode */
 @media (max-width: 767px) {
     .pm-chat-area .send-btn {
         width: 42px;
@@ -1922,9 +1760,6 @@ body.light-mode .user-item:hover {
     opacity: 0.6;
 }
 
-/* ============================================
-   USERS LIST - PREMIUM
-   ============================================ */
 .users-list-header {
     display: flex;
     justify-content: space-between;
@@ -1935,7 +1770,6 @@ body.light-mode .user-item:hover {
     flex-shrink: 0;
 }
 
-/* PC Mode */
 @media (min-width: 768px) {
     .users-list-header {
         padding: 14px 20px;
@@ -1974,7 +1808,6 @@ body.light-mode .user-item:hover {
     background: #0e0f16;
 }
 
-/* PC Mode */
 @media (min-width: 768px) {
     .users-list {
         padding: 12px;
@@ -1994,14 +1827,12 @@ body.light-mode .user-item:hover {
     animation: fadeIn 0.2s ease;
 }
 
-/* PC Mode */
 @media (min-width: 768px) {
     .user-item {
         padding: 14px 16px;
     }
 }
 
-/* Mobile Mode */
 @media (max-width: 767px) {
     .user-item {
         padding: 10px 12px;
@@ -2033,7 +1864,6 @@ body.light-mode .user-item:hover {
     box-shadow: 0 3px 10px rgba(79,70,229,0.2);
 }
 
-/* PC Mode */
 @media (min-width: 768px) {
     .user-item-avatar {
         width: 50px;
@@ -2042,7 +1872,6 @@ body.light-mode .user-item:hover {
     }
 }
 
-/* Mobile Mode */
 @media (max-width: 767px) {
     .user-item-avatar {
         width: 44px;
@@ -2075,7 +1904,6 @@ body.light-mode .user-item:hover {
     transition: var(--transition);
 }
 
-/* PC Mode */
 @media (min-width: 768px) {
     .status-indicator {
         width: 15px;
@@ -2083,7 +1911,6 @@ body.light-mode .user-item:hover {
     }
 }
 
-/* Mobile Mode */
 @media (max-width: 767px) {
     .status-indicator {
         width: 13px;
@@ -2166,9 +1993,6 @@ body.light-mode .user-item:hover {
     color: #94a3b8;
 }
 
-/* ============================================
-   SIDEBAR - FLEXIBLE
-   ============================================ */
 .sidebar {
     position: absolute;
     top: 0;
@@ -2196,14 +2020,12 @@ body.light-mode .user-item:hover {
     border-bottom: 1px solid var(--border-color);
 }
 
-/* PC Mode */
 @media (min-width: 768px) {
     .sidebar-header {
         padding: 20px 24px;
     }
 }
 
-/* Mobile Mode */
 @media (max-width: 767px) {
     .sidebar-header {
         padding: 16px 18px;
@@ -2251,7 +2073,6 @@ body.light-mode .user-item:hover {
     background: #0e0f16;
 }
 
-/* PC Mode */
 @media (min-width: 768px) {
     .sidebar-content {
         padding: 24px;
@@ -2279,9 +2100,6 @@ body.light-mode .user-item:hover {
     font-size: 14px;
 }
 
-/* ============================================
-   SIDEBAR BUTTONS - PREMIUM
-   ============================================ */
 .sidebar-btn {
     width: 100%;
     padding: 14px 18px;
@@ -2302,7 +2120,6 @@ body.light-mode .user-item:hover {
     overflow: hidden;
 }
 
-/* PC Mode */
 @media (min-width: 768px) {
     .sidebar-btn {
         padding: 16px 20px;
@@ -2363,9 +2180,6 @@ body.light-mode .user-item:hover {
     border-color: var(--danger);
 }
 
-/* ============================================
-   GC INFO CARD - PREMIUM
-   ============================================ */
 .gc-info-card {
     display: flex;
     align-items: center;
@@ -2401,7 +2215,6 @@ body.light-mode .user-item:hover {
     flex-shrink: 0;
 }
 
-/* PC Mode */
 @media (min-width: 768px) {
     .gc-info-card img {
         width: 64px;
@@ -2442,9 +2255,6 @@ body.light-mode .user-item:hover {
     gap: 4px;
 }
 
-/* ============================================
-   SIDEBAR USERS LIST
-   ============================================ */
 .sidebar-users-list {
     display: flex;
     flex-direction: column;
@@ -2458,9 +2268,6 @@ body.light-mode .user-item:hover {
     margin-bottom: 0;
 }
 
-/* ============================================
-   DEVELOPER SECTION - PREMIUM
-   ============================================ */
 .developer-section {
     margin-top: 30px;
     padding-top: 22px;
@@ -2561,9 +2368,6 @@ body.light-mode .user-item:hover {
     50% { transform: scale(1.2); }
 }
 
-/* ============================================
-   TOAST NOTIFICATIONS - PREMIUM
-   ============================================ */
 .toast {
     position: fixed;
     bottom: 30px;
@@ -2642,9 +2446,6 @@ body.light-mode .user-item:hover {
     50% { transform: translateY(-10px); }
 }
 
-/* ============================================
-   MODAL - RESPONSIVE PREMIUM
-   ============================================ */
 .modal {
     display: none;
     position: absolute;
@@ -2694,14 +2495,12 @@ body.light-mode .user-item:hover {
     border-bottom: 1px solid var(--border-color);
 }
 
-/* PC Mode */
 @media (min-width: 768px) {
     .modal-header {
         padding: 20px 28px;
     }
 }
 
-/* Mobile Mode */
 @media (max-width: 767px) {
     .modal-header {
         padding: 16px 20px;
@@ -2754,23 +2553,18 @@ body.light-mode .user-item:hover {
     background: #0e0f16;
 }
 
-/* PC Mode */
 @media (min-width: 768px) {
     .modal-body {
         padding: 28px;
     }
 }
 
-/* Mobile Mode */
 @media (max-width: 767px) {
     .modal-body {
         padding: 20px;
     }
 }
 
-/* ============================================
-   GC PFP SECTION
-   ============================================ */
 .gc-pfp-section {
     display: flex;
     flex-direction: column;
@@ -2789,7 +2583,6 @@ body.light-mode .user-item:hover {
     box-shadow: 0 15px 35px rgba(79,70,229,0.4);
 }
 
-/* PC Mode */
 @media (min-width: 768px) {
     .gc-pfp-section img {
         width: 120px;
@@ -2839,9 +2632,6 @@ body.light-mode .user-item:hover {
     transform: rotate(10deg) scale(1.2);
 }
 
-/* ============================================
-   INFO ROWS - PREMIUM
-   ============================================ */
 .info-row {
     margin-bottom: 20px;
 }
@@ -2916,9 +2706,6 @@ body.light-mode .user-item:hover {
     border: 1px solid transparent;
 }
 
-/* ============================================
-   MEMBERS LIST - PREMIUM
-   ============================================ */
 .modal-body h4 {
     font-size: 16px;
     font-weight: 800;
@@ -3003,9 +2790,6 @@ body.light-mode .user-item:hover {
     gap: 4px;
 }
 
-/* ============================================
-   REACTION MODAL - PREMIUM
-   ============================================ */
 .reaction-modal .modal-content {
     background: #1a1b26;
     padding: 24px;
@@ -3042,9 +2826,6 @@ body.light-mode .user-item:hover {
     border-color: white;
 }
 
-/* ============================================
-   FORWARD MODAL - PREMIUM
-   ============================================ */
 .forward-preview {
     background: var(--bg-input);
     border-radius: 18px;
@@ -3068,9 +2849,6 @@ body.light-mode .user-item:hover {
     overflow-y: auto;
 }
 
-/* ============================================
-   MESSAGE LINK
-   ============================================ */
 .message-link {
     color: var(--primary);
     text-decoration: none;
@@ -3085,9 +2863,6 @@ body.light-mode .user-item:hover {
     color: var(--primary-light);
 }
 
-/* ============================================
-   LOADING DOTS - PREMIUM
-   ============================================ */
 .loading-dots {
     display: inline-flex;
     align-items: center;
@@ -3115,9 +2890,6 @@ body.light-mode .user-item:hover {
     50% { transform: translateY(-6px); opacity: 1; }
 }
 
-/* ============================================
-   READ STATUS - PREMIUM
-   ============================================ */
 .status-read {
     color: var(--success);
     margin-left: 5px;
@@ -3137,9 +2909,6 @@ body.light-mode .user-item:hover {
     font-size: 12px;
 }
 
-/* ============================================
-   SCROLLBAR - PREMIUM
-   ============================================ */
 .messages-container::-webkit-scrollbar,
 .users-list::-webkit-scrollbar,
 .sidebar-content::-webkit-scrollbar,
@@ -3178,16 +2947,10 @@ body.light-mode .user-item:hover {
     background: linear-gradient(180deg, var(--primary-light), var(--primary));
 }
 
-/* ============================================
-   HIDDEN CLASS
-   ============================================ */
 .hidden {
     display: none !important;
 }
 
-/* ============================================
-   FORCE OVERRIDES - PERFECT
-   ============================================ */
 .user-item-avatar {
     overflow: visible !important;
     position: relative !important;
@@ -3207,9 +2970,6 @@ body.light-mode .user-item:hover {
     overflow: hidden !important;
 }
 
-/* ============================================
-   SAFE AREA INSETS - NOTCHED PHONES
-   ============================================ */
 @supports (padding: max(0px)) {
     .chat-header,
     .search-bar,
@@ -3239,9 +2999,6 @@ body.light-mode .user-item:hover {
     }
 }
 
-/* ============================================
-   ANIMATIONS - PREMIUM
-   ============================================ */
 @keyframes spin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
@@ -3250,12 +3007,9 @@ body.light-mode .user-item:hover {
 @keyframes shake {
     0%, 100% { transform: translateX(0); }
     25% { transform: translateX(-2px); }
-    75% { transform: translateX(2px); }
+    55% { transform: translateX(2px); }
 }
 
-/* ============================================
-   RESPONSIVE FIXES - PERFECT BALANCE
-   ============================================ */
 @media (max-width: 380px) {
     .user-avatar {
         width: 38px;
@@ -3308,7 +3062,6 @@ body.light-mode .user-item:hover {
 }
 
 @media (min-width: 768px) and (max-width: 1024px) {
-    /* Tablet optimization */
     #app {
         max-width: 400px;
         height: 750px;
@@ -3317,7 +3070,6 @@ body.light-mode .user-item:hover {
     }
 }
 
-/* Extra Large Screens */
 @media (min-width: 1200px) {
     #app {
         max-width: 400px;
@@ -3327,7 +3079,6 @@ body.light-mode .user-item:hover {
     }
 }
 
-/* Landscape Mode Fix */
 @media (max-height: 600px) and (orientation: landscape) {
     #app {
         height: 100vh;
@@ -3350,5 +3101,252 @@ body.light-mode .user-item:hover {
     .user-avatar {
         width: 36px;
         height: 36px;
+    }
+}
+
+#gc-view .message-input-container {
+    display: flex;
+    padding: 12px 16px;
+    background: #1a1b26;
+    border-top: 1px solid var(--border-color);
+    gap: 8px;
+    flex-shrink: 0;
+    width: 100%;
+    position: sticky;
+    bottom: 0;
+    z-index: 50;
+    transition: var(--transition);
+}
+
+@media (min-width: 768px) {
+    #gc-view .message-input-container {
+        padding: 14px 20px;
+        gap: 10px;
+    }
+}
+
+@media (max-width: 767px) {
+    #gc-view .message-input-container {
+        padding: 10px 14px;
+        padding-bottom: max(12px, env(safe-area-inset-bottom, 12px));
+        position: sticky;
+        bottom: 0;
+        background: #1a1b26;
+        z-index: 50;
+    }
+}
+
+#gc-view .attach-btn,
+#gc-view .voice-btn {
+    width: 42px;
+    height: 42px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+@media (min-width: 768px) {
+    #gc-view .attach-btn,
+    #gc-view .voice-btn {
+        width: 48px;
+        height: 48px;
+    }
+}
+
+@media (max-width: 767px) {
+    #gc-view .attach-btn,
+    #gc-view .voice-btn {
+        width: 42px;
+        height: 42px;
+    }
+}
+
+#gc-view .attach-btn::before,
+#gc-view .voice-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(79,70,229,0.2);
+    transform: translate(-50%, -50%);
+    transition: width 0.3s ease, height 0.3s ease;
+}
+
+#gc-view .attach-btn:hover::before,
+#gc-view .voice-btn:hover::before {
+    width: 100%;
+    height: 100%;
+}
+
+#gc-view .attach-btn:hover,
+#gc-view .voice-btn:hover {
+    background: var(--bg-hover);
+    color: var(--primary);
+    transform: scale(1.1);
+}
+
+#gc-view .message-input-container input {
+    flex: 1;
+    padding: 12px 18px;
+    border: none;
+    border-radius: var(--border-radius-full);
+    font-size: clamp(14px, 4vw, 15px);
+    outline: none;
+    background: var(--bg-input);
+    color: white;
+    transition: var(--transition);
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
+    min-width: 50px;
+}
+
+@media (min-width: 768px) {
+    #gc-view .message-input-container input {
+        padding: 14px 22px;
+        font-size: 15px;
+    }
+}
+
+@media (max-width: 767px) {
+    #gc-view .message-input-container input {
+        padding: 12px 16px;
+        font-size: 16px;
+        min-height: 48px;
+    }
+}
+
+#gc-view .message-input-container input:focus {
+    background: #32333f;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.3), 0 0 0 2px rgba(79,70,229,0.3);
+}
+
+#gc-view .message-input-container input::placeholder {
+    color: #6b7280;
+    transition: var(--transition);
+}
+
+#gc-view .message-input-container input:focus::placeholder {
+    transform: translateX(5px);
+    opacity: 0.6;
+}
+
+#gc-view .send-btn {
+    width: 42px;
+    height: 42px;
+    border: none;
+    background: linear-gradient(145deg, var(--primary), var(--primary-light));
+    color: white;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+    box-shadow: 0 5px 15px rgba(79,70,229,0.3);
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+@media (min-width: 768px) {
+    #gc-view .send-btn {
+        width: 48px;
+        height: 48px;
+    }
+}
+
+@media (max-width: 767px) {
+    #gc-view .send-btn {
+        width: 42px;
+        height: 42px;
+    }
+}
+
+#gc-view .send-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.4s ease, height 0.4s ease;
+}
+
+#gc-view .send-btn:hover::before {
+    width: 100%;
+    height: 100%;
+}
+
+#gc-view .send-btn:hover {
+    transform: scale(1.15) rotate(10deg);
+    box-shadow: 0 8px 25px rgba(79,70,229,0.5);
+    background: linear-gradient(145deg, var(--primary-light), var(--primary));
+}
+
+#gc-view .send-btn:active {
+    transform: scale(0.95) rotate(0deg);
+}
+
+#gc-view .send-btn i {
+    font-size: 18px;
+    filter: drop-shadow(0 2px 5px rgba(0,0,0,0.2));
+    transition: var(--transition);
+}
+
+#gc-view .send-btn:hover i {
+    transform: scale(1.2);
+}
+
+#gc-view .send-btn:disabled {
+    background: #3a3b45;
+    box-shadow: none;
+    transform: none;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+#gc-view {
+    display: none;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+    position: relative;
+}
+
+#gc-view.active {
+    display: flex;
+}
+
+#gc-view .messages-container {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    min-height: 0;
+    height: 100%;
+}
+
+@media (max-width: 767px) {
+    #gc-view {
+        position: relative;
+    }
+    
+    #gc-view .message-input-container {
+        position: sticky;
+        bottom: 0;
+        z-index: 100;
     }
 }
