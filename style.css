@@ -1,7 +1,7 @@
 /* ============================================
    MINI MESSENGER - ULTIMATE FLEXIBLE TELEGRAM THEME
-   🧸 TEDDY BEAR CONVERSATION PATTERN - ULTRA HD 🧸
-   PERFECT FOR PC (400px-1200px) & MOBILE
+   🧸 ULTRA HD TEDDY BEAR CONVERSATION PATTERN 🧸
+   PERFECT FLEXIBLE PM UI - PC, TABLET, MOBILE
    KEYBOARD FIXED - BALANCED - PREMIUM ANIMATIONS
    ============================================ */
 
@@ -172,15 +172,6 @@ body.light-mode .user-item:hover {
     }
 }
 
-/* Large Desktop (≥ 1200px) - Still 400px width */
-@media (min-width: 1200px) {
-    #app {
-        max-width: var(--app-width-pc);
-        height: var(--app-height-pc);
-        border-radius: var(--border-radius-xl);
-    }
-}
-
 /* ============================================
    SCREENS - FLEXIBLE LAYOUT
    ============================================ */
@@ -217,6 +208,21 @@ body.light-mode .user-item:hover {
     transition: var(--transition);
 }
 
+/* PC Mode */
+@media (min-width: 768px) {
+    .chat-header {
+        padding: 14px 20px;
+    }
+}
+
+/* Mobile Mode */
+@media (max-width: 767px) {
+    .chat-header {
+        padding: 12px 16px;
+        padding-top: max(12px, env(safe-area-inset-top, 12px));
+    }
+}
+
 .user-info {
     display: flex;
     align-items: center;
@@ -242,6 +248,22 @@ body.light-mode .user-item:hover {
     position: relative;
     transition: var(--transition);
     box-shadow: 0 0 10px rgba(79,70,229,0.2);
+}
+
+/* PC Mode */
+@media (min-width: 768px) {
+    .user-avatar {
+        width: 48px;
+        height: 48px;
+    }
+}
+
+/* Mobile Mode */
+@media (max-width: 767px) {
+    .user-avatar {
+        width: 42px;
+        height: 42px;
+    }
 }
 
 .user-avatar:hover {
@@ -304,6 +326,25 @@ body.light-mode .user-item:hover {
     transition: var(--transition);
     position: relative;
     overflow: hidden;
+    flex-shrink: 0;
+}
+
+/* PC Mode */
+@media (min-width: 768px) {
+    .header-actions button {
+        width: 42px;
+        height: 42px;
+        font-size: 20px;
+    }
+}
+
+/* Mobile Mode */
+@media (max-width: 767px) {
+    .header-actions button {
+        width: 36px;
+        height: 36px;
+        font-size: 18px;
+    }
 }
 
 .header-actions button::before {
@@ -389,6 +430,7 @@ body.light-mode .user-item:hover {
     border-radius: 50%;
     cursor: pointer;
     transition: var(--transition);
+    flex-shrink: 0;
 }
 
 .search-bar button:hover {
@@ -458,6 +500,13 @@ body.light-mode .user-item:hover {
     background: rgba(26,27,38,0.98);
     gap: 12px;
     flex-shrink: 0;
+}
+
+/* PC Mode */
+@media (min-width: 768px) {
+    .chat-tabs {
+        padding: 12px 20px;
+    }
 }
 
 .tab {
@@ -545,6 +594,13 @@ body.light-mode .user-item:hover {
     transition: var(--transition);
 }
 
+/* PC Mode */
+@media (min-width: 768px) {
+    .gc-header {
+        padding: 14px 20px;
+    }
+}
+
 .gc-header:hover {
     background: var(--bg-hover);
     padding-left: 20px;
@@ -563,6 +619,15 @@ body.light-mode .user-item:hover {
     border: 2px solid var(--primary);
     transition: var(--transition);
     box-shadow: 0 5px 15px rgba(79,70,229,0.2);
+    flex-shrink: 0;
+}
+
+/* PC Mode */
+@media (min-width: 768px) {
+    .gc-avatar {
+        width: 54px;
+        height: 54px;
+    }
 }
 
 .gc-avatar:hover {
@@ -579,6 +644,7 @@ body.light-mode .user-item:hover {
 
 .gc-info {
     flex: 1;
+    min-width: 0;
 }
 
 .gc-info h3 {
@@ -587,6 +653,9 @@ body.light-mode .user-item:hover {
     color: white;
     font-weight: 800;
     letter-spacing: -0.3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .gc-info span {
@@ -615,6 +684,7 @@ body.light-mode .user-item:hover {
     color: var(--primary);
     font-size: 14px;
     animation: bounce 2s infinite;
+    flex-shrink: 0;
 }
 
 @keyframes bounce {
@@ -638,6 +708,7 @@ body.light-mode .user-item:hover {
     padding: 6px;
     border-radius: 50%;
     transition: var(--transition);
+    flex-shrink: 0;
 }
 
 .pinned-message button:hover {
@@ -648,7 +719,7 @@ body.light-mode .user-item:hover {
 
 /* ============================================
    🧸 ULTRA HD TEDDY BEAR CONVERSATION THEME 🧸
-   CRYSTAL CLEAR - PREMIUM PATTERN
+   CRYSTAL CLEAR - 4K QUALITY PATTERN
    ============================================ */
 .messages-container,
 #pm-messages {
@@ -657,36 +728,63 @@ body.light-mode .user-item:hover {
     padding: 20px 16px;
     background: #0e0f16;
     
-    /* 🧸 ULTRA HD TEDDY BEAR PATTERN - CRYSTAL CLEAR */
+    /* 🧸 ULTRA HD TEDDY BEAR PATTERN - 4K CRYSTAL CLEAR */
     background-image: 
         /* Purple Glow Orbs - Premium Depth */
-        radial-gradient(circle at 10% 20%, rgba(139, 92, 246, 0.12) 0%, transparent 35%),
-        radial-gradient(circle at 90% 65%, rgba(79, 70, 229, 0.12) 0%, transparent 40%),
-        radial-gradient(circle at 30% 80%, rgba(99, 102, 241, 0.1) 0%, transparent 35%),
-        radial-gradient(circle at 70% 25%, rgba(79, 70, 229, 0.1) 0%, transparent 40%),
-        radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.08) 0%, transparent 45%),
+        radial-gradient(circle at 8% 15%, rgba(139, 92, 246, 0.14) 0%, transparent 32%),
+        radial-gradient(circle at 92% 72%, rgba(79, 70, 229, 0.14) 0%, transparent 35%),
+        radial-gradient(circle at 25% 82%, rgba(99, 102, 241, 0.12) 0%, transparent 30%),
+        radial-gradient(circle at 75% 28%, rgba(79, 70, 229, 0.12) 0%, transparent 33%),
+        radial-gradient(circle at 45% 45%, rgba(139, 92, 246, 0.1) 0%, transparent 40%),
+        radial-gradient(circle at 60% 60%, rgba(99, 102, 241, 0.1) 0%, transparent 38%),
         
-        /* 🧸 Teddy Bear Face Pattern - Clear & Cute */
-        repeating-radial-gradient(circle at 15% 25%, rgba(139, 92, 246, 0.06) 2px, transparent 3px, transparent 35px),
-        repeating-radial-gradient(circle at 85% 75%, rgba(99, 102, 241, 0.06) 2px, transparent 3px, transparent 40px),
-        repeating-radial-gradient(circle at 45% 40%, rgba(79, 70, 229, 0.05) 1.5px, transparent 2.5px, transparent 30px),
-        repeating-radial-gradient(circle at 60% 85%, rgba(79, 70, 229, 0.05) 1.5px, transparent 2.5px, transparent 32px),
-        repeating-radial-gradient(circle at 25% 70%, rgba(139, 92, 246, 0.04) 1px, transparent 2px, transparent 28px),
-        repeating-radial-gradient(circle at 75% 30%, rgba(99, 102, 241, 0.04) 1px, transparent 2px, transparent 28px),
+        /* 🧸 Teddy Bear Face Pattern - Ultra HD (4K Quality) */
+        repeating-radial-gradient(circle at 12% 18%, rgba(139, 92, 246, 0.09) 2.5px, transparent 3.5px, transparent 32px),
+        repeating-radial-gradient(circle at 88% 68%, rgba(99, 102, 241, 0.09) 2.5px, transparent 3.5px, transparent 35px),
+        repeating-radial-gradient(circle at 32% 78%, rgba(79, 70, 229, 0.08) 2px, transparent 3px, transparent 28px),
+        repeating-radial-gradient(circle at 68% 22%, rgba(79, 70, 229, 0.08) 2px, transparent 3px, transparent 30px),
+        repeating-radial-gradient(circle at 20% 55%, rgba(139, 92, 246, 0.07) 1.8px, transparent 2.8px, transparent 26px),
+        repeating-radial-gradient(circle at 80% 45%, rgba(99, 102, 241, 0.07) 1.8px, transparent 2.8px, transparent 28px),
+        repeating-radial-gradient(circle at 40% 30%, rgba(79, 70, 229, 0.06) 1.5px, transparent 2.5px, transparent 24px),
+        repeating-radial-gradient(circle at 55% 85%, rgba(79, 70, 229, 0.06) 1.5px, transparent 2.5px, transparent 25px),
+        repeating-radial-gradient(circle at 70% 50%, rgba(139, 92, 246, 0.06) 1.5px, transparent 2.5px, transparent 27px),
         
-        /* Teddy Bear Paw Prints - Subtle */
-        repeating-linear-gradient(45deg, rgba(139, 92, 246, 0.03) 0px, rgba(139, 92, 246, 0.03) 2px, transparent 2px, transparent 18px),
-        repeating-linear-gradient(-45deg, rgba(79, 70, 229, 0.03) 0px, rgba(79, 70, 229, 0.03) 2px, transparent 2px, transparent 20px),
-        repeating-linear-gradient(135deg, rgba(99, 102, 241, 0.02) 0px, rgba(99, 102, 241, 0.02) 1px, transparent 1px, transparent 15px),
+        /* 🧸 Teddy Bear Paw Prints - Clear Pattern */
+        repeating-linear-gradient(45deg, rgba(139, 92, 246, 0.05) 0px, rgba(139, 92, 246, 0.05) 2px, transparent 2px, transparent 22px),
+        repeating-linear-gradient(-45deg, rgba(79, 70, 229, 0.05) 0px, rgba(79, 70, 229, 0.05) 2px, transparent 2px, transparent 24px),
+        repeating-linear-gradient(135deg, rgba(99, 102, 241, 0.04) 0px, rgba(99, 102, 241, 0.04) 1.5px, transparent 1.5px, transparent 18px),
+        repeating-linear-gradient(225deg, rgba(139, 92, 246, 0.04) 0px, rgba(139, 92, 246, 0.04) 1.5px, transparent 1.5px, transparent 20px),
         
-        /* Base Dark Gradient */
-        linear-gradient(145deg, #0e0f16 0%, #15161e 100%);
+        /* Teddy Bear Ear Pattern */
+        repeating-radial-gradient(ellipse at 15% 22%, rgba(79,70,229,0.05) 1px, transparent 2px, transparent 20px),
+        repeating-radial-gradient(ellipse at 85% 75%, rgba(99,102,241,0.05) 1px, transparent 2px, transparent 22px),
+        
+        /* Base Dark Gradient - Deep Premium */
+        linear-gradient(145deg, #0e0f16 0%, #1a1b26 100%);
     
     display: flex;
     flex-direction: column;
     gap: 8px;
     min-height: 0;
     position: relative;
+}
+
+/* PC Mode - More comfortable spacing */
+@media (min-width: 768px) {
+    .messages-container,
+    #pm-messages {
+        padding: 24px 20px;
+        gap: 10px;
+    }
+}
+
+/* Mobile Mode - Optimized spacing */
+@media (max-width: 767px) {
+    .messages-container,
+    #pm-messages {
+        padding: 16px 12px;
+        gap: 6px;
+    }
 }
 
 /* Premium Gradient Overlay - Smooth Edges */
@@ -739,6 +837,24 @@ body.light-mode .user-item:hover {
     flex-direction: row-reverse;
 }
 
+/* PC Mode - Wider messages */
+@media (min-width: 768px) {
+    .message {
+        max-width: 75%;
+    }
+}
+
+/* Mobile Mode - More space efficient */
+@media (max-width: 767px) {
+    .message {
+        max-width: 90%;
+    }
+    
+    .message.sent {
+        max-width: 85%;
+    }
+}
+
 .message-avatar {
     width: 36px;
     height: 36px;
@@ -749,6 +865,22 @@ body.light-mode .user-item:hover {
     background: var(--bg-input);
     transition: var(--transition);
     box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+}
+
+/* PC Mode - Larger avatars */
+@media (min-width: 768px) {
+    .message-avatar {
+        width: 42px;
+        height: 42px;
+    }
+}
+
+/* Mobile Mode - Compact avatars */
+@media (max-width: 767px) {
+    .message-avatar {
+        width: 34px;
+        height: 34px;
+    }
 }
 
 .message-avatar:hover {
@@ -772,6 +904,20 @@ body.light-mode .user-item:hover {
     position: relative;
     transition: var(--transition);
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+/* PC Mode - More padding */
+@media (min-width: 768px) {
+    .message-content {
+        padding: 14px 20px;
+    }
+}
+
+/* Mobile Mode - Compact padding */
+@media (max-width: 767px) {
+    .message-content {
+        padding: 10px 14px;
+    }
 }
 
 .message-content:hover {
@@ -1019,83 +1165,100 @@ body.light-mode .user-item:hover {
 }
 
 /* ============================================
-   MESSAGE INPUT - PERFECT KEYBOARD FIX!
-   PC & MOBILE BALANCED
+   ============================================
+   🚀 ULTIMATE FLEXIBLE PM UI - 100% RESPONSIVE
+   ============================================
    ============================================ */
-.message-input-container {
+
+/* ============================================
+   PM CHAT AREA - ULTIMATE FLEXIBLE CONTAINER
+   ============================================ */
+.pm-chat-area {
     display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    background: #0e0f16;
+    position: relative;
+    overflow: hidden;
+    flex: 1;
+}
+
+.pm-chat-area.hidden {
+    display: none !important;
+}
+
+/* ============================================
+   PM HEADER - PERFECTLY FLEXIBLE
+   ============================================ */
+.pm-header {
+    display: flex;
+    align-items: center;
     padding: 12px 16px;
     background: #1a1b26;
-    border-top: 1px solid var(--border-color);
-    gap: 8px;
+    border-bottom: 1px solid var(--border-color);
+    gap: 12px;
     flex-shrink: 0;
     width: 100%;
     position: relative;
-    bottom: 0;
-    transition: var(--transition);
+    z-index: 10;
 }
 
-/* PC Mode Input */
+/* PC Mode */
 @media (min-width: 768px) {
-    .message-input-container {
-        padding: 14px 18px;
-    }
-    
-    .message-input-container input {
+    .pm-header {
         padding: 14px 20px;
-        font-size: 15px;
-    }
-    
-    .send-btn,
-    .attach-btn,
-    .voice-btn {
-        width: 48px;
-        height: 48px;
+        gap: 14px;
     }
 }
 
-/* Mobile Mode Input - PERFECT KEYBOARD FIX! */
+/* Mobile Mode */
 @media (max-width: 767px) {
-    .message-input-container {
-        padding: 10px 12px;
-        padding-bottom: max(12px, env(safe-area-inset-bottom, 12px));
-        position: sticky;
-        bottom: 0;
-        background: #1a1b26;
-        z-index: 50;
-    }
-    
-    .message-input-container input {
-        padding: 12px 16px;
-        font-size: 16px; /* Prevents zoom on iOS */
-        min-height: 48px;
-    }
-    
-    .send-btn,
-    .attach-btn,
-    .voice-btn {
-        width: 48px;
-        height: 48px;
+    .pm-header {
+        padding: 10px 14px;
+        padding-top: max(12px, env(safe-area-inset-top, 12px));
+        gap: 10px;
     }
 }
 
-.attach-btn,
-.voice-btn {
-    border: none;
+/* Back Button */
+.pm-header button {
     background: transparent;
+    border: none;
+    font-size: 20px;
     color: var(--text-muted);
-    border-radius: 50%;
     cursor: pointer;
+    width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
+    border-radius: 50%;
     transition: var(--transition);
     position: relative;
     overflow: hidden;
+    flex-shrink: 0;
 }
 
-.attach-btn::before,
-.voice-btn::before {
+/* PC Mode */
+@media (min-width: 768px) {
+    .pm-header button {
+        width: 44px;
+        height: 44px;
+        font-size: 22px;
+    }
+}
+
+/* Mobile Mode */
+@media (max-width: 767px) {
+    .pm-header button {
+        width: 38px;
+        height: 38px;
+        font-size: 20px;
+    }
+}
+
+.pm-header button::before {
     content: '';
     position: absolute;
     top: 50%;
@@ -1108,46 +1271,580 @@ body.light-mode .user-item:hover {
     transition: width 0.3s ease, height 0.3s ease;
 }
 
-.attach-btn:hover::before,
-.voice-btn:hover::before {
+.pm-header button:hover::before {
     width: 100%;
     height: 100%;
 }
 
-.attach-btn:hover,
-.voice-btn:hover {
+.pm-header button:hover {
     background: var(--bg-hover);
     color: var(--primary);
     transform: scale(1.1);
 }
 
-.message-input-container input {
+.pm-header button:active {
+    transform: scale(0.95);
+}
+
+/* PM User Info - Flexible */
+.pm-user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
     flex: 1;
+    min-width: 0; /* CRITICAL for flex truncation */
+}
+
+/* PC Mode */
+@media (min-width: 768px) {
+    .pm-user-info {
+        gap: 14px;
+    }
+}
+
+/* Mobile Mode */
+@media (max-width: 767px) {
+    .pm-user-info {
+        gap: 10px;
+    }
+}
+
+/* PM User Avatar - Responsive */
+.pm-user-info img {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--primary);
+    box-shadow: 0 5px 15px rgba(79,70,229,0.2);
+    transition: var(--transition);
+    flex-shrink: 0;
+}
+
+/* PC Mode */
+@media (min-width: 768px) {
+    .pm-user-info img {
+        width: 48px;
+        height: 48px;
+    }
+}
+
+/* Mobile Mode */
+@media (max-width: 767px) {
+    .pm-user-info img {
+        width: 40px;
+        height: 40px;
+    }
+}
+
+.pm-user-info img:hover {
+    transform: scale(1.1) rotate(5deg);
+    border-color: var(--primary-light);
+    box-shadow: 0 8px 25px rgba(79,70,229,0.4);
+}
+
+/* PM User Text Container - Flexible */
+.pm-user-info div {
+    display: flex;
+    flex-direction: column;
+    min-width: 0; /* CRITICAL for flex truncation */
+    flex: 1;
+}
+
+/* PM User Name - Truncated */
+.pm-user-info span {
+    font-weight: 700;
+    font-size: clamp(14px, 4vw, 16px);
+    color: white;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: -0.2px;
+}
+
+/* PM Actions - Right Side */
+.pm-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+/* PC Mode */
+@media (min-width: 768px) {
+    .pm-actions {
+        gap: 8px;
+    }
+}
+
+/* PM Action Buttons */
+.pm-actions button {
+    width: 38px;
+    height: 38px;
+    font-size: 18px;
+}
+
+/* PC Mode */
+@media (min-width: 768px) {
+    .pm-actions button {
+        width: 42px;
+        height: 42px;
+        font-size: 20px;
+    }
+}
+
+/* ============================================
+   PM MESSAGES CONTAINER - ULTRA HD TEDDY BEAR
+   ============================================ */
+#pm-messages {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 20px 16px;
+    background: #0e0f16;
+    
+    /* 🧸 ULTRA HD TEDDY BEAR PATTERN - 4K CRYSTAL CLEAR */
+    background-image: 
+        /* Purple Glow Orbs - Premium Depth */
+        radial-gradient(circle at 8% 15%, rgba(139, 92, 246, 0.14) 0%, transparent 32%),
+        radial-gradient(circle at 92% 72%, rgba(79, 70, 229, 0.14) 0%, transparent 35%),
+        radial-gradient(circle at 25% 82%, rgba(99, 102, 241, 0.12) 0%, transparent 30%),
+        radial-gradient(circle at 75% 28%, rgba(79, 70, 229, 0.12) 0%, transparent 33%),
+        radial-gradient(circle at 45% 45%, rgba(139, 92, 246, 0.1) 0%, transparent 40%),
+        radial-gradient(circle at 60% 60%, rgba(99, 102, 241, 0.1) 0%, transparent 38%),
+        
+        /* 🧸 Teddy Bear Face Pattern - Ultra HD (4K Quality) */
+        repeating-radial-gradient(circle at 12% 18%, rgba(139, 92, 246, 0.09) 2.5px, transparent 3.5px, transparent 32px),
+        repeating-radial-gradient(circle at 88% 68%, rgba(99, 102, 241, 0.09) 2.5px, transparent 3.5px, transparent 35px),
+        repeating-radial-gradient(circle at 32% 78%, rgba(79, 70, 229, 0.08) 2px, transparent 3px, transparent 28px),
+        repeating-radial-gradient(circle at 68% 22%, rgba(79, 70, 229, 0.08) 2px, transparent 3px, transparent 30px),
+        repeating-radial-gradient(circle at 20% 55%, rgba(139, 92, 246, 0.07) 1.8px, transparent 2.8px, transparent 26px),
+        repeating-radial-gradient(circle at 80% 45%, rgba(99, 102, 241, 0.07) 1.8px, transparent 2.8px, transparent 28px),
+        repeating-radial-gradient(circle at 40% 30%, rgba(79, 70, 229, 0.06) 1.5px, transparent 2.5px, transparent 24px),
+        repeating-radial-gradient(circle at 55% 85%, rgba(79, 70, 229, 0.06) 1.5px, transparent 2.5px, transparent 25px),
+        repeating-radial-gradient(circle at 70% 50%, rgba(139, 92, 246, 0.06) 1.5px, transparent 2.5px, transparent 27px),
+        
+        /* 🧸 Teddy Bear Paw Prints - Clear Pattern */
+        repeating-linear-gradient(45deg, rgba(139, 92, 246, 0.05) 0px, rgba(139, 92, 246, 0.05) 2px, transparent 2px, transparent 22px),
+        repeating-linear-gradient(-45deg, rgba(79, 70, 229, 0.05) 0px, rgba(79, 70, 229, 0.05) 2px, transparent 2px, transparent 24px),
+        repeating-linear-gradient(135deg, rgba(99, 102, 241, 0.04) 0px, rgba(99, 102, 241, 0.04) 1.5px, transparent 1.5px, transparent 18px),
+        repeating-linear-gradient(225deg, rgba(139, 92, 246, 0.04) 0px, rgba(139, 92, 246, 0.04) 1.5px, transparent 1.5px, transparent 20px),
+        
+        /* Teddy Bear Ear Pattern */
+        repeating-radial-gradient(ellipse at 15% 22%, rgba(79,70,229,0.05) 1px, transparent 2px, transparent 20px),
+        repeating-radial-gradient(ellipse at 85% 75%, rgba(99,102,241,0.05) 1px, transparent 2px, transparent 22px),
+        
+        /* Base Dark Gradient - Deep Premium */
+        linear-gradient(145deg, #0e0f16 0%, #1a1b26 100%);
+    
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+    position: relative;
+}
+
+/* PC Mode - More comfortable spacing */
+@media (min-width: 768px) {
+    #pm-messages {
+        padding: 24px 20px;
+        gap: 10px;
+    }
+}
+
+/* Mobile Mode - Optimized spacing */
+@media (max-width: 767px) {
+    #pm-messages {
+        padding: 16px 12px;
+        gap: 6px;
+    }
+}
+
+/* Premium Gradient Overlay */
+#pm-messages::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 40px;
+    background: linear-gradient(to bottom, #0e0f16, transparent);
+    pointer-events: none;
+    z-index: 5;
+}
+
+#pm-messages::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 40px;
+    background: linear-gradient(to top, #0e0f16, transparent);
+    pointer-events: none;
+    z-index: 5;
+}
+
+/* ============================================
+   PM MESSAGES - PERFECTLY FLEXIBLE
+   ============================================ */
+#pm-messages .message {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    max-width: 85%;
+    animation: messagePop 0.3s ease;
+    position: relative;
+    z-index: 10;
+}
+
+/* PC Mode - Wider messages */
+@media (min-width: 768px) {
+    #pm-messages .message {
+        max-width: 75%;
+    }
+}
+
+/* Mobile Mode - More space efficient */
+@media (max-width: 767px) {
+    #pm-messages .message {
+        max-width: 90%;
+    }
+    
+    #pm-messages .message.sent {
+        max-width: 85%;
+    }
+}
+
+#pm-messages .message.sent {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+}
+
+/* PM Message Avatar */
+#pm-messages .message-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+    border: 2px solid var(--primary);
+    background: var(--bg-input);
+    transition: var(--transition);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+}
+
+/* PC Mode */
+@media (min-width: 768px) {
+    #pm-messages .message-avatar {
+        width: 42px;
+        height: 42px;
+    }
+}
+
+/* Mobile Mode */
+@media (max-width: 767px) {
+    #pm-messages .message-avatar {
+        width: 34px;
+        height: 34px;
+    }
+}
+
+#pm-messages .message-avatar:hover {
+    transform: scale(1.15) rotate(8deg);
+    border-color: var(--primary-light);
+    box-shadow: 0 5px 15px rgba(79,70,229,0.5);
+}
+
+#pm-messages .message-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* PM Message Content */
+#pm-messages .message-content {
+    background: #2a2b36;
+    padding: 12px 16px;
+    border-radius: 20px;
+    border-bottom-left-radius: 6px;
+    word-break: break-word;
+    position: relative;
+    transition: var(--transition);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+/* PC Mode */
+@media (min-width: 768px) {
+    #pm-messages .message-content {
+        padding: 14px 20px;
+    }
+}
+
+/* Mobile Mode */
+@media (max-width: 767px) {
+    #pm-messages .message-content {
+        padding: 10px 14px;
+    }
+}
+
+#pm-messages .message-content:hover {
+    background: #32333f;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+}
+
+#pm-messages .message.sent .message-content {
+    background: linear-gradient(145deg, var(--primary), var(--primary-light));
+    color: white;
+    border-bottom-right-radius: 6px;
+    border-bottom-left-radius: 20px;
+    box-shadow: 0 4px 15px rgba(79,70,229,0.3);
+}
+
+#pm-messages .message.sent .message-content:hover {
+    background: linear-gradient(145deg, var(--primary-light), var(--primary));
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(79,70,229,0.5);
+}
+
+/* Message Tail */
+#pm-messages .message.received .message-content::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: -8px;
+    width: 14px;
+    height: 14px;
+    background: #2a2b36;
+    border-radius: 0 0 14px 0;
+    box-shadow: -2px 2px 0 0 rgba(0,0,0,0.05);
+}
+
+#pm-messages .message.sent .message-content::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: -8px;
+    width: 14px;
+    height: 14px;
+    background: linear-gradient(145deg, var(--primary), var(--primary-light));
+    border-radius: 0 0 0 14px;
+    box-shadow: 2px 2px 0 0 rgba(0,0,0,0.05);
+}
+
+/* PM Message Sender */
+#pm-messages .message-sender {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--primary);
+    margin-bottom: 4px;
+    letter-spacing: -0.2px;
+}
+
+#pm-messages .message.sent .message-sender {
+    color: rgba(255,255,255,0.95);
+}
+
+/* PM Message Text */
+#pm-messages .message-text {
+    font-size: clamp(13px, 4vw, 14px);
+    line-height: 1.55;
+    word-wrap: break-word;
+    font-weight: 450;
+}
+
+/* PM Message Time */
+#pm-messages .message-time {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+#pm-messages .message.sent .message-time {
+    color: rgba(255,255,255,0.85);
+}
+
+/* ============================================
+   PM READ STATUS
+   ============================================ */
+#pm-messages .status-read {
+    color: var(--success);
+    margin-left: 4px;
+    font-size: 11px;
+}
+
+#pm-messages .status-sent {
+    color: var(--text-muted);
+    margin-left: 4px;
+    font-size: 11px;
+}
+
+/* ============================================
+   PM TYPING INDICATOR
+   ============================================ */
+#pm-messages .typing-indicator {
+    font-size: 11px;
+    color: var(--primary);
+    font-style: italic;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 2px;
+}
+
+/* ============================================
+   PM MESSAGE INPUT - PERFECT KEYBOARD FIX!
+   ============================================ */
+.pm-chat-area .message-input-container {
+    display: flex;
+    padding: 12px 16px;
+    background: #1a1b26;
+    border-top: 1px solid var(--border-color);
+    gap: 8px;
+    flex-shrink: 0;
+    width: 100%;
+    position: relative;
+    bottom: 0;
+    transition: var(--transition);
+}
+
+/* PC Mode */
+@media (min-width: 768px) {
+    .pm-chat-area .message-input-container {
+        padding: 14px 20px;
+        gap: 10px;
+    }
+}
+
+/* Mobile Mode - PERFECT KEYBOARD FIX! */
+@media (max-width: 767px) {
+    .pm-chat-area .message-input-container {
+        padding: 10px 14px;
+        padding-bottom: max(12px, env(safe-area-inset-bottom, 12px));
+        position: sticky;
+        bottom: 0;
+        background: #1a1b26;
+        z-index: 50;
+    }
+}
+
+/* PM Attach & Voice Buttons */
+.pm-chat-area .attach-btn,
+.pm-chat-area .voice-btn {
+    width: 42px;
+    height: 42px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+/* PC Mode */
+@media (min-width: 768px) {
+    .pm-chat-area .attach-btn,
+    .pm-chat-area .voice-btn {
+        width: 48px;
+        height: 48px;
+    }
+}
+
+/* Mobile Mode */
+@media (max-width: 767px) {
+    .pm-chat-area .attach-btn,
+    .pm-chat-area .voice-btn {
+        width: 42px;
+        height: 42px;
+    }
+}
+
+.pm-chat-area .attach-btn::before,
+.pm-chat-area .voice-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(79,70,229,0.2);
+    transform: translate(-50%, -50%);
+    transition: width 0.3s ease, height 0.3s ease;
+}
+
+.pm-chat-area .attach-btn:hover::before,
+.pm-chat-area .voice-btn:hover::before {
+    width: 100%;
+    height: 100%;
+}
+
+.pm-chat-area .attach-btn:hover,
+.pm-chat-area .voice-btn:hover {
+    background: var(--bg-hover);
+    color: var(--primary);
+    transform: scale(1.1);
+}
+
+/* PM Input Field */
+.pm-chat-area .message-input-container input {
+    flex: 1;
+    padding: 12px 18px;
     border: none;
     border-radius: var(--border-radius-full);
+    font-size: clamp(14px, 4vw, 15px);
     outline: none;
     background: var(--bg-input);
     color: white;
     transition: var(--transition);
     box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
+    min-width: 50px;
 }
 
-.message-input-container input:focus {
+/* PC Mode */
+@media (min-width: 768px) {
+    .pm-chat-area .message-input-container input {
+        padding: 14px 22px;
+        font-size: 15px;
+    }
+}
+
+/* Mobile Mode - Prevent zoom on iOS */
+@media (max-width: 767px) {
+    .pm-chat-area .message-input-container input {
+        padding: 12px 16px;
+        font-size: 16px;
+        min-height: 48px;
+    }
+}
+
+.pm-chat-area .message-input-container input:focus {
     background: #32333f;
     box-shadow: inset 0 2px 8px rgba(0,0,0,0.3), 0 0 0 2px rgba(79,70,229,0.3);
 }
 
-.message-input-container input::placeholder {
+.pm-chat-area .message-input-container input::placeholder {
     color: #6b7280;
     transition: var(--transition);
 }
 
-.message-input-container input:focus::placeholder {
+.pm-chat-area .message-input-container input:focus::placeholder {
     transform: translateX(5px);
     opacity: 0.6;
 }
 
-.send-btn {
+/* PM Send Button */
+.pm-chat-area .send-btn {
+    width: 42px;
+    height: 42px;
     border: none;
     background: linear-gradient(145deg, var(--primary), var(--primary-light));
     color: white;
@@ -1160,9 +1857,26 @@ body.light-mode .user-item:hover {
     box-shadow: 0 5px 15px rgba(79,70,229,0.3);
     position: relative;
     overflow: hidden;
+    flex-shrink: 0;
 }
 
-.send-btn::before {
+/* PC Mode */
+@media (min-width: 768px) {
+    .pm-chat-area .send-btn {
+        width: 48px;
+        height: 48px;
+    }
+}
+
+/* Mobile Mode */
+@media (max-width: 767px) {
+    .pm-chat-area .send-btn {
+        width: 42px;
+        height: 42px;
+    }
+}
+
+.pm-chat-area .send-btn::before {
     content: '';
     position: absolute;
     top: 50%;
@@ -1175,85 +1889,37 @@ body.light-mode .user-item:hover {
     transition: width 0.4s ease, height 0.4s ease;
 }
 
-.send-btn:hover::before {
+.pm-chat-area .send-btn:hover::before {
     width: 100%;
     height: 100%;
 }
 
-.send-btn:hover {
+.pm-chat-area .send-btn:hover {
     transform: scale(1.15) rotate(10deg);
     box-shadow: 0 8px 25px rgba(79,70,229,0.5);
     background: linear-gradient(145deg, var(--primary-light), var(--primary));
 }
 
-.send-btn:active {
+.pm-chat-area .send-btn:active {
     transform: scale(0.95) rotate(0deg);
 }
 
-.send-btn i {
+.pm-chat-area .send-btn i {
     font-size: 18px;
     filter: drop-shadow(0 2px 5px rgba(0,0,0,0.2));
     transition: var(--transition);
 }
 
-.send-btn:hover i {
+.pm-chat-area .send-btn:hover i {
     transform: scale(1.2);
 }
 
-.send-btn:disabled {
+.pm-chat-area .send-btn:disabled {
     background: #3a3b45;
     box-shadow: none;
     transform: none;
     cursor: not-allowed;
     opacity: 0.6;
-}
-
-/* ============================================
-   VOICE RECORDING INDICATOR - PREMIUM
-   ============================================ */
-.voice-recording {
-    position: fixed;
-    bottom: 100px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--danger);
-    color: white;
-    padding: 14px 28px;
-    border-radius: 60px;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    z-index: 10000;
-    box-shadow: 0 10px 40px rgba(239,68,68,0.5);
-    animation: slideUpFade 0.3s ease;
-    border: 1px solid rgba(255,255,255,0.2);
-    backdrop-filter: blur(10px);
-}
-
-@keyframes slideUpFade {
-    from { opacity: 0; transform: translateX(-50%) translateY(20px); }
-    to { opacity: 1; transform: translateX(-50%) translateY(0); }
-}
-
-.voice-recording i {
-    animation: pulse 1s infinite;
-}
-
-.stop-recording {
-    background: rgba(255,255,255,0.25);
-    border: none;
-    color: white;
-    padding: 8px 16px;
-    border-radius: 40px;
-    cursor: pointer;
-    transition: var(--transition);
-    font-weight: 600;
-    border: 1px solid rgba(255,255,255,0.2);
-}
-
-.stop-recording:hover {
-    background: rgba(255,255,255,0.35);
-    transform: scale(1.05);
 }
 
 /* ============================================
@@ -1267,6 +1933,13 @@ body.light-mode .user-item:hover {
     background: #1a1b26;
     border-bottom: 1px solid var(--border-color);
     flex-shrink: 0;
+}
+
+/* PC Mode */
+@media (min-width: 768px) {
+    .users-list-header {
+        padding: 14px 20px;
+    }
 }
 
 .users-list-header h4 {
@@ -1301,6 +1974,13 @@ body.light-mode .user-item:hover {
     background: #0e0f16;
 }
 
+/* PC Mode */
+@media (min-width: 768px) {
+    .users-list {
+        padding: 12px;
+    }
+}
+
 .user-item {
     display: flex;
     align-items: center;
@@ -1312,6 +1992,20 @@ body.light-mode .user-item:hover {
     transition: var(--transition);
     border: 1px solid transparent;
     animation: fadeIn 0.2s ease;
+}
+
+/* PC Mode */
+@media (min-width: 768px) {
+    .user-item {
+        padding: 14px 16px;
+    }
+}
+
+/* Mobile Mode */
+@media (max-width: 767px) {
+    .user-item {
+        padding: 10px 12px;
+    }
 }
 
 .user-item:hover {
@@ -1339,6 +2033,24 @@ body.light-mode .user-item:hover {
     box-shadow: 0 3px 10px rgba(79,70,229,0.2);
 }
 
+/* PC Mode */
+@media (min-width: 768px) {
+    .user-item-avatar {
+        width: 50px;
+        height: 50px;
+        margin-right: 16px;
+    }
+}
+
+/* Mobile Mode */
+@media (max-width: 767px) {
+    .user-item-avatar {
+        width: 44px;
+        height: 44px;
+        margin-right: 12px;
+    }
+}
+
 .user-item:hover .user-item-avatar {
     transform: scale(1.08) rotate(5deg);
     border-color: var(--primary-light);
@@ -1361,6 +2073,22 @@ body.light-mode .user-item:hover {
     border-radius: 50%;
     border: 2px solid #1a1b26;
     transition: var(--transition);
+}
+
+/* PC Mode */
+@media (min-width: 768px) {
+    .status-indicator {
+        width: 15px;
+        height: 15px;
+    }
+}
+
+/* Mobile Mode */
+@media (max-width: 767px) {
+    .status-indicator {
+        width: 13px;
+        height: 13px;
+    }
 }
 
 .status-indicator.online {
@@ -1439,114 +2167,6 @@ body.light-mode .user-item:hover {
 }
 
 /* ============================================
-   PM CHAT AREA
-   ============================================ */
-.pm-chat-area {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    background: #0e0f16;
-}
-
-.pm-chat-area.hidden {
-    display: none !important;
-}
-
-.pm-header {
-    display: flex;
-    align-items: center;
-    padding: 12px 16px;
-    background: #1a1b26;
-    border-bottom: 1px solid var(--border-color);
-    gap: 12px;
-    flex-shrink: 0;
-}
-
-.pm-header button {
-    background: transparent;
-    border: none;
-    font-size: 18px;
-    color: var(--text-muted);
-    cursor: pointer;
-    width: 38px;
-    height: 38px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    transition: var(--transition);
-    position: relative;
-    overflow: hidden;
-}
-
-.pm-header button::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    border-radius: 50%;
-    background: rgba(79,70,229,0.2);
-    transform: translate(-50%, -50%);
-    transition: width 0.3s ease, height 0.3s ease;
-}
-
-.pm-header button:hover::before {
-    width: 100%;
-    height: 100%;
-}
-
-.pm-header button:hover {
-    background: var(--bg-hover);
-    color: var(--primary);
-    transform: scale(1.1);
-}
-
-.pm-header button:active {
-    transform: scale(0.95);
-}
-
-.pm-user-info {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex: 1;
-}
-
-.pm-user-info img {
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid var(--primary);
-    transition: var(--transition);
-    box-shadow: 0 5px 15px rgba(79,70,229,0.2);
-}
-
-.pm-user-info img:hover {
-    transform: scale(1.1) rotate(5deg);
-    border-color: var(--primary-light);
-    box-shadow: 0 8px 25px rgba(79,70,229,0.4);
-}
-
-.pm-user-info div {
-    display: flex;
-    flex-direction: column;
-}
-
-.pm-user-info span {
-    font-weight: 700;
-    font-size: clamp(14px, 4vw, 15px);
-    color: white;
-}
-
-.pm-actions {
-    display: flex;
-    gap: 6px;
-}
-
-/* ============================================
    SIDEBAR - FLEXIBLE
    ============================================ */
 .sidebar {
@@ -1576,6 +2196,21 @@ body.light-mode .user-item:hover {
     border-bottom: 1px solid var(--border-color);
 }
 
+/* PC Mode */
+@media (min-width: 768px) {
+    .sidebar-header {
+        padding: 20px 24px;
+    }
+}
+
+/* Mobile Mode */
+@media (max-width: 767px) {
+    .sidebar-header {
+        padding: 16px 18px;
+        padding-top: max(16px, env(safe-area-inset-top, 16px));
+    }
+}
+
 .sidebar-header h3 {
     font-size: clamp(16px, 5vw, 18px);
     font-weight: 800;
@@ -1600,6 +2235,7 @@ body.light-mode .user-item:hover {
     border-radius: 50%;
     transition: var(--transition);
     backdrop-filter: blur(10px);
+    flex-shrink: 0;
 }
 
 .sidebar-header button:hover {
@@ -1613,6 +2249,13 @@ body.light-mode .user-item:hover {
     overflow-y: auto;
     height: calc(100% - 80px);
     background: #0e0f16;
+}
+
+/* PC Mode */
+@media (min-width: 768px) {
+    .sidebar-content {
+        padding: 24px;
+    }
 }
 
 .sidebar-section {
@@ -1657,6 +2300,14 @@ body.light-mode .user-item:hover {
     color: white;
     position: relative;
     overflow: hidden;
+}
+
+/* PC Mode */
+@media (min-width: 768px) {
+    .sidebar-btn {
+        padding: 16px 20px;
+        gap: 16px;
+    }
 }
 
 .sidebar-btn::before {
@@ -1747,6 +2398,15 @@ body.light-mode .user-item:hover {
     border: 2px solid var(--primary);
     box-shadow: 0 8px 20px rgba(0,0,0,0.3);
     transition: var(--transition);
+    flex-shrink: 0;
+}
+
+/* PC Mode */
+@media (min-width: 768px) {
+    .gc-info-card img {
+        width: 64px;
+        height: 64px;
+    }
 }
 
 .gc-info-card:hover img {
@@ -1759,6 +2419,8 @@ body.light-mode .user-item:hover {
     display: flex;
     flex-direction: column;
     gap: 5px;
+    min-width: 0;
+    flex: 1;
 }
 
 .gc-info-card strong {
@@ -1766,6 +2428,9 @@ body.light-mode .user-item:hover {
     font-weight: 800;
     color: white;
     letter-spacing: -0.3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .gc-info-card span {
@@ -2029,6 +2694,20 @@ body.light-mode .user-item:hover {
     border-bottom: 1px solid var(--border-color);
 }
 
+/* PC Mode */
+@media (min-width: 768px) {
+    .modal-header {
+        padding: 20px 28px;
+    }
+}
+
+/* Mobile Mode */
+@media (max-width: 767px) {
+    .modal-header {
+        padding: 16px 20px;
+    }
+}
+
 .modal-header h3 {
     font-size: clamp(16px, 5vw, 18px);
     font-weight: 800;
@@ -2058,6 +2737,7 @@ body.light-mode .user-item:hover {
     justify-content: center;
     border-radius: 50%;
     transition: var(--transition);
+    flex-shrink: 0;
 }
 
 .modal-header button:hover {
@@ -2072,6 +2752,20 @@ body.light-mode .user-item:hover {
     overflow-y: auto;
     max-height: calc(90vh - 80px);
     background: #0e0f16;
+}
+
+/* PC Mode */
+@media (min-width: 768px) {
+    .modal-body {
+        padding: 28px;
+    }
+}
+
+/* Mobile Mode */
+@media (max-width: 767px) {
+    .modal-body {
+        padding: 20px;
+    }
 }
 
 /* ============================================
@@ -2093,6 +2787,14 @@ body.light-mode .user-item:hover {
     margin-bottom: 16px;
     transition: var(--transition);
     box-shadow: 0 15px 35px rgba(79,70,229,0.4);
+}
+
+/* PC Mode */
+@media (min-width: 768px) {
+    .gc-pfp-section img {
+        width: 120px;
+        height: 120px;
+    }
 }
 
 .gc-pfp-section img:hover {
@@ -2194,6 +2896,7 @@ body.light-mode .user-item:hover {
     justify-content: center;
     border-radius: 50%;
     transition: var(--transition);
+    flex-shrink: 0;
 }
 
 .edit-btn:hover {
@@ -2266,6 +2969,7 @@ body.light-mode .user-item:hover {
     border: 2px solid var(--primary);
     box-shadow: 0 5px 15px rgba(79,70,229,0.2);
     transition: var(--transition);
+    flex-shrink: 0;
 }
 
 .members-list .member-item:hover .member-avatar {
@@ -2276,6 +2980,7 @@ body.light-mode .user-item:hover {
 
 .members-list .member-info {
     flex: 1;
+    min-width: 0;
 }
 
 .members-list .member-name {
@@ -2284,6 +2989,9 @@ body.light-mode .user-item:hover {
     color: white;
     margin-bottom: 3px;
     letter-spacing: -0.2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .members-list .member-role {
@@ -2513,12 +3221,21 @@ body.light-mode .user-item:hover {
         padding-right: max(16px, env(safe-area-inset-right));
     }
     
-    .message-input-container {
+    .message-input-container,
+    .pm-chat-area .message-input-container {
         padding-bottom: max(12px, env(safe-area-inset-bottom, 12px));
     }
     
     .sidebar {
         padding-left: env(safe-area-inset-left);
+    }
+    
+    .pm-header {
+        padding-top: max(12px, env(safe-area-inset-top, 12px));
+    }
+    
+    .sidebar-header {
+        padding-top: max(16px, env(safe-area-inset-top, 16px));
     }
 }
 
@@ -2541,13 +3258,13 @@ body.light-mode .user-item:hover {
    ============================================ */
 @media (max-width: 380px) {
     .user-avatar {
-        width: 40px;
-        height: 40px;
+        width: 38px;
+        height: 38px;
     }
     
     .user-item-avatar {
-        width: 42px;
-        height: 42px;
+        width: 40px;
+        height: 40px;
     }
     
     .user-item-avatar .unread-badge {
@@ -2563,17 +3280,30 @@ body.light-mode .user-item:hover {
         height: 11px;
     }
     
-    .message-avatar {
+    .message-avatar,
+    #pm-messages .message-avatar {
         width: 32px;
         height: 32px;
     }
     
-    .message-content {
-        padding: 10px 14px;
+    .message-content,
+    #pm-messages .message-content {
+        padding: 8px 12px;
     }
     
-    .message-text {
+    .message-text,
+    #pm-messages .message-text {
         font-size: 13px;
+    }
+    
+    .pm-user-info img {
+        width: 38px;
+        height: 38px;
+    }
+    
+    .pm-header button {
+        width: 36px;
+        height: 36px;
     }
 }
 
@@ -2584,5 +3314,41 @@ body.light-mode .user-item:hover {
         height: 750px;
         border-radius: 28px;
         margin: 20px auto;
+    }
+}
+
+/* Extra Large Screens */
+@media (min-width: 1200px) {
+    #app {
+        max-width: 400px;
+        height: 750px;
+        border-radius: 28px;
+        margin: 20px;
+    }
+}
+
+/* Landscape Mode Fix */
+@media (max-height: 600px) and (orientation: landscape) {
+    #app {
+        height: 100vh;
+        max-width: 100%;
+        border-radius: 0;
+    }
+    
+    .chat-header,
+    .pm-header {
+        padding-top: 10px;
+        padding-bottom: 10px;
+    }
+    
+    .message-avatar,
+    #pm-messages .message-avatar {
+        width: 30px;
+        height: 30px;
+    }
+    
+    .user-avatar {
+        width: 36px;
+        height: 36px;
     }
 }
