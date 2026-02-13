@@ -2371,9 +2371,6 @@ body.light-mode .user-item:hover {
     100% { transform: scale(1); }
 }
 
-/* ============================================
-   NO MESSAGES / NO USERS
-   ============================================ */
 .no-messages, .no-users {
     text-align: center;
     color: #6b7280;
@@ -3560,7 +3557,6 @@ body.light-mode .user-item:hover {
     transform: scale(1.1);
 }
 
-/* Responsive */
 @media (max-width: 480px) {
     .voice-player-modal .modal-content {
         width: 90%;
@@ -3581,10 +3577,6 @@ body.light-mode .user-item:hover {
     }
 }
 
-
-/* ============================================
-   BOT CONTAINER - MATCHES MAIN APP STYLE
-   ============================================ */
 .bot-container {
     width: 100%;
     max-width: var(--app-width-pc);
@@ -3608,9 +3600,6 @@ body.light-mode .user-item:hover {
     }
 }
 
-/* ============================================
-   BOT HEADER
-   ============================================ */
 .bot-header {
     display: flex;
     align-items: center;
@@ -3774,9 +3763,6 @@ body.light-mode .user-item:hover {
     50% { opacity: 1; transform: scale(1.2); text-shadow: 0 0 5px var(--success); }
 }
 
-/* ============================================
-   QUICK REPLIES
-   ============================================ */
 .quick-replies {
     display: flex;
     gap: 8px;
@@ -3846,9 +3832,6 @@ body.light-mode .user-item:hover {
     transform: translateY(0);
 }
 
-/* ============================================
-   BOT MESSAGES CONTAINER
-   ============================================ */
 .bot-messages-container {
     flex: 1 1 auto;
     overflow-y: auto;
@@ -3890,33 +3873,6 @@ body.light-mode .user-item:hover {
     }
 }
 
-.bot-messages-container::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 40px;
-    background: linear-gradient(to bottom, var(--bg-darker), transparent);
-    pointer-events: none;
-    z-index: 5;
-}
-
-.bot-messages-container::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 40px;
-    background: linear-gradient(to top, var(--bg-darker), transparent);
-    pointer-events: none;
-    z-index: 5;
-}
-
-/* ============================================
-   BOT MESSAGE ITEMS
-   ============================================ */
 .bot-message-wrapper {
     display: flex;
     align-items: flex-end;
@@ -4105,9 +4061,6 @@ body.light-mode .user-item:hover {
     color: rgba(255,255,255,0.85);
 }
 
-/* ============================================
-   TYPING INDICATOR
-   ============================================ */
 .typing-indicator-bot {
     background: var(--bg-input);
     padding: 12px 16px;
@@ -4143,9 +4096,6 @@ body.light-mode .user-item:hover {
     30% { transform: translateY(-6px); opacity: 1; }
 }
 
-/* ============================================
-   WELCOME MESSAGE
-   ============================================ */
 .welcome-message {
     text-align: center;
     color: var(--text-muted);
@@ -4174,9 +4124,6 @@ body.light-mode .user-item:hover {
     50% { transform: translateY(-8px); }
 }
 
-/* ============================================
-   BOT INPUT CONTAINER
-   ============================================ */
 .bot-input-container {
     display: flex;
     padding: 12px 16px;
@@ -4327,9 +4274,6 @@ body.light-mode .user-item:hover {
     opacity: 0.6;
 }
 
-/* ============================================
-   SCROLLBAR STYLES
-   ============================================ */
 .bot-messages-container::-webkit-scrollbar,
 .quick-replies::-webkit-scrollbar {
     width: 5px;
@@ -4353,9 +4297,6 @@ body.light-mode .user-item:hover {
     background: linear-gradient(180deg, var(--primary-light), var(--primary));
 }
 
-/* ============================================
-   RESPONSIVE ADJUSTMENTS
-   ============================================ */
 @media (max-width: 380px) {
     .bot-avatar {
         width: 38px;
@@ -4422,9 +4363,6 @@ body.light-mode .user-item:hover {
     }
 }
 
-/* ============================================
-   SAFE AREA SUPPORT
-   ============================================ */
 @supports (padding: max(0px)) {
     .bot-header {
         padding-left: max(16px, env(safe-area-inset-left));
@@ -4449,9 +4387,6 @@ body.light-mode .user-item:hover {
     }
 }
 
-/* ============================================
-   LIGHT MODE SUPPORT
-   ============================================ */
 body.light-mode .bot-container {
     background: #ffffff;
     border: 1px solid rgba(0,0,0,0.05);
@@ -4539,9 +4474,6 @@ body.light-mode .bot-message-wrapper:not(.user) .bot-message-content::before {
     box-shadow: -2px 2px 0 0 rgba(0,0,0,0.02);
 }
 
-/* ============================================
-   UTILITY CLASSES
-   ============================================ */
 .hidden {
     display: none !important;
 }
