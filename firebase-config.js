@@ -1,4 +1,11 @@
-
+const firebaseConfig = {
+  apiKey: "AIzaSyAdQT-inUvJrk6zpezYJRSOxUMZm4gAf1U",
+  authDomain: "messenger-chat000.firebaseapp.com",
+  projectId: "messenger-chat000",
+  storageBucket: "messenger-chat000.firebasestorage.app",
+  messagingSenderId: "142041302540",
+  appId: "1:142041302540:web:cea9a7f6c81a9fad529029"
+};
 
 const IMGBB_API_KEY = "87b58d438e0cbe5226c1df0a8071621e"; 
 
