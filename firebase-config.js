@@ -1,10 +1,10 @@
 const firebaseConfig = {
-  apiKey: "AIzaSyBkR0E-PftBKDNkdpWS1niFRMRjcK64-P4",
-  authDomain: "mini-chat-app-1a2ca.firebaseapp.com",
-  projectId: "mini-chat-app-1a2ca",
-  storageBucket: "mini-chat-app-1a2ca.firebasestorage.app",
-  messagingSenderId: "638448934198",
-  appId: "1:638448934198:web:8e0dcbf8a4987642312797"
+  apiKey: "AIzaSyA4jlTUo2XlfL2-k1gzT3x2tnpqeEZIeUA",
+  authDomain: "mini-messenger-000.firebaseapp.com",
+  projectId: "mini-messenger-000",
+  storageBucket: "mini-messenger-000.firebasestorage.app",
+  messagingSenderId: "456773666595",
+  appId: "1:456773666595:web:e1d1d973ec5ef27fd6ee96"
 };
 
 const IMGBB_API_KEY = "87b58d438e0cbe5226c1df0a8071621e"; 
