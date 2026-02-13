@@ -25,6 +25,11 @@ let audioPlayer = null;
 let isPlaying = false;
 let currentVoiceMessageId = null;
 
+const BOT_IDS = {
+    WELCOME_BOT: "welcome_bot",
+    AI_BOT: "ai_bot"
+};
+
 function initVoicePlayer() {
     audioPlayer = document.getElementById('voice-audio-player');
     if (!audioPlayer) return;
@@ -408,7 +413,7 @@ async function initializeApp() {
         }, { merge: true });
 
         await initializeGroupChat();
-        loadUsers();
+        loadUsers(); 
         listenToUnreadPMs();
         setupPresence();
         setupEnterKeyListeners();
@@ -418,6 +423,15 @@ async function initializeApp() {
         
         console.log('✅ App initialized successfully');
         showToast('✅ Connected to chat!', 'success');
+        
+        setTimeout(() => {
+            if (typeof initBots === 'function') {
+                initBots();
+                console.log('🤖 Bot system activated!');
+            } else {
+                console.log('⏳ Waiting for bot.js to load...');
+            }
+        }, 2000);
         
     } catch (error) {
         console.error('❌ Error initializing app:', error);
@@ -492,7 +506,6 @@ function loadGCInfo() {
                 if (el) el.textContent = `${memberCount} members`;
             });
 
-            // Created date
             if (data.createdAt) {
                 const date = data.createdAt.toDate();
                 const createdEl = document.getElementById('gc-created');
@@ -809,7 +822,9 @@ async function showForwardModal(messageId, text, type, imageUrl) {
     usersList.innerHTML = '';
     
     snapshot.forEach(doc => {
-        if (doc.id !== currentUser.uid) {
+        if (doc.id !== currentUser.uid && 
+            doc.id !== BOT_IDS.WELCOME_BOT && 
+            doc.id !== BOT_IDS.AI_BOT) {
             const user = doc.data();
             const userDiv = document.createElement('div');
             userDiv.className = 'user-item';
@@ -917,7 +932,6 @@ async function performSearch(query) {
     resultsContainer.classList.remove('hidden');
     
     try {
-
         const gcSnapshot = await db.collection('groupChats').doc(GROUP_CHAT_ID)
             .collection('messages')
             .where('text', '>=', query)
@@ -1057,16 +1071,32 @@ function loadUsers() {
         .onSnapshot((snapshot) => {
             const users = [];
             snapshot.forEach((doc) => {
-                if (doc.id !== currentUser?.uid) {
-                    users.push({ 
-                        id: doc.id, 
-                        ...doc.data(),
-                        unreadCount: 0 
-                    });
+                const userData = doc.data();
+                
+                if (doc.id !== currentUser?.uid) {                
+                    if (doc.id === BOT_IDS.AI_BOT) {
+                        users.push({ 
+                            id: doc.id, 
+                            ...userData,
+                            unreadCount: 0,
+                            isBot: true,
+                            online: true
+                        });
+                    } 
+                    
+                    else if (doc.id !== BOT_IDS.WELCOME_BOT) {
+                        users.push({ 
+                            id: doc.id, 
+                            ...userData,
+                            unreadCount: 0 
+                        });
+                    }
                 }
             });
 
             users.sort((a, b) => {
+                if (a.id === BOT_IDS.AI_BOT) return -1;
+                if (b.id === BOT_IDS.AI_BOT) return 1;
                 if (a.online && !b.online) return -1;
                 if (!a.online && b.online) return 1;
                 return (a.name || '').localeCompare(b.name || '');
@@ -1077,7 +1107,7 @@ function loadUsers() {
             
             const onlineCount = document.getElementById('online-count');
             if (onlineCount) {
-                const onlineUsers = users.filter(u => u.online).length;
+                const onlineUsers = users.filter(u => u.online && !u.isBot).length;
                 onlineCount.textContent = onlineUsers;
             }
         });
@@ -1105,7 +1135,11 @@ function displayUsers(users) {
         const avatarUrl = user.photoURL || fallbackAvatar;
         
         const statusClass = user.online ? 'online' : 'offline';
-        const statusText = user.online ? '● Online' : formatLastSeen(user.lastSeen);
+        let statusText = user.online ? '● Online' : formatLastSeen(user.lastSeen);
+        
+        if (user.id === BOT_IDS.AI_BOT) {
+            statusText = '🧠 AI Assistant';
+        }
         
         userDiv.innerHTML = `
             <div class="user-item-avatar">
@@ -1113,11 +1147,11 @@ function displayUsers(users) {
                      alt="${escapeHTML(user.name || 'User')}"
                      loading="lazy"
                      onerror="this.onerror=null; this.src='${escapeHTML(fallbackAvatar)}';">
-                <span class="status-indicator ${statusClass}"></span>
+                <span class="status-indicator ${user.id === BOT_IDS.AI_BOT ? 'online' : statusClass}"></span>
             </div>
             <div class="user-item-info">
                 <div class="user-item-name">${escapeHTML(user.name || 'User')}</div>
-                <div class="user-item-status ${statusClass}">${statusText}</div>
+                <div class="user-item-status ${user.online ? 'online' : 'offline'}">${statusText}</div>
             </div>
         `;
         
@@ -1145,7 +1179,11 @@ function displaySidebarUsers(users) {
         const avatarUrl = user.photoURL || fallbackAvatar;
         
         const statusClass = user.online ? 'online' : 'offline';
-        const statusText = user.online ? '● Online' : formatLastSeen(user.lastSeen);
+        let statusText = user.online ? '● Online' : formatLastSeen(user.lastSeen);
+        
+        if (user.id === BOT_IDS.AI_BOT) {
+            statusText = '🧠 AI Assistant';
+        }
         
         userDiv.innerHTML = `
             <div class="user-item-avatar">
@@ -1153,11 +1191,11 @@ function displaySidebarUsers(users) {
                      alt="${escapeHTML(user.name || 'User')}"
                      loading="lazy"
                      onerror="this.onerror=null; this.src='${escapeHTML(fallbackAvatar)}';">
-                <span class="status-indicator ${statusClass}"></span>
+                <span class="status-indicator ${user.id === BOT_IDS.AI_BOT ? 'online' : statusClass}"></span>
             </div>
             <div class="user-item-info">
                 <div class="user-item-name">${escapeHTML(user.name || 'User')}</div>
-                <div class="user-item-status ${statusClass}">${statusText}</div>
+                <div class="user-item-status ${user.online ? 'online' : 'offline'}">${statusText}</div>
             </div>
         `;
         
@@ -1205,8 +1243,10 @@ function listenToUnreadPMs() {
             if (unreadMap.size === 0) {
                 document.title = 'Mini Messenger';
             } else {
-                unreadMap.forEach((count, senderId) => {
-                    updateUserUnreadBadge(senderId, count);
+                unreadMap.forEach((count, senderId) => {                   
+                    if (senderId !== BOT_IDS.AI_BOT) {
+                        updateUserUnreadBadge(senderId, count);
+                    }
                 });
                 
                 const totalUnread = Array.from(unreadMap.values()).reduce((a, b) => a + b, 0);
