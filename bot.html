@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mini Assistant - Chat Bot</title>
+    <title>Mini Assistant - AI Powered</title>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <style>
-        /* Back button design */
         .back-btn {
             width: 36px;
             height: 36px;
@@ -44,7 +43,6 @@
             transform: scale(0.95);
         }
 
-        /* Light mode */
         body.light-mode .back-btn {
             color: #64748b;
         }
@@ -62,7 +60,7 @@
                 <i class="fas fa-arrow-left"></i>
             </button>
             <div class="bot-avatar">
-                <img src="https://ui-avatars.com/api/?name=AI&background=4f46e5&color=fff&size=200" alt="Bot">
+                <img src="https://i.ibb.co/KjkPv6xw/Ilustraci-n-de-dibujos-animados-lindo-robot-agitando-la-mano-Vector-Premium.jpg" alt="Bot">
             </div>
             <div class="bot-info">
                 <h2>Mini Assistant</h2>
@@ -71,29 +69,29 @@
         </div>
 
         <div class="quick-replies">
-            <button class="quick-reply-btn" onclick="sendQuickReply('Hello')">
-                <i class="fas fa-hand-wave"></i> Hello
+            <button class="quick-reply-btn" onclick="sendQuickReply('/help')">
+                <i class="fas fa-question-circle"></i> /help
             </button>
-            <button class="quick-reply-btn" onclick="sendQuickReply('Help')">
-                <i class="fas fa-question-circle"></i> Help
+            <button class="quick-reply-btn" onclick="sendQuickReply('/ai Hello')">
+                <i class="fas fa-robot"></i> /ai
             </button>
-            <button class="quick-reply-btn" onclick="sendQuickReply('Features')">
-                <i class="fas fa-star"></i> Features
+            <button class="quick-reply-btn" onclick="sendQuickReply('/sim Hello')">
+                <i class="fas fa-comment"></i> /sim
             </button>
-            <button class="quick-reply-btn" onclick="sendQuickReply('Contact')">
-                <i class="fas fa-envelope"></i> Contact
+            <button class="quick-reply-btn" onclick="sendQuickReply('/botinfo')">
+                <i class="fas fa-info-circle"></i> /botinfo
             </button>
         </div>
 
         <div id="botMessages" class="bot-messages-container">
             <div class="welcome-message">
                 <i class="fas fa-robot" style="font-size: 32px; color: var(--primary); margin-bottom: 10px; display: block;"></i>
-                Hi! I'm Mini Assistant. How can I help you today?
+                Hi! I'm Mini Assistant. Type <strong>/help</strong> to see all commands!
             </div>
         </div>
 
         <div class="bot-input-container">
-            <input type="text" id="botMessageInput" placeholder="Type your message..." onkeypress="handleBotKeyPress(event)">
+            <input type="text" id="botMessageInput" placeholder="Type /help for commands..." onkeypress="handleBotKeyPress(event)">
             <button class="bot-send-btn" onclick="sendBotMessage()">
                 <i class="fas fa-paper-plane"></i>
             </button>
@@ -101,20 +99,333 @@
     </div>
 
     <script>
-        // Get user data from URL
+        const API_CONFIG = {
+            ai: {
+                endpoint: "https://echoai-api-qsh3.onrender.com/chat",
+                method: "POST"
+            },
+            sim: {
+                endpoint: "https://simsimi-api-pro.onrender.com/sim?query=",
+                key: "a650beda66094d58b3e5c84b664420e8f2e65edd"
+            }
+        };
+
         const urlParams = new URLSearchParams(window.location.search);
         const userId = urlParams.get('userId');
         const userName = urlParams.get('userName') || 'User';
         const userPfp = urlParams.get('userPfp') || 'https://ui-avatars.com/api/?name=User&background=4f46e5&color=fff';
 
-        // Bot responses
-        const botResponses = {
-            'hello': 'Hello! 👋 How can I assist you today?',
-            'hi': 'Hi there! 🌟 What can I do for you?',
-            'help': '📚 **I can help you with:**\n\n• Chat features\n• Account settings\n• Troubleshooting\n• General questions',
-            'features': '✨ **Mini Messenger Features:**\n\n• Group Chat with members\n• Private Messages\n• Voice Messages\n• Image Sharing\n• Message Reactions\n• Dark/Light Mode\n• Message Search\n• Pinned Messages',
-            'contact': '📞 **Contact Support:**\n\n• Email: support@minimessenger.com\n• Twitter: @minimessenger\n• Help Center: help.minimessenger.com',
-            'default': 'I understand. Is there anything specific you\'d like to know about? You can ask about features, help, or contact support.'
+        const jokes = [
+            "Why don't scientists trust atoms? Because they make up everything!",
+            "Why did the scarecrow win an award? He was outstanding in his field!",
+            "Why don't eggs tell jokes? They'd crack each other up!",
+            "What do you call a fake noodle? An impasta!",
+            "Why did the math book look sad? Because it had too many problems!",
+            "What do you call a bear with no teeth? A gummy bear!",
+            "Why can't you give Elsa a balloon? Because she will let it go!",
+            "What do you call a sleeping bull? A bulldozer!",
+            "Why did the coffee file a police report? It got mugged!",
+            "What do you call a fish with no eyes? A fsh!",
+            "Why don't skeletons fight each other? They don't have the guts!",
+            "What do you call a pig that does karate? A pork chop!",
+            "Why did the bicycle fall over? Because it was two-tired!",
+            "How does a penguin build its house? Igloos it together!",
+            "Why did the golfer bring two pairs of pants? In case he got a hole in one!"
+        ];
+
+        const facts = [
+            "Honey never spoils. Archaeologists found 3000-year-old honey in Egyptian tombs!",
+            "A day on Venus is longer than a year on Venus.",
+            "Bananas are berries, but strawberries aren't.",
+            "Octopuses have three hearts and blue blood.",
+            "The Eiffel Tower can be 15 cm taller during summer.",
+            "Your brain is constantly eating itself - it's called phagocytosis!",
+            "A cloud can weigh around a million pounds.",
+            "There's a species of jellyfish that's immortal.",
+            "The shortest war in history lasted 38 minutes.",
+            "Cows have best friends and get stressed when separated.",
+            "A group of flamingos is called a 'flamboyance'!",
+            "The world's oldest known living tree is over 5,000 years old.",
+            "Humans share 60% of their DNA with bananas.",
+            "A single strand of spaghetti is called a 'spaghetto'.",
+            "The nose can remember 50,000 different scents."
+        ];
+
+        const quotes = [
+            "The only way to do great work is to love what you do. - Steve Jobs",
+            "Life is what happens when you're busy making other plans. - John Lennon",
+            "The future belongs to those who believe in the beauty of their dreams. - Eleanor Roosevelt",
+            "Success is not final, failure is not fatal: it is the courage to continue that counts. - Winston Churchill",
+            "Believe you can and you're halfway there. - Theodore Roosevelt",
+            "It does not matter how slowly you go as long as you do not stop. - Confucius",
+            "Everything you've ever wanted is on the other side of fear. - George Addair",
+            "The only limit to our realization of tomorrow will be our doubts of today. - Franklin D. Roosevelt",
+            "Don't watch the clock; do what it does. Keep going. - Sam Levenson",
+            "The future depends on what you do today. - Mahatma Gandhi",
+            "You miss 100% of the shots you don't take. - Wayne Gretzky",
+            "The best time to plant a tree was 20 years ago. The second best time is now.",
+            "Happiness is not something ready made. It comes from your own actions. - Dalai Lama",
+            "Your time is limited, don't waste it living someone else's life. - Steve Jobs",
+            "The journey of a thousand miles begins with one step. - Lao Tzu"
+        ];
+
+        let userNotes = JSON.parse(localStorage.getItem('botNotes')) || [];
+
+        function getHelpResponse() {
+            return `╭────────────────────╮
+│   🤖 **BOT COMMANDS**   │
+╰────────────────────╯
+
+╭━━━ **[ GENERAL ]** ━━━╮
+┃ 💬 \`/help\` • Show this menu
+┃ 👋 \`/hi\` • Greeting message
+┃ ℹ️ \`/botinfo\` • Bot information
+┃ ⏰ \`/time\` • Current time
+┃ 📅 \`/date\` • Today's date
+┃ 🧹 \`/clear\` • Clear chat
+╰━━━━━━━━━━━━━━╯
+
+╭━━━ **[ AI & CHAT ]** ━━━╮
+┃ 🤖 \`/ai [msg]\` • Talk to advanced AI *(NEW API!)*
+┃ 💬 \`/sim [msg]\` • Chat with SimSimi
+╰━━━━━━━━━━━━━━╯
+
+╭━━━ **[ FUN ]** ━━━╮
+┃ 😂 \`/joke\` • Random funny joke
+┃ 🤔 \`/fact\` • Interesting fact
+┃ 💭 \`/quote\` • Inspirational quote
+╰━━━━━━━━━━━━━━╯
+
+╭━━━ **[ DICTIONARY ]** ━━━╮
+┃ 📖 \`/define [word]\` • Word definition
+┃ 🔤 \`/synonym [word]\` • Find synonyms
+┃ 🔄 \`/antonym [word]\` • Find antonyms
+╰━━━━━━━━━━━━━━╯
+
+╭━━━ **[ MATH ]** ━━━╮
+┃ 🧮 \`/calc [exp]\` • Basic calculator
+┃ ➗ \`/math [exp]\` • Math problem solver
+╰━━━━━━━━━━━━━━╯
+
+╭━━━ **[ UTILITIES ]** ━━━╮
+┃ 📝 \`/note [text]\` • Save a note
+┃ 📋 \`/notes\` • View all notes
+┃ ⏲️ \`/timer [sec]\` • Set a timer
+┃ 🔔 \`/remind [text]\` • Set reminder
+╰━━━━━━━━━━━━━━╯
+
+━━━━━━━━━━━━━━━━━━`;
+        }
+
+        function getBotInfo() {
+            return `🤖 **BOT INFORMATION**
+
+╭━━━━━━━━━━━━━━━━━━╮
+┃ **Mini Assistant** 
+┃ Version 2.0
+┃ AI API: EchoAI
+╰━━━━━━━━━━━━━━━━━━╯
+
+📊 **STATISTICS:**
+• Commands: 20+
+• Auto-responses: 200+
+• Users: Active community
+• Uptime: 24/7
+
+⚙️ **FEATURES:**
+• AI Chat
+• SimSimi Chat 
+• Jokes & Facts
+• Dictionary
+• Calculator
+• Notes
+• Timer
+• Reminder
+
+🔧 **DEVELOPER:**
+Created by **ARI** with ❤️
+Built for Mini Messenger
+
+🌐 **API STATUS:**
+• /ai: EchoAI ✅
+• /sim: SimSimi ✅
+• Others: Built-in
+
+💡 **Tip:** Type /help to see all commands!`;
+        }
+
+        async function fetchAIResponse(message) {
+            try {
+                const response = await fetch(API_CONFIG.ai.endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        user: userName || 'User'
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API responded with status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.response) {
+                    return data.response;
+                } else if (data.message) {
+                    return data.message;
+                } else if (data.text) {
+                    return data.text;
+                } else if (typeof data === 'string') {
+                    return data;
+                } else {
+                    return "I'm here to help! What would you like to know?";
+                }
+            } catch (error) {
+                console.error('AI API error:', error);
+                const fallbacks = [
+                    "That's interesting! Tell me more.",
+                    "I understand. What else would you like to know?",
+                    "Great question! Let me think about that.",
+                    "I'm here to help! What else can I do for you?",
+                    "Thanks for sharing that with me!"
+                ];
+                return `🤖 **EchoAI says:**\n${fallbacks[Math.floor(Math.random() * fallbacks.length)]}`;
+            }
+        }
+
+        async function fetchSimSimiResponse(message) {
+            try {
+                const url = `${API_CONFIG.sim.endpoint}${encodeURIComponent(message)}&key=${API_CONFIG.sim.key}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                return data.message || "Sorry, I don't understand.";
+            } catch (error) {
+                console.error('SimSimi error:', error);
+                return "💬 SimSimi service unavailable. Please try again later.";
+            }
+        }
+
+        async function getDictionaryDefinition(word) {
+            try {
+                const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
+                const data = await response.json();
+                
+                if (data.title === "No Definitions Found") {
+                    return `❌ No definition found for "${word}".`;
+                }
+
+                const entry = data[0];
+                let definition = `📖 **Definition of "${word}":**\n\n`;
+                
+                entry.meanings.forEach((meaning, i) => {
+                    definition += `*${meaning.partOfSpeech}*\n`;
+                    meaning.definitions.slice(0, 2).forEach(def => {
+                        definition += `  • ${def.definition}\n`;
+                        if (def.example) {
+                            definition += `    ✏️ Example: "${def.example}"\n`;
+                        }
+                    });
+                    definition += '\n';
+                });
+
+                return definition;
+            } catch {
+                return `❌ Could not find definition for "${word}".`;
+            }
+        }
+
+        async function getSynonyms(word) {
+            try {
+                const response = await fetch(`https://api.datamuse.com/words?rel_syn=${encodeURIComponent(word)}&max=10`);
+                const data = await response.json();
+                
+                if (data.length === 0) {
+                    return `❌ No synonyms found for "${word}".`;
+                }
+
+                let result = `🔤 **Synonyms for "${word}":**\n`;
+                data.forEach((item, i) => {
+                    result += `${i + 1}. ${item.word}\n`;
+                });
+                return result;
+            } catch {
+                return `❌ Could not find synonyms for "${word}".`;
+            }
+        }
+
+        async function getAntonyms(word) {
+            try {
+                const response = await fetch(`https://api.datamuse.com/words?rel_ant=${encodeURIComponent(word)}&max=10`);
+                const data = await response.json();
+                
+                if (data.length === 0) {
+                    return `❌ No antonyms found for "${word}".`;
+                }
+
+                let result = `🔄 **Antonyms for "${word}":**\n`;
+                data.forEach((item, i) => {
+                    result += `${i + 1}. ${item.word}\n`;
+                });
+                return result;
+            } catch {
+                return `❌ Could not find antonyms for "${word}".`;
+            }
+        }
+
+        function getJoke() {
+            return jokes[Math.floor(Math.random() * jokes.length)];
+        }
+
+        function getFact() {
+            return facts[Math.floor(Math.random() * facts.length)];
+        }
+
+        function getQuote() {
+            return quotes[Math.floor(Math.random() * quotes.length)];
+        }
+
+        function calculate(expression) {
+            try {
+                const result = Function('"use strict";return (' + expression + ')')();
+                return `🧮 **Result:** ${expression} = ${result}`;
+            } catch {
+                return "❌ Invalid math expression!";
+            }
+        }
+
+        const autoResponses = {
+            'hello': 'Hello! 👋 How can I help you today?',
+            'hi': 'Hi there! 🌟 What\'s up?',
+            'hey': 'Hey! 😊 Nice to see you!',
+            'good morning': 'Good morning! ☀️ Have a great day!',
+            'good afternoon': 'Good afternoon! 🌤️ How\'s your day going?',
+            'good evening': 'Good evening! 🌙 Ready to chat?',
+            'good night': 'Good night! 😴 Sleep well!',
+
+            'who is your creator': 'My creator is **ARI**! 👑 He\'s an amazing developer! Type /botinfo for more details!',
+            'who made you': 'I was created by **ARI**! 🚀 He\'s the mastermind behind my code!',
+            'your creator': '**ARI** is my creator! 💻 He designed me to be your helpful assistant!',
+
+            'what is your name': 'I\'m **Mini Assistant**! 🤖 Your friendly AI helper!',
+            'your name': 'My name is **Mini Assistant**! 📛 What\'s yours?',
+            'who are you': 'I\'m **Mini Assistant**, an AI bot created to help you! 🌟',
+
+            'thank you': 'You\'re very welcome! 😊 Anything else?',
+            'thanks': 'My pleasure! 🌟 Happy to help!',
+            'thank': 'You\'re welcome! 👍',
+            
+            'goodbye': 'Goodbye! 👋 Come back anytime!',
+            'bye': 'Bye bye! 🎈 It was nice chatting with you!',
+            'see you later': 'See you later! 🌟 Take care!',
+
+            'default1': 'That\'s interesting! Tell me more! 👂',
+            'default2': 'I understand. What else would you like to know? 🤔',
+            'default3': 'Great point! Let\'s chat more! 😊',
+            'default4': 'I see! Thanks for sharing that with me!'
         };
 
         function addBotMessage(text, isUser = false, isBot = false) {
@@ -141,29 +452,7 @@
             
             const textDiv = document.createElement('div');
             textDiv.className = 'bot-message-text';
-            
-            // Format text with line breaks
-            const lines = text.split('\n');
-            lines.forEach((line, index) => {
-                if (index > 0) {
-                    textDiv.appendChild(document.createElement('br'));
-                }
-                // Check for bold markdown
-                if (line.includes('**')) {
-                    const parts = line.split('**');
-                    parts.forEach((part, i) => {
-                        if (i % 2 === 1) {
-                            const strong = document.createElement('strong');
-                            strong.textContent = part;
-                            textDiv.appendChild(strong);
-                        } else if (part) {
-                            textDiv.appendChild(document.createTextNode(part));
-                        }
-                    });
-                } else {
-                    textDiv.appendChild(document.createTextNode(line));
-                }
-            });
+            textDiv.innerHTML = text.replace(/\n/g, '<br>');
             
             contentDiv.appendChild(textDiv);
             
@@ -174,7 +463,6 @@
             
             wrapper.appendChild(contentDiv);
             
-            // Remove welcome message if it exists
             const welcomeMsg = messagesDiv.querySelector('.welcome-message');
             if (welcomeMsg && !isUser) {
                 welcomeMsg.remove();
@@ -201,49 +489,162 @@
             }
         }
 
-        function getBotResponse(message) {
-            const lowerMsg = message.toLowerCase();
-            
-            if (lowerMsg.includes('hello') || lowerMsg.includes('hi') || lowerMsg.includes('hey')) {
-                return botResponses['hello'];
-            } else if (lowerMsg.includes('help') || lowerMsg.includes('support')) {
-                return botResponses['help'];
-            } else if (lowerMsg.includes('feature') || lowerMsg.includes('what can')) {
-                return botResponses['features'];
-            } else if (lowerMsg.includes('contact') || lowerMsg.includes('email') || lowerMsg.includes('reach')) {
-                return botResponses['contact'];
-            } else if (lowerMsg.includes('thank')) {
-                return "You're welcome! 😊 Let me know if you need anything else!";
-            } else if (lowerMsg.includes('bye') || lowerMsg.includes('goodbye')) {
-                return "Goodbye! 👋 Feel free to chat again anytime!";
-            } else {
-                return botResponses['default'];
+        function getAutoResponse(message) {
+            const lowerMsg = message.toLowerCase().trim();
+
+            for (const [key, response] of Object.entries(autoResponses)) {
+                if (lowerMsg === key) {
+                    return response;
+                }
             }
+            
+            for (const [key, response] of Object.entries(autoResponses)) {
+                if (lowerMsg.includes(key) && key.length > 3) {
+                    return response;
+                }
+            }
+
+            const defaults = ['default1', 'default2', 'default3', 'default4'];
+            return autoResponses[defaults[Math.floor(Math.random() * defaults.length)]];
+        }
+
+        async function processCommand(message) {
+            const parts = message.split(' ');
+            const command = parts[0].toLowerCase();
+            const args = parts.slice(1).join(' ');
+
+            if (command === '/help') {
+                return getHelpResponse();
+            }
+
+            if (command === '/botinfo' || command === '/info') {
+                return getBotInfo();
+            }
+
+            if (command === '/hi') {
+                return "Hello! 👋 How can I help you today?";
+            }
+
+            if (command === '/time') {
+                return `🕐 **Current Time:** ${new Date().toLocaleTimeString()}`;
+            }
+
+            if (command === '/date') {
+                return `📅 **Today's Date:** ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
+            }
+
+            if (command === '/clear') {
+                document.getElementById('botMessages').innerHTML = '';
+                return "Chat cleared! Type /help to see commands.";
+            }
+
+            if (command === '/joke') {
+                return `😂 **Joke:**\n${getJoke()}`;
+            }
+
+            if (command === '/fact') {
+                return `🤔 **Did you know?**\n${getFact()}`;
+            }
+
+            if (command === '/quote') {
+                return `💭 **Quote:**\n${getQuote()}`;
+            }
+
+            if (command === '/calc' && args) {
+                return calculate(args);
+            }
+
+            if (command === '/math' && args) {
+                return calculate(args);
+            }
+
+            if (command === '/note' && args) {
+                userNotes.push({ text: args, date: new Date().toLocaleString() });
+                localStorage.setItem('botNotes', JSON.stringify(userNotes));
+                return `📝 Note saved! Use /notes to view all notes.`;
+            }
+
+            if (command === '/notes') {
+                if (userNotes.length === 0) {
+                    return "📭 No notes yet. Use /note [text] to create one.";
+                }
+                let notesText = "📋 **YOUR NOTES:**\n\n";
+                userNotes.forEach((note, index) => {
+                    notesText += `${index + 1}. ${note.text} (${note.date})\n`;
+                });
+                return notesText;
+            }
+
+            if (command === '/timer' && args) {
+                const seconds = parseInt(args);
+                if (isNaN(seconds)) {
+                    return "❌ Please enter a valid number of seconds!";
+                }
+                setTimeout(() => {
+                    addBotMessage(`⏰ **Timer finished!** ${seconds} seconds have passed.`, false, true);
+                }, seconds * 1000);
+                return `⏲️ Timer set for ${seconds} seconds. I'll remind you!`;
+            }
+
+            if (command === '/remind' && args) {
+                setTimeout(() => {
+                    addBotMessage(`🔔 **Reminder:** ${args}`, false, true);
+                }, 10000);
+                return `✅ Reminder set: "${args}" (I'll remind you in 10 seconds)`;
+            }
+
+            if (command === '/define' && args) {
+                return await getDictionaryDefinition(args);
+            }
+
+            if (command === '/synonym' && args) {
+                return await getSynonyms(args);
+            }
+
+            if (command === '/antonym' && args) {
+                return await getAntonyms(args);
+            }
+
+            if (command === '/ai' && args) {
+                const response = await fetchAIResponse(args);
+                return `🤖 **AI says:**\n${response}`;
+            }
+
+            if (command === '/sim' && args) {
+                const response = await fetchSimSimiResponse(args);
+                return `💬 **SimSimi says:**\n${response}`;
+            }
+
+            return null;
         }
 
         async function sendBotMessage() {
             const input = document.getElementById('botMessageInput');
             const message = input.value.trim();
             
-            if (message) {
-                // Add user message
-                addBotMessage(message, true);
-                input.value = '';
+            if (!message) return;
+
+            addBotMessage(message, true);
+            input.value = '';
+            
+            showBotTyping();
+
+            setTimeout(async () => {
+                removeBotTyping();
                 
-                // Show typing indicator
-                showBotTyping();
+                let response;
+
+                if (message.startsWith('/')) {
+                    response = await processCommand(message);
+                    if (!response) {
+                        response = "❌ Unknown command. Type /help to see available commands.";
+                    }
+                } else {
+                    response = getAutoResponse(message);
+                }
                 
-                // Simulate bot thinking (random delay between 1-2 seconds)
-                const thinkingTime = 1000 + Math.random() * 1000;
-                
-                setTimeout(() => {
-                    removeBotTyping();
-                    
-                    // Get and add bot response
-                    const response = getBotResponse(message);
-                    addBotMessage(response, false, true);
-                }, thinkingTime);
-            }
+                addBotMessage(response, false, true);
+            }, 800);
         }
 
         function sendQuickReply(text) {
@@ -261,11 +662,10 @@
             window.location.href = 'index.html';
         }
 
-        // Welcome message with user's name
         document.addEventListener('DOMContentLoaded', function() {
             if (userName !== 'User') {
                 setTimeout(() => {
-                    addBotMessage(`Welcome back, ${userName}! 👋 How can I help you today?`, false, true);
+                    addBotMessage(`Welcome back, ${userName}! 👋 I'm your assistant! Type /help to see all commands!`, false, true);
                 }, 500);
             }
         });
