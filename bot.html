@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini Assistant - Chat Bot</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Back button design */
+        .back-btn {
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .back-btn i {
+            font-size: 18px;
+            transition: transform 0.2s ease;
+        }
+
+        .back-btn:hover {
+            background: var(--bg-hover);
+            color: var(--primary);
+        }
+
+        .back-btn:hover i {
+            transform: translateX(-3px);
+        }
+
+        .back-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Light mode */
+        body.light-mode .back-btn {
+            color: #64748b;
+        }
+
+        body.light-mode .back-btn:hover {
+            background: rgba(79,70,229,0.05);
+            color: var(--primary);
+        }
+    </style>
+</head>
+<body style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #0a0c10;">
+    <div class="bot-container">
+        <div class="bot-header">
+            <button class="back-btn" onclick="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div class="bot-avatar">
+                <img src="https://ui-avatars.com/api/?name=AI&background=4f46e5&color=fff&size=200" alt="Bot">
+            </div>
+            <div class="bot-info">
+                <h2>Mini Assistant</h2>
+                <p><i class="fas fa-circle"></i> Online • AI Powered</p>
+            </div>
+        </div>
+
+        <div class="quick-replies">
+            <button class="quick-reply-btn" onclick="sendQuickReply('Hello')">
+                <i class="fas fa-hand-wave"></i> Hello
+            </button>
+            <button class="quick-reply-btn" onclick="sendQuickReply('Help')">
+                <i class="fas fa-question-circle"></i> Help
+            </button>
+            <button class="quick-reply-btn" onclick="sendQuickReply('Features')">
+                <i class="fas fa-star"></i> Features
+            </button>
+            <button class="quick-reply-btn" onclick="sendQuickReply('Contact')">
+                <i class="fas fa-envelope"></i> Contact
+            </button>
+        </div>
+
+        <div id="botMessages" class="bot-messages-container">
+            <div class="welcome-message">
+                <i class="fas fa-robot" style="font-size: 32px; color: var(--primary); margin-bottom: 10px; display: block;"></i>
+                Hi! I'm Mini Assistant. How can I help you today?
+            </div>
+        </div>
+
+        <div class="bot-input-container">
+            <input type="text" id="botMessageInput" placeholder="Type your message..." onkeypress="handleBotKeyPress(event)">
+            <button class="bot-send-btn" onclick="sendBotMessage()">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Get user data from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const userId = urlParams.get('userId');
+        const userName = urlParams.get('userName') || 'User';
+        const userPfp = urlParams.get('userPfp') || 'https://ui-avatars.com/api/?name=User&background=4f46e5&color=fff';
+
+        // Bot responses
+        const botResponses = {
+            'hello': 'Hello! 👋 How can I assist you today?',
+            'hi': 'Hi there! 🌟 What can I do for you?',
+            'help': '📚 **I can help you with:**\n\n• Chat features\n• Account settings\n• Troubleshooting\n• General questions',
+            'features': '✨ **Mini Messenger Features:**\n\n• Group Chat with members\n• Private Messages\n• Voice Messages\n• Image Sharing\n• Message Reactions\n• Dark/Light Mode\n• Message Search\n• Pinned Messages',
+            'contact': '📞 **Contact Support:**\n\n• Email: support@minimessenger.com\n• Twitter: @minimessenger\n• Help Center: help.minimessenger.com',
+            'default': 'I understand. Is there anything specific you\'d like to know about? You can ask about features, help, or contact support.'
+        };
+
+        function addBotMessage(text, isUser = false, isBot = false) {
+            const messagesDiv = document.getElementById('botMessages');
+            const wrapper = document.createElement('div');
+            wrapper.className = `bot-message-wrapper ${isUser ? 'user' : ''}`;
+            
+            if (!isUser) {
+                const avatarDiv = document.createElement('div');
+                avatarDiv.className = 'bot-message-avatar';
+                avatarDiv.innerHTML = '<img src="https://ui-avatars.com/api/?name=AI&background=4f46e5&color=fff" alt="Bot">';
+                wrapper.appendChild(avatarDiv);
+            }
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'bot-message-content';
+            
+            if (!isUser) {
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'bot-name-tag';
+                nameDiv.innerHTML = '<i class="fas fa-robot"></i> Mini Assistant';
+                contentDiv.appendChild(nameDiv);
+            }
+            
+            const textDiv = document.createElement('div');
+            textDiv.className = 'bot-message-text';
+            
+            // Format text with line breaks
+            const lines = text.split('\n');
+            lines.forEach((line, index) => {
+                if (index > 0) {
+                    textDiv.appendChild(document.createElement('br'));
+                }
+                // Check for bold markdown
+                if (line.includes('**')) {
+                    const parts = line.split('**');
+                    parts.forEach((part, i) => {
+                        if (i % 2 === 1) {
+                            const strong = document.createElement('strong');
+                            strong.textContent = part;
+                            textDiv.appendChild(strong);
+                        } else if (part) {
+                            textDiv.appendChild(document.createTextNode(part));
+                        }
+                    });
+                } else {
+                    textDiv.appendChild(document.createTextNode(line));
+                }
+            });
+            
+            contentDiv.appendChild(textDiv);
+            
+            const timeDiv = document.createElement('div');
+            timeDiv.className = 'bot-message-time';
+            timeDiv.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            contentDiv.appendChild(timeDiv);
+            
+            wrapper.appendChild(contentDiv);
+            
+            // Remove welcome message if it exists
+            const welcomeMsg = messagesDiv.querySelector('.welcome-message');
+            if (welcomeMsg && !isUser) {
+                welcomeMsg.remove();
+            }
+            
+            messagesDiv.appendChild(wrapper);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function showBotTyping() {
+            const messagesDiv = document.getElementById('botMessages');
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'typing-indicator-bot';
+            typingDiv.id = 'botTypingIndicator';
+            typingDiv.innerHTML = '<span></span><span></span><span></span>';
+            messagesDiv.appendChild(typingDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function removeBotTyping() {
+            const typingIndicator = document.getElementById('botTypingIndicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+        }
+
+        function getBotResponse(message) {
+            const lowerMsg = message.toLowerCase();
+            
+            if (lowerMsg.includes('hello') || lowerMsg.includes('hi') || lowerMsg.includes('hey')) {
+                return botResponses['hello'];
+            } else if (lowerMsg.includes('help') || lowerMsg.includes('support')) {
+                return botResponses['help'];
+            } else if (lowerMsg.includes('feature') || lowerMsg.includes('what can')) {
+                return botResponses['features'];
+            } else if (lowerMsg.includes('contact') || lowerMsg.includes('email') || lowerMsg.includes('reach')) {
+                return botResponses['contact'];
+            } else if (lowerMsg.includes('thank')) {
+                return "You're welcome! 😊 Let me know if you need anything else!";
+            } else if (lowerMsg.includes('bye') || lowerMsg.includes('goodbye')) {
+                return "Goodbye! 👋 Feel free to chat again anytime!";
+            } else {
+                return botResponses['default'];
+            }
+        }
+
+        async function sendBotMessage() {
+            const input = document.getElementById('botMessageInput');
+            const message = input.value.trim();
+            
+            if (message) {
+                // Add user message
+                addBotMessage(message, true);
+                input.value = '';
+                
+                // Show typing indicator
+                showBotTyping();
+                
+                // Simulate bot thinking (random delay between 1-2 seconds)
+                const thinkingTime = 1000 + Math.random() * 1000;
+                
+                setTimeout(() => {
+                    removeBotTyping();
+                    
+                    // Get and add bot response
+                    const response = getBotResponse(message);
+                    addBotMessage(response, false, true);
+                }, thinkingTime);
+            }
+        }
+
+        function sendQuickReply(text) {
+            document.getElementById('botMessageInput').value = text;
+            sendBotMessage();
+        }
+
+        function handleBotKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendBotMessage();
+            }
+        }
+
+        function goBack() {
+            window.location.href = 'index.html';
+        }
+
+        // Welcome message with user's name
+        document.addEventListener('DOMContentLoaded', function() {
+            if (userName !== 'User') {
+                setTimeout(() => {
+                    addBotMessage(`Welcome back, ${userName}! 👋 How can I help you today?`, false, true);
+                }, 500);
+            }
+        });
+    </script>
+</body>
+</html>
