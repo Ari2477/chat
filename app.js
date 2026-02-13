@@ -15,6 +15,11 @@ let currentMessageForForward = null;
 let recognition = null;
 let isRecording = false;
 
+window.displayedGCMessageIds = new Set();
+window.displayedPMMessageIds = new Set();
+window.gcMessagesLoaded = false;
+window.pmMessagesLoaded = false;
+
 let mediaRecorder = null;
 let audioChunks = [];
 let recordingStartTime = null;
@@ -57,7 +62,6 @@ async function startVoiceRecording(isGC = true) {
         };
 
         mediaRecorder.onstop = async () => {
-            
             const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
             currentAudioBlob = audioBlob;
 
@@ -72,7 +76,6 @@ async function startVoiceRecording(isGC = true) {
         recordingStartTime = Date.now();
 
         showRecordingIndicator();
-
         startRecordingTimer();
         
         console.log('🎤 Recording started');
@@ -149,9 +152,7 @@ async function sendVoiceMessage(audioBlob, isGC = true) {
         showToast('📤 Uploading voice message...', 'info');
 
         const base64Audio = await blobToBase64(audioBlob);
-
         const duration = await getAudioDuration(audioBlob);
-
         const waveformData = generateWaveformData();
         
         if (isGC) {
@@ -290,8 +291,7 @@ function drawWaveform(waveformData) {
     });
 }
 
-function updateWaveformProgress() {
-}
+function updateWaveformProgress() {}
 
 function onVoicePlayEnd() {
     isPlaying = false;
@@ -369,6 +369,11 @@ firebase.auth().onAuthStateChanged(async (user) => {
     }
     
     currentUser = user;
+
+    window.displayedGCMessageIds.clear();
+    window.displayedPMMessageIds.clear();
+    window.gcMessagesLoaded = false;
+    window.pmMessagesLoaded = false;
     
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => initializeApp());
@@ -492,7 +497,6 @@ function loadGCInfo() {
                 if (el) el.textContent = `${memberCount} members`;
             });
 
-            // Created date
             if (data.createdAt) {
                 const date = data.createdAt.toDate();
                 const createdEl = document.getElementById('gc-created');
@@ -574,41 +578,90 @@ function listenToGCMessages() {
     
     const messagesContainer = document.getElementById('gc-messages');
     if (!messagesContainer) return;
+
+    messagesContainer.innerHTML = '';
     
     unsubscribeGC = db.collection('groupChats')
         .doc(GROUP_CHAT_ID)
         .collection('messages')
         .orderBy('timestamp', 'asc')
         .onSnapshot((snapshot) => {
-            messagesContainer.innerHTML = '';
-            
-            if (snapshot.empty) {
-                messagesContainer.innerHTML = '<div class="no-messages">👋 No messages yet. Say hello!</div>';
-                return;
+
+            snapshot.docChanges().forEach((change) => {
+                const message = change.doc.data();
+                const messageId = change.doc.id;
+                
+                if (change.type === 'added') {
+                    if (window.displayedGCMessageIds.has(messageId)) {
+                        console.log('Skipping duplicate GC message:', messageId);
+                        return;
+                    }
+                    
+                    window.displayedGCMessageIds.add(messageId);
+
+                    if (message.senderId === currentUser?.uid) {
+                        appendGCMessage(message, messagesContainer, {}, messageId);
+                    } else {
+                        db.collection('users').doc(message.senderId).get()
+                            .then((userDoc) => {
+                                const userMap = {};
+                                if (userDoc.exists) {
+                                    userMap[message.senderId] = userDoc.data();
+                                }
+                                appendGCMessage(message, messagesContainer, userMap, messageId);
+                            })
+                            .catch(error => {
+                                console.error('Error fetching user:', error);
+                                appendGCMessage(message, messagesContainer, {}, messageId);
+                            });
+                    }
+                }
+                
+                if (change.type === 'modified') {
+                    const existingMsg = document.getElementById(`msg-${messageId}`);
+                    if (existingMsg) {
+                        existingMsg.remove();
+                        window.displayedGCMessageIds.delete(messageId);
+
+                        if (message.senderId === currentUser?.uid) {
+                            appendGCMessage(message, messagesContainer, {}, messageId);
+                        } else {
+                            db.collection('users').doc(message.senderId).get()
+                                .then((userDoc) => {
+                                    const userMap = {};
+                                    if (userDoc.exists) {
+                                        userMap[message.senderId] = userDoc.data();
+                                    }
+                                    appendGCMessage(message, messagesContainer, userMap, messageId);
+                                });
+                        }
+                    }
+                }
+                
+                if (change.type === 'removed') {
+                    const existingMsg = document.getElementById(`msg-${messageId}`);
+                    if (existingMsg) {
+                        existingMsg.remove();
+                        window.displayedGCMessageIds.delete(messageId);
+                    }
+                }
+            });
+      
+            if (snapshot.docChanges().length > 0) {
+                const lastChange = snapshot.docChanges()[snapshot.docChanges().length - 1];
+                if (lastChange.type === 'added' && lastChange.doc.data().senderId === currentUser?.uid) {
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                } else {
+                    const isNearBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight < 100;
+                    if (isNearBottom) {
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    }
+                }
             }
-
-            const senderIds = new Set();
-            snapshot.forEach(doc => {
-                senderIds.add(doc.data().senderId);
-            });
-
-            Promise.all(Array.from(senderIds).map(async (senderId) => {
-                if (senderId === currentUser?.uid) return null;
-                const userDoc = await db.collection('users').doc(senderId).get();
-                return { id: senderId, data: userDoc.data() };
-            })).then((usersData) => {
-                const userMap = {};
-                usersData.filter(Boolean).forEach(user => {
-                    if (user) userMap[user.id] = user.data;
-                });
-                
-                snapshot.forEach((doc) => {
-                    const message = doc.data();
-                    appendGCMessage(message, messagesContainer, userMap, doc.id);
-                });
-                
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            });
+            
+            if (messagesContainer.children.length === 0) {
+                messagesContainer.innerHTML = '<div class="no-messages">👋 No messages yet. Say hello!</div>';
+            }
             
         }, (error) => {
             console.error('Message listener error:', error);
@@ -694,7 +747,7 @@ function appendGCMessage(message, container, userMap = {}, messageId) {
                     <button onclick="showReactionPicker('${messageId}', true)" class="action-btn" title="React">
                         <i class="fas fa-smile"></i>
                     </button>
-                    <button onclick="showForwardModal('${messageId}', '${message.text || ''}', '${message.type || 'text'}', '${message.imageUrl || ''}')" class="action-btn" title="Forward">
+                    <button onclick="showForwardModal('${messageId}', '${escapeHTML(message.text || '')}', '${message.type || 'text'}', '${message.imageUrl || ''}')" class="action-btn" title="Forward">
                         <i class="fas fa-share"></i>
                     </button>
                     ${message.senderId === currentUser?.uid ? `
@@ -917,7 +970,6 @@ async function performSearch(query) {
     resultsContainer.classList.remove('hidden');
     
     try {
-
         const gcSnapshot = await db.collection('groupChats').doc(GROUP_CHAT_ID)
             .collection('messages')
             .where('text', '>=', query)
@@ -1236,6 +1288,8 @@ function updateUserUnreadBadge(userId, count) {
 
 async function openPrivateChat(user) {
     if (!user) return;
+
+    window.displayedPMMessageIds.clear();
     
     currentPMUser = user;
     await markMessagesAsRead(user.id);
@@ -1270,6 +1324,8 @@ async function openPrivateChat(user) {
 
 function closePM() {
     currentPMUser = null;
+
+    window.displayedPMMessageIds.clear();
     
     const usersList = document.getElementById('users-list');
     const pmChatArea = document.getElementById('pm-chat-area');
@@ -1286,6 +1342,8 @@ function listenToPMMessages(otherUserId) {
     
     const messagesContainer = document.getElementById('pm-messages');
     if (!messagesContainer) return;
+
+    messagesContainer.innerHTML = '';
     
     const chatId = [currentUser.uid, otherUserId].sort().join('_');
     
@@ -1294,19 +1352,57 @@ function listenToPMMessages(otherUserId) {
         .collection('messages')
         .orderBy('timestamp', 'asc')
         .onSnapshot((snapshot) => {
-            messagesContainer.innerHTML = '';
-            
-            if (snapshot.empty) {
-                messagesContainer.innerHTML = '<div class="no-messages">💬 No messages yet. Say hi!</div>';
-                return;
-            }
-            
-            snapshot.forEach((doc) => {
-                const message = doc.data();
-                appendPMMessage(message, messagesContainer, doc.id);
+
+            snapshot.docChanges().forEach((change) => {
+                const message = change.doc.data();
+                const messageId = change.doc.id;
+                
+                if (change.type === 'added') {
+                    if (window.displayedPMMessageIds.has(messageId)) {
+                        console.log('Skipping duplicate PM message:', messageId);
+                        return;
+                    }
+                    
+                    window.displayedPMMessageIds.add(messageId);
+
+                    appendPMMessage(message, messagesContainer, messageId);
+                }
+                
+                if (change.type === 'modified') {
+                    const existingMsg = document.getElementById(`pm-msg-${messageId}`);
+                    if (existingMsg) {
+                        existingMsg.remove();
+                        window.displayedPMMessageIds.delete(messageId);
+                        
+                        window.displayedPMMessageIds.add(messageId);
+                        appendPMMessage(message, messagesContainer, messageId);
+                    }
+                }
+                
+                if (change.type === 'removed') {
+                    const existingMsg = document.getElementById(`pm-msg-${messageId}`);
+                    if (existingMsg) {
+                        existingMsg.remove();
+                        window.displayedPMMessageIds.delete(messageId);
+                    }
+                }
             });
             
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            if (snapshot.docChanges().length > 0) {
+                const lastChange = snapshot.docChanges()[snapshot.docChanges().length - 1];
+                if (lastChange.type === 'added' && lastChange.doc.data().senderId === currentUser?.uid) {
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                } else {
+                    const isNearBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight < 100;
+                    if (isNearBottom) {
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    }
+                }
+            }
+
+            if (messagesContainer.children.length === 0) {
+                messagesContainer.innerHTML = '<div class="no-messages">💬 No messages yet. Say hi!</div>';
+            }
             
             if (currentPMUser?.id === otherUserId) {
                 markMessagesAsRead(otherUserId);
@@ -1466,6 +1562,55 @@ async function sendPM() {
         console.error('❌ Error sending PM:', error);
         showToast('Failed to send message', 'error');
         input.value = messageText;
+    } finally {
+        input.disabled = false;
+        input.focus();
+        if (sendBtn) {
+            sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+            sendBtn.disabled = false;
+        }
+    }
+}
+
+async function sendGCMessage() {
+    const input = document.getElementById('gc-message-input');
+    if (!input) return;
+    
+    const text = input.value.trim();
+    if (!text) {
+        showToast('Please type a message', 'error');
+        return;
+    }
+    
+    if (!currentUser) {
+        showToast('You are not logged in', 'error');
+        return;
+    }
+
+    input.disabled = true;
+    const sendBtn = document.querySelector('#gc-view .send-btn');
+    if (sendBtn) {
+        sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        sendBtn.disabled = true;
+    }
+
+    input.value = '';
+    
+    try {
+        const gcRef = db.collection('groupChats').doc(GROUP_CHAT_ID);
+        
+        await gcRef.collection('messages').add({
+            text: text,
+            senderId: currentUser.uid,
+            senderName: currentUser.displayName || currentUser.email.split('@')[0] || 'User',
+            senderPhoto: currentUser.photoURL || '',
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+    } catch (error) {
+        console.error('❌ Error sending message:', error);
+        showToast('Failed to send message', 'error');
+        input.value = text;
     } finally {
         input.disabled = false;
         input.focus();
@@ -1839,55 +1984,6 @@ async function logout() {
     } catch (error) {
         console.error('Logout error:', error);
         window.location.href = 'login.html';
-    }
-}
-
-async function sendGCMessage() {
-    const input = document.getElementById('gc-message-input');
-    if (!input) return;
-    
-    const text = input.value.trim();
-    if (!text) {
-        showToast('Please type a message', 'error');
-        return;
-    }
-    
-    if (!currentUser) {
-        showToast('You are not logged in', 'error');
-        return;
-    }
-
-    input.disabled = true;
-    const sendBtn = document.querySelector('#gc-view .send-btn');
-    if (sendBtn) {
-        sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-        sendBtn.disabled = true;
-    }
-
-    input.value = '';
-    
-    try {
-        const gcRef = db.collection('groupChats').doc(GROUP_CHAT_ID);
-        
-        await gcRef.collection('messages').add({
-            text: text,
-            senderId: currentUser.uid,
-            senderName: currentUser.displayName || currentUser.email.split('@')[0] || 'User',
-            senderPhoto: currentUser.photoURL || '',
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        
-    } catch (error) {
-        console.error('❌ Error sending message:', error);
-        showToast('Failed to send message', 'error');
-        input.value = text;
-    } finally {
-        input.disabled = false;
-        input.focus();
-        if (sendBtn) {
-            sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
-            sendBtn.disabled = false;
-        }
     }
 }
 
