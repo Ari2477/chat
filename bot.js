@@ -7,7 +7,9 @@ const BOT_CONFIG = {
     AI_BOT_NAME: "🧠 AI Assistant",
     AI_BOT_PHOTO: "https://ui-avatars.com/api/?name=AI&background=6366f1&color=fff&size=200",
     
-    GROUP_CHAT_ID: "general_chat", 
+    GROUP_CHAT_ID: "general_chat",
+    
+    TYPING_DELAY: 1000, 
     
     WELCOME_MESSAGES: [
         "👋 Welcome {name} to World Chat! Enjoy your stay! 🎉",
@@ -27,7 +29,7 @@ const BOT_CONFIG = {
         "/ai": "🤖 Talk to AI - example: /ai what is JavaScript?",
         "/time": "🕐 Show current time",
         "/date": "📅 Show current date",
-        "/weather": "☀️ Weather in Manila (real-time)",
+        "/weather": "☀️ Weather in Manila",
         "/calc": "🧮 Calculate - example: /calc 2 + 2",
         "/joke": "😂 Tell a random joke",
         "/quote": "💡 Random inspirational quote",
@@ -39,31 +41,36 @@ const BOT_CONFIG = {
         "/advice": "✨ Get random advice",
         "/riddle": "🧩 Solve a riddle",
         "/compliment": "💝 Receive a compliment",
-        "/echo": "📢 Echo your message - example: /echo Hello",
+        "/echo": "📢 Echo your message",
         "/say": "🗣️ Make bot say something",
         "/botinfo": "ℹ️ About AI Assistant"
     }
 };
 
+
 async function initWelcomeBot() {
     console.log('🤖 Initializing Welcome Bot...');
     
-    const botRef = db.collection('users').doc(BOT_CONFIG.WELCOME_BOT_ID);
-    const botDoc = await botRef.get();
-    
-    if (!botDoc.exists) {
-        await botRef.set({
-            uid: BOT_CONFIG.WELCOME_BOT_ID,
-            name: BOT_CONFIG.WELCOME_BOT_NAME,
-            photoURL: BOT_CONFIG.WELCOME_BOT_PHOTO,
-            email: 'welcome@bot.local',
-            online: true,
-            isBot: true,
-            botType: 'welcome',
-            showInUserList: false,
-            lastSeen: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        console.log('✅ Welcome Bot created');
+    try {
+        const botRef = db.collection('users').doc(BOT_CONFIG.WELCOME_BOT_ID);
+        const botDoc = await botRef.get();
+        
+        if (!botDoc.exists) {
+            await botRef.set({
+                uid: BOT_CONFIG.WELCOME_BOT_ID,
+                name: BOT_CONFIG.WELCOME_BOT_NAME,
+                photoURL: BOT_CONFIG.WELCOME_BOT_PHOTO,
+                email: 'welcome@bot.local',
+                online: true,
+                isBot: true,
+                botType: 'welcome',
+                showInUserList: false,
+                lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            console.log('✅ Welcome Bot created');
+        }
+    } catch (error) {
+        console.error('❌ Error creating Welcome Bot:', error);
     }
 }
 
@@ -89,6 +96,7 @@ function listenToNewMembers() {
             
             for (const memberId of newMembers) {
                 await welcomeNewMember(memberId);
+                await new Promise(resolve => setTimeout(resolve, 500)); 
             }
             
             window.previousMembers = members;
@@ -125,30 +133,38 @@ async function welcomeNewMember(memberId) {
     }
 }
 
+
 async function initAIBot() {
     console.log('🧠 Initializing AI Bot...');
     
-    const botRef = db.collection('users').doc(BOT_CONFIG.AI_BOT_ID);
-    const botDoc = await botRef.get();
-    
-    if (!botDoc.exists) {
-        await botRef.set({
-            uid: BOT_CONFIG.AI_BOT_ID,
-            name: BOT_CONFIG.AI_BOT_NAME,
-            photoURL: BOT_CONFIG.AI_BOT_PHOTO,
-            email: 'ai@bot.local',
-            online: true,
-            isBot: true,
-            botType: 'ai',
-            showInUserList: true,
-            lastSeen: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        console.log('✅ AI Bot created');
+    try {
+        const botRef = db.collection('users').doc(BOT_CONFIG.AI_BOT_ID);
+        const botDoc = await botRef.get();
+        
+        if (!botDoc.exists) {
+            await botRef.set({
+                uid: BOT_CONFIG.AI_BOT_ID,
+                name: BOT_CONFIG.AI_BOT_NAME,
+                photoURL: BOT_CONFIG.AI_BOT_PHOTO,
+                email: 'ai@bot.local',
+                online: true,
+                isBot: true,
+                botType: 'ai',
+                showInUserList: true,
+                lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            console.log('✅ AI Bot created');
+        }
+    } catch (error) {
+        console.error('❌ Error creating AI Bot:', error);
     }
 }
 
 function listenToAIBotMessages() {
-    if (!currentUser) return;
+    if (!currentUser) {
+        console.log('⏳ Waiting for currentUser...');
+        return;
+    }
     
     const chatId = [currentUser.uid, BOT_CONFIG.AI_BOT_ID].sort().join('_');
     
@@ -171,9 +187,12 @@ async function processAICommand(message, messageId) {
     const text = message.text || '';
     
     const chatId = [currentUser.uid, BOT_CONFIG.AI_BOT_ID].sort().join('_');
+    
     await db.collection('privateChats').doc(chatId)
         .collection('messages').doc(messageId)
         .update({ isBotProcessed: true });
+    
+    await showTypingIndicator();
     
     if (text.startsWith('/')) {
         await handleCommand(text);
@@ -182,146 +201,193 @@ async function processAICommand(message, messageId) {
     }
 }
 
+async function showTypingIndicator() {
+    if (!currentPMUser || currentPMUser.id !== BOT_CONFIG.AI_BOT_ID) return;
+    
+    const typingEl = document.getElementById('typing-indicator');
+    if (typingEl) {
+        typingEl.classList.remove('hidden');
+        typingEl.textContent = 'AI Assistant is typing...';
+    }
+    
+    const delay = Math.floor(Math.random() * 1000) + 500;
+    await new Promise(resolve => setTimeout(resolve, delay));
+    
+    if (typingEl) {
+        typingEl.classList.add('hidden');
+    }
+}
+
+
 async function handleCommand(text) {
     const cmd = text.split(' ')[0].toLowerCase();
     const args = text.substring(cmd.length).trim();
     
     let response = '';
     
-    switch(cmd) {
-        case '/help':
-            response = getHelpMessage();
-            break;
-        
-        case '/ai':
-            if (!args) {
-                response = "❌ Please ask me something!\nExample: /ai what is JavaScript?";
-            } else {
-                response = await getAIResponse(args);
-            }
-            break;
-        
-        case '/time':
-            const now = new Date();
-            response = `🕐 **Current Time:** ${now.toLocaleTimeString('en-US', { 
-                hour: '2-digit', 
-                minute: '2-digit', 
-                second: '2-digit',
-                hour12: true 
-            })}`;
-            break;
-        
-        case '/date':
-            const today = new Date();
-            response = `📅 **Today's Date:** ${today.toLocaleDateString('en-US', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-            })}`;
-            break;
-        
-        case '/weather':
-            const cities = ['Manila', 'Cebu', 'Davao', 'Quezon City', 'Makati'];
-            const conditions = ['☀️ Sunny', '⛅ Partly Cloudy', '☁️ Cloudy', '🌧️ Rainy', '⛈️ Thunderstorm', '🌈 Clear'];
-            const randomCity = cities[Math.floor(Math.random() * cities.length)];
-            const randomCondition = conditions[Math.floor(Math.random() * conditions.length)];
-            const temp = Math.floor(Math.random() * 15) + 25;
-            const humidity = Math.floor(Math.random() * 30) + 60;
+    try {
+        switch(cmd) {
+            case '/help':
+                response = getHelpMessage();
+                break;
             
-            response = `🌤️ **Weather Update**\n\n📍 Location: ${randomCity}\n🌡️ Temperature: ${temp}°C\n☁️ Condition: ${randomCondition}\n💧 Humidity: ${humidity}%\n💨 Wind: ${Math.floor(Math.random() * 20 + 5)} km/h`;
-            break;
-        
-        case '/calc':
-            response = calculateExpression(args);
-            break;
-        
-        case '/joke':
-            response = getRandomJoke();
-            break;
-        
-        case '/quote':
-            response = getRandomQuote();
-            break;
-        
-        case '/fact':
-            response = getRandomFact();
-            break;
-        
-        case '/roll':
-            const roll = Math.floor(Math.random() * 6) + 1;
-            const diceEmoji = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'][roll - 1];
-            response = `🎲 **You rolled:** ${diceEmoji} ${roll}`;
-            break;
-        
-        case '/flip':
-            const flip = Math.random() < 0.5 ? 'Heads' : 'Tails';
-            response = `🪙 **Coin Flip:** ${flip}`;
-            break;
-        
-        case '/ping':
-            const ping = Math.floor(Math.random() * 30) + 10;
-            response = `🏓 **Pong!** Response time: ${ping}ms`;
-            break;
-        
-        case '/motivate':
-            response = getMotivationalMessage();
-            break;
-        
-        case '/advice':
-            response = getRandomAdvice();
-            break;
-        
-        case '/riddle':
-            const riddleData = getRandomRiddle();
-            response = `🧩 **Riddle:**\n${riddleData.riddle}\n\n💡 *Type /answer to see the answer*`;
-            window.lastRiddleAnswer = riddleData.answer;
-            break;
-        
-        case '/answer':
-            if (window.lastRiddleAnswer) {
-                response = `✅ **Answer:** ${window.lastRiddleAnswer}`;
-                window.lastRiddleAnswer = null;
-            } else {
-                response = "❌ No active riddle. Type /riddle first!";
-            }
-            break;
-        
-        case '/compliment':
-            response = getRandomCompliment();
-            break;
-        
-        case '/echo':
-            if (!args) {
-                response = "❌ Please type something to echo!\nExample: /echo Hello World";
-            } else {
-                response = `📢 **Echo:** ${args}`;
-            }
-            break;
-        
-        case '/say':
-            if (!args) {
-                response = "❌ Please tell me what to say!\nExample: /say I love coding";
-            } else {
-                response = `🗣️ **${BOT_CONFIG.AI_BOT_NAME} says:**\n"${args}"`;
-            }
-            break;
-        
-        case '/botinfo':
-            response = `🤖 **${BOT_CONFIG.AI_BOT_NAME}**\n\n` +
-                      `📌 **Version:** 2.0.0\n` +
-                      `📅 **Created:** February 2026\n` +
-                      `⚙️ **Commands:** ${Object.keys(BOT_CONFIG.COMMANDS).length}\n` +
-                      `💬 **Language:** JavaScript/Firebase\n` +
-                      `🧠 **AI Engine:** BrainShop API + Fallback\n\n` +
-                      `Type /help to see all commands!`;
-            break;
-        
-        default:
-            response = `❌ **Unknown command:** ${cmd}\n\nType /help to see all available commands.`;
+            case '/ai':
+                if (!args) {
+                    response = "❌ Please ask me something!\n\nExample: `/ai what is JavaScript?`";
+                } else {
+                    response = await getAIResponse(args);
+                }
+                break;
+            
+            case '/time':
+                const now = new Date();
+                response = `🕐 **Current Time**\n\n${now.toLocaleTimeString('en-US', { 
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    second: '2-digit',
+                    hour12: true 
+                })}`;
+                break;
+            
+            case '/date':
+                const today = new Date();
+                response = `📅 **Today's Date**\n\n${today.toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                })}`;
+                break;
+            
+            case '/weather':
+                response = getWeatherResponse();
+                break;
+            
+            case '/calc':
+                response = calculateExpression(args);
+                break;
+            
+            case '/joke':
+                response = getRandomJoke();
+                break;
+            
+            case '/quote':
+                response = getRandomQuote();
+                break;
+            
+            case '/fact':
+                response = getRandomFact();
+                break;
+            
+            case '/roll':
+                const roll = Math.floor(Math.random() * 6) + 1;
+                const diceEmoji = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'][roll - 1];
+                response = `🎲 **You rolled a ${roll}!** ${diceEmoji}`;
+                break;
+            
+            case '/flip':
+                const flip = Math.random() < 0.5 ? 'Heads' : 'Tails';
+                const coinEmoji = '🪙';
+                response = `${coinEmoji} **Coin Flip:** ${flip}`;
+                break;
+            
+            case '/ping':
+                const ping = Math.floor(Math.random() * 30) + 10;
+                response = `🏓 **Pong!** Response time: ${ping}ms`;
+                break;
+            
+            case '/motivate':
+                response = getMotivationalMessage();
+                break;
+            
+            case '/advice':
+                response = getRandomAdvice();
+                break;
+            
+            case '/riddle':
+                const riddleData = getRandomRiddle();
+                response = `🧩 **Riddle Time!**\n\n${riddleData.riddle}\n\n💡 *Type \`/answer\` to see the answer*`;
+                window.lastRiddleAnswer = riddleData.answer;
+                window.riddleTimeout = setTimeout(() => {
+                    window.lastRiddleAnswer = null;
+                }, 300000); 
+                break;
+            
+            case '/answer':
+                if (window.lastRiddleAnswer) {
+                    response = `✅ **Answer:** ${window.lastRiddleAnswer}`;
+                    window.lastRiddleAnswer = null;
+                    clearTimeout(window.riddleTimeout);
+                } else {
+                    response = "❌ No active riddle. Type `/riddle` first!";
+                }
+                break;
+            
+            case '/compliment':
+                response = getRandomCompliment();
+                break;
+            
+            case '/echo':
+                if (!args) {
+                    response = "❌ Please type something to echo!\n\nExample: `/echo Hello World`";
+                } else {
+                    response = `📢 **Echo:**\n"${args}"`;
+                }
+                break;
+            
+            case '/say':
+                if (!args) {
+                    response = "❌ Please tell me what to say!\n\nExample: `/say I love coding`";
+                } else {
+                    response = `🗣️ **${BOT_CONFIG.AI_BOT_NAME} says:**\n"${args}"`;
+                }
+                break;
+            
+            case '/botinfo':
+                response = getBotInfo();
+                break;
+            
+            default:
+                response = `❌ **Unknown command:** \`${cmd}\`\n\nType \`/help\` to see all available commands.`;
+        }
+    } catch (error) {
+        console.error('Command error:', error);
+        response = "❌ Sorry, something went wrong. Please try again.";
     }
     
     await sendBotResponse(response);
+}
+
+function getWeatherResponse() {
+    const cities = ['Manila', 'Cebu', 'Davao', 'Quezon City', 'Makati'];
+    const conditions = ['☀️ Sunny', '⛅ Partly Cloudy', '☁️ Cloudy', '🌧️ Rainy', '⛈️ Thunderstorm', '🌈 Clear'];
+    const randomCity = cities[Math.floor(Math.random() * cities.length)];
+    const randomCondition = conditions[Math.floor(Math.random() * conditions.length)];
+    const temp = Math.floor(Math.random() * 15) + 25;
+    const humidity = Math.floor(Math.random() * 30) + 60;
+    const wind = Math.floor(Math.random() * 20) + 5;
+    
+    return `🌤️ **Weather in ${randomCity}**\n\n` +
+           `🌡️ Temperature: ${temp}°C\n` +
+           `☁️ Condition: ${randomCondition}\n` +
+           `💧 Humidity: ${humidity}%\n` +
+           `💨 Wind: ${wind} km/h`;
+}
+
+function getBotInfo() {
+    return `🤖 **${BOT_CONFIG.AI_BOT_NAME}**\n\n` +
+           `📌 **Version:** 2.0.0\n` +
+           `📅 **Created:** February 2026\n` +
+           `⚙️ **Commands:** ${Object.keys(BOT_CONFIG.COMMANDS).length}\n` +
+           `💬 **Language:** JavaScript/Firebase\n` +
+           `🧠 **AI Engine:** BrainShop API + Smart Fallback\n\n` +
+           `✨ **Features:**\n` +
+           `• 🎉 Auto-welcome in Group Chat\n` +
+           `• 💬 Natural conversations\n` +
+           `• 🎮 Games & Fun commands\n` +
+           `• 💡 Inspirational quotes\n` +
+           `• 🔍 Random facts\n\n` +
+           `Type \`/help\` to see all commands!`;
 }
 
 function getHelpMessage() {
@@ -329,34 +395,52 @@ function getHelpMessage() {
     help += "━━━━━━━━━━━━━━━━━━━━━\n\n";
     
     const categories = {
-        "📖 Basic": ["/help", "/ai", "/ping", "/botinfo"],
-        "🕐 Time & Date": ["/time", "/date", "/weather"],
-        "🧮 Utilities": ["/calc", "/echo", "/say"],
-        "🎮 Fun": ["/joke", "/roll", "/flip", "/riddle", "/answer"],
-        "💡 Inspiration": ["/quote", "/motivate", "/advice", "/compliment"],
-        "🔍 Knowledge": ["/fact"]
+        "📖 **BASIC**": ["/help", "/ai", "/ping", "/botinfo"],
+        "🕐 **TIME & DATE**": ["/time", "/date", "/weather"],
+        "🧮 **UTILITIES**": ["/calc", "/echo", "/say"],
+        "🎮 **FUN & GAMES**": ["/joke", "/roll", "/flip", "/riddle", "/answer"],
+        "💡 **INSPIRATION**": ["/quote", "/motivate", "/advice", "/compliment"],
+        "🔍 **KNOWLEDGE**": ["/fact"]
     };
     
     Object.entries(categories).forEach(([category, cmds]) => {
-        help += `**${category}**\n`;
+        help += `${category}\n`;
         cmds.forEach(cmd => {
-            help += `  ${cmd} - ${BOT_CONFIG.COMMANDS[cmd] || "No description"}\n`;
+            const desc = BOT_CONFIG.COMMANDS[cmd] || "No description";
+            help += `  \`${cmd}\` - ${desc}\n`;
         });
         help += "\n";
     });
     
     help += "━━━━━━━━━━━━━━━━━━━━━\n";
-    help += "💡 *You can also just chat with me normally!*\n";
-    help += "✨ *I'll respond like a real AI!*";
+    help += "💡 **Tips:**\n";
+    help += "• You can also just chat with me normally!\n";
+    help += "• I respond to greetings and questions\n";
+    help += "• Try asking \"How are you?\" or \"What's your name?\"\n";
+    help += "• Commands are case-insensitive\n";
     
     return help;
 }
 
+const responseCache = new Map();
+
 async function getAIResponse(message) {
+
+    const cacheKey = `${currentUser.uid}:${message}`;
+    if (responseCache.has(cacheKey)) {
+        return responseCache.get(cacheKey);
+    }
+    
     try {
         const response = await fetch(`https://api.brainshop.ai/get?bid=176117&key=sX5A5sTheH8Tz8BR&uid=${currentUser.uid}&msg=${encodeURIComponent(message)}`);
         const data = await response.json();
-        return data.cnt || getSmartResponse(message);
+        
+        let botResponse = data.cnt || getSmartResponse(message);
+        
+        responseCache.set(cacheKey, botResponse);
+        setTimeout(() => responseCache.delete(cacheKey), 3600000);
+        
+        return botResponse;
     } catch (error) {
         console.error('AI API error:', error);
         return getSmartResponse(message);
@@ -367,59 +451,80 @@ function getSmartResponse(message) {
     const msg = message.toLowerCase().trim();
     const name = currentUser?.displayName?.split(' ')[0] || 'there';
     
-    if (msg.match(/^(hi|hello|hey|hola|kamusta|musta)/)) {
+    if (msg.match(/^(hi|hello|hey|hola|kamusta|musta|good morning|good afternoon|good evening)/)) {
         const greetings = [
             `Hello ${name}! 👋 How can I help you today?`,
             `Hey ${name}! What's up? 😊`,
             `Hi there ${name}! Nice to see you! 🌟`,
             `Hello! How's your day going? 💫`,
-            `Hey! I'm here to help! 🤖`
+            `Hey ${name}! I'm here to help! 🤖`,
+            `Hi ${name}! What can I do for you? ✨`
         ];
         return greetings[Math.floor(Math.random() * greetings.length)];
     }
     
-    if (msg.includes('how are you') || msg.includes('kamusta ka')) {
+    if (msg.includes('how are you') || msg.includes('kamusta ka') || msg.includes('musta ka')) {
         return `I'm doing great, ${name}! Thanks for asking! 😊 How about you?`;
     }
     
     if (msg.includes('your name') || msg.includes('who are you') || msg.includes('sino ka')) {
-        return `I'm **${BOT_CONFIG.AI_BOT_NAME}**, your personal AI assistant! 🤖`;
+        return `I'm **${BOT_CONFIG.AI_BOT_NAME}**, your personal AI assistant! 🤖 Created to help you with commands, answer questions, and have fun conversations!`;
     }
     
-    if (msg.includes('thank') || msg.includes('salamat')) {
-        return `You're welcome, ${name}! 😊`;
+    if (msg.includes('thank') || msg.includes('salamat') || msg.includes('thanks')) {
+        const thanks = [
+            `You're welcome, ${name}! 😊`,
+            `Anytime! Happy to help! 🌟`,
+            `No problem at all! ✨`,
+            `Glad I could help! 💫`,
+            `You got it! 👍`
+        ];
+        return thanks[Math.floor(Math.random() * thanks.length)];
     }
     
-    if (msg.includes('bye') || msg.includes('goodbye') || msg.includes('paalam')) {
+    if (msg.includes('bye') || msg.includes('goodbye') || msg.includes('paalam') || msg.includes('sige')) {
         return `Goodbye, ${name}! 👋 Come back anytime!`;
     }
     
-    if (msg.includes('love') || msg.includes('mahal') || msg.includes('❤️')) {
+    if (msg.includes('love') || msg.includes('mahal') || msg.includes('❤️') || msg.includes('heart')) {
         return `Aww, that's so sweet! ❤️ I love chatting with you too, ${name}!`;
     }
     
-    if (msg.includes('how old') || msg.includes('your age')) {
+    if (msg.includes('how old') || msg.includes('your age') || msg.includes('edad')) {
         return `I was born just recently! 🎂 But I'm learning new things every day!`;
     }
     
-    if (msg.includes('where are you from') || msg.includes('taga saan')) {
+    if (msg.includes('where are you from') || msg.includes('taga saan') || msg.includes('origin')) {
         return `I live in the cloud! ☁️ I'm everywhere and nowhere at the same time. Pretty cool, right? 😎`;
     }
     
-    if (msg.includes('can you help') || msg.includes('tulong')) {
-        return `Of course I can help! 🤝 Just tell me what you need. You can also type **/help** to see all my commands!`;
+    if (msg.includes('can you help') || msg.includes('tulong') || msg.includes('help me')) {
+        return `Of course I can help! 🤝 Just tell me what you need.\n\nYou can also type \`/help\` to see all my commands!`;
     }
     
-    if (msg.includes('what can you do') || msg.includes('anong kaya mo')) {
+    if (msg.includes('what can you do') || msg.includes('anong kaya mo') || msg.includes('capabilities')) {
         return `I can do lots of things! 🚀\n\n` +
-               `• Answer questions with /ai\n` +
-               `• Tell jokes (/joke) and facts (/fact)\n` +
-               `• Calculate math (/calc)\n` +
-               `• Check time and date (/time, /date)\n` +
-               `• Play games (/roll, /flip, /riddle)\n` +
-               `• Give you motivation (/motivate, /quote)\n` +
-               `• And much more!\n\n` +
-               `Type **/help** to see all commands! 📖`;
+               `• 🤖 Answer questions with \`/ai\`\n` +
+               `• 😂 Tell jokes with \`/joke\`\n` +
+               `• 🔍 Share facts with \`/fact\`\n` +
+               `• 🧮 Calculate with \`/calc\`\n` +
+               `• 🕐 Check time/date with \`/time\` and \`/date\`\n` +
+               `• 🎲 Play games with \`/roll\` and \`/flip\`\n` +
+               `• 💡 Give motivation with \`/motivate\` and \`/quote\`\n` +
+               `• 🧩 Solve riddles with \`/riddle\`\n\n` +
+               `Type \`/help\` to see all commands! 📖`;
+    }
+    
+    if (msg.includes('how to use') || msg.includes('paano') || msg.includes('how do i')) {
+        return `Using me is easy! 🎯\n\n` +
+               `• Type \`/help\` to see all commands\n` +
+               `• Type \`/ai [question]\` to ask me anything\n` +
+               `• Just chat with me normally!\n\n` +
+               `Try saying "Hello" or "Tell me a joke"! 😊`;
+    }
+    
+    if (msg.includes('who created you') || msg.includes('sino gumawa') || msg.includes('your creator')) {
+        return `I was created by **ARI**! 👨‍💻 He's a awesome developer who built me to help and entertain people in Mini Messenger! 🚀`;
     }
     
     const defaultResponses = [
@@ -429,27 +534,31 @@ function getSmartResponse(message) {
         `Hmm, let me think about that... 🤖`,
         `Great question! I'm still learning, but I'll do my best to help! ✨`,
         `I understand! Is there anything specific you'd like to ask? 📝`,
-        `Cool! 😎 Want to try some commands? Type /help to see what I can do!`,
+        `Cool! 😎 Want to try some commands? Type \`/help\` to see what I can do!`,
         `Interesting perspective! Tell me more about that! 🌟`,
         `Got it! What's next? 🚀`,
-        `I'm here to help! Just let me know what you need! 🤝`
+        `I'm here to help! Just let me know what you need! 🤝`,
+        `That's a good point! 👍`,
+        `I never thought of it that way! 💭`,
+        `Thanks for teaching me something new! 📚`
     ];
     
     return defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
 }
 
+
 function calculateExpression(expr) {
-    if (!expr) return "❌ Please enter an expression!\nExample: /calc 2 + 2";
+    if (!expr) return "❌ Please enter an expression!\n\nExample: `/calc 2 + 2`";
     
     try {
         expr = expr.replace(/\s+/g, '');
         if (!/^[0-9+\-*/().]+$/.test(expr)) {
-            return "❌ Invalid expression. Use only numbers and + - * / ( )";
+            return "❌ Invalid expression. Use only numbers and `+`, `-`, `*`, `/`, `(`, `)`";
         }
         const result = eval(expr);
         return `🧮 **${expr}** = **${result}**`;
     } catch (error) {
-        return "❌ Invalid calculation. Example: /calc 2 + 2";
+        return "❌ Invalid calculation. Example: `/calc 2 + 2`";
     }
 }
 
@@ -463,9 +572,18 @@ function getRandomJoke() {
         "Why did the math book look so sad? Because it had too many problems! 📚",
         "What do you call a sleeping bull? A bulldozer! 🐂",
         "Why don't skeletons fight each other? They don't have the guts! 💀",
-        "What's the best thing about Switzerland? I don't know, but the flag is a big plus! 🇨🇭"
+        "What's the best thing about Switzerland? I don't know, but the flag is a big plus! 🇨🇭",
+        "Why did the coffee file a police report? It got mugged! ☕",
+        "What do you call a fish wearing a bowtie? Sofishticated! 🐠",
+        "Why can't you give Elsa a balloon? Because she will let it go! 🎈",
+        "What do you call a funny mountain? Hill-arious! ⛰️",
+        "Why did the bicycle fall over? Because it was two tired! 🚲",
+        "What do you call a pig that does karate? A pork chop! 🐷",
+        "Why did the golfer bring two pairs of pants? In case he got a hole in one! ⛳",
+        "What do you call a lazy kangaroo? A pouch potato! 🦘",
+        "Why did the cookie go to the doctor? Because it felt crumbly! 🍪"
     ];
-    return jokes[Math.floor(Math.random() * jokes.length)];
+    return `😂 **Joke Time!**\n\n${jokes[Math.floor(Math.random() * jokes.length)]}`;
 }
 
 function getRandomQuote() {
@@ -477,9 +595,13 @@ function getRandomQuote() {
         "🎯 \"Success is not final, failure is not fatal: it is the courage to continue that counts.\" - Winston Churchill",
         "✨ \"Everything you've ever wanted is on the other side of fear.\"",
         "🌈 \"Happiness is not something ready-made. It comes from your own actions.\" - Dalai Lama",
-        "⭐ \"The best time to plant a tree was 20 years ago. The second best time is now.\""
+        "⭐ \"The best time to plant a tree was 20 years ago. The second best time is now.\"",
+        "💖 \"You are never too old to set another goal or to dream a new dream.\" - C.S. Lewis",
+        "🔥 \"Don't watch the clock; do what it does. Keep going.\" - Sam Levenson",
+        "🌅 \"The only limit to our realization of tomorrow will be our doubts of today.\" - Franklin D. Roosevelt",
+        "🎨 \"Creativity is intelligence having fun.\" - Albert Einstein"
     ];
-    return quotes[Math.floor(Math.random() * quotes.length)];
+    return `💡 **Inspirational Quote**\n\n${quotes[Math.floor(Math.random() * quotes.length)]}`;
 }
 
 function getRandomFact() {
@@ -492,9 +614,18 @@ function getRandomFact() {
         "🍌 Bananas are technically berries, but strawberries aren't.",
         "🐙 Octopuses have three hearts and blue blood.",
         "🎵 The longest recorded flight of a chicken is 13 seconds.",
-        "🌊 90% of all volcanic activity occurs in the oceans."
+        "🌊 90% of all volcanic activity occurs in the oceans.",
+        "🕷️ There's a species of spider that can't spin webs - the huntsman spider.",
+        "🐬 Dolphins give each other names and respond to them!",
+        "🌿 Bamboo is the fastest growing plant - it can grow 35 inches in a single day!",
+        "📚 The shortest war in history lasted only 38 minutes between Britain and Zanzibar.",
+        "🍫 Chocolate was once used as currency by the Aztecs.",
+        "🎮 The first video game was created in 1958 - it was called 'Tennis for Two'.",
+        "🧀 The most expensive cheese in the world is made from donkey milk.",
+        "🐌 Snails can sleep for 3 years straight.",
+        "🍅 Tomatoes are actually fruits, not vegetables."
     ];
-    return facts[Math.floor(Math.random() * facts.length)];
+    return `🔍 **Did You Know?**\n\n${facts[Math.floor(Math.random() * facts.length)]}`;
 }
 
 function getMotivationalMessage() {
@@ -508,9 +639,11 @@ function getMotivationalMessage() {
         "🌈 **Every day is a second chance.** Make it count!",
         "⭐ **You are stronger than you think.** Keep pushing forward!",
         "💖 **Be your own biggest fan.** The world needs what you have to offer!",
-        "🎯 **Small steps every day** lead to big results!"
+        "🎯 **Small steps every day** lead to big results!",
+        "🌱 **Growth takes time.** Be patient with yourself.",
+        "💎 **You are unique and valuable.** Never doubt that."
     ];
-    return messages[Math.floor(Math.random() * messages.length)];
+    return `💪 **Motivation Boost!**\n\n${messages[Math.floor(Math.random() * messages.length)]}`;
 }
 
 function getRandomAdvice() {
@@ -524,9 +657,13 @@ function getRandomAdvice() {
         "💭 **Don't compare your Chapter 1 to someone else's Chapter 20.**",
         "🌱 **Learn something new every day.** Growth is a lifelong journey!",
         "💝 **Be kind to yourself.** You're doing the best you can.",
-        "🌟 **Celebrate small victories.** They're still victories!"
+        "🌟 **Celebrate small victories.** They're still victories!",
+        "💰 **Save a little money each month.** Future you will be grateful.",
+        "📝 **Write down your thoughts.** It helps clear your mind.",
+        "🎵 **Listen to music.** It's good for your soul.",
+        "🌿 **Spend time in nature.** It reduces stress and anxiety."
     ];
-    return advices[Math.floor(Math.random() * advices.length)];
+    return `✨ **Daily Advice**\n\n${advices[Math.floor(Math.random() * advices.length)]}`;
 }
 
 function getRandomRiddle() {
@@ -538,7 +675,11 @@ function getRandomRiddle() {
         { riddle: "I'm tall when I'm young, and I'm short when I'm old. What am I?", answer: "A candle" },
         { riddle: "What has keys but can't open locks?", answer: "A piano" },
         { riddle: "What has a face and two hands but no arms or legs?", answer: "A clock" },
-        { riddle: "What gets wetter as it dries?", answer: "A towel" }
+        { riddle: "What gets wetter as it dries?", answer: "A towel" },
+        { riddle: "What has words but never speaks?", answer: "A book" },
+        { riddle: "What is always in front of you but can't be seen?", answer: "The future" },
+        { riddle: "What has a head and a tail but no body?", answer: "A coin" },
+        { riddle: "What can you break without touching it?", answer: "A promise" }
     ];
     return riddles[Math.floor(Math.random() * riddles.length)];
 }
@@ -554,28 +695,36 @@ function getRandomCompliment() {
         "🌈 **You bring out the best in others!**",
         "🔥 **You have so much potential!**",
         "🎯 **You're capable of amazing things!**",
-        "💪 **You're stronger than you know!**"
+        "💪 **You're stronger than you know!**",
+        "🎨 **You have great taste!**",
+        "💎 **You're a gem!**",
+        "🌺 **You make the world better just by being in it!**"
     ];
-    return compliments[Math.floor(Math.random() * compliments.length)];
+    return `💝 **Compliment for You!**\n\n${compliments[Math.floor(Math.random() * compliments.length)]}`;
 }
+
 
 async function sendBotResponse(response) {
     if (!currentUser) return;
     
-    const chatId = [currentUser.uid, BOT_CONFIG.AI_BOT_ID].sort().join('_');
-    
-    await db.collection('privateChats').doc(chatId)
-        .collection('messages').add({
-            text: response,
-            senderId: BOT_CONFIG.AI_BOT_ID,
-            senderName: BOT_CONFIG.AI_BOT_NAME,
-            senderPhoto: BOT_CONFIG.AI_BOT_PHOTO,
-            receiverId: currentUser.uid,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-            read: false,
-            isBotMessage: true,
-            botType: 'ai'
-        });
+    try {
+        const chatId = [currentUser.uid, BOT_CONFIG.AI_BOT_ID].sort().join('_');
+        
+        await db.collection('privateChats').doc(chatId)
+            .collection('messages').add({
+                text: response,
+                senderId: BOT_CONFIG.AI_BOT_ID,
+                senderName: BOT_CONFIG.AI_BOT_NAME,
+                senderPhoto: BOT_CONFIG.AI_BOT_PHOTO,
+                receiverId: currentUser.uid,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                read: false,
+                isBotMessage: true,
+                botType: 'ai'
+            });
+    } catch (error) {
+        console.error('❌ Error sending bot response:', error);
+    }
 }
 
 async function handleAIConversation(message) {
@@ -584,15 +733,27 @@ async function handleAIConversation(message) {
 }
 
 async function initBots() {
-    await initWelcomeBot();
-    await initAIBot();
+    console.log('🤖 Initializing bot system...');
     
-    listenToNewMembers();      
-    listenToAIBotMessages();   
-    
-    console.log('🤖✅ All bots initialized!');
-    console.log('🎉 Welcome Bot - GC ONLY (Auto welcome)');
-    console.log('🧠 AI Bot - PM ONLY (Full commands)');
+    try {
+        await initWelcomeBot();
+        await initAIBot();
+        
+        setTimeout(() => {
+            listenToNewMembers();
+            listenToAIBotMessages();
+            console.log('🤖✅ All bots initialized and ready!');
+            console.log('🎉 Welcome Bot - GC ONLY (Auto welcome)');
+            console.log('🧠 AI Bot - PM ONLY (Full commands)');
+        }, 500);
+        
+    } catch (error) {
+        console.error('❌ Error initializing bots:', error);
+    }
 }
 
-console.log('🤖 Bot.js loaded and ready!');
+
+console.log('🤖 Bot.js loaded and waiting for app.js...');
+
+window.initBots = initBots;
+window.BOT_CONFIG = BOT_CONFIG;
