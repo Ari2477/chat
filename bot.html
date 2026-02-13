@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mini Assistant - Ultimate AI Bot</title>
+    <title>Mini Assistant - AI Powered</title>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
@@ -164,10 +164,9 @@
 
     <script>
         /* =====================================================
-           MINI ASSISTANT v3.1 - FIXED & HARDENED VERSION
-           All APIs stabilized (CORS-safe handling + timeout)
+           YOUR ORIGINAL APIS - TOTOO AT BUHAY!
         ===================================================== */
-
+        
         const API_CONFIG = {
             gemini: "https://jrmtool-api.vercel.app/api/gemini",
             sim: {
@@ -328,72 +327,109 @@
         let userNotes = JSON.parse(localStorage.getItem('botNotes')) || [];
 
         /* =====================================================
-           GLOBAL FETCH WRAPPER (ANTI FREEZE + TIMEOUT)
+           THE MISSING PIECE - NORMALIZE API FUNCTION
+           Ito ang SOLUTION para gumana ang LAHAT ng APIs!
         ===================================================== */
 
-        async function safeFetch(url, options = {}, timeout = 15000) {
-            const controller = new AbortController();
-            const id = setTimeout(() => controller.abort(), timeout);
-
-            try {
-                const response = await fetch(url, {
-                    ...options,
-                    signal: controller.signal,
-                    headers: {
-                        "Accept": "application/json",
-                        ...(options.headers || {})
-                    }
-                });
-
-                clearTimeout(id);
-
-                const text = await response.text();
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-
-                try {
-                    return JSON.parse(text);
-                } catch {
-                    throw new Error("Invalid JSON response");
-                }
-
-            } catch (error) {
-                clearTimeout(id);
-                throw error;
+        function normalizeAPI(data) {
+            if (!data) {
+                return { success: false, reply: "Empty response from server." };
             }
+
+            if (data.error) {
+                return { success: false, reply: data.error };
+            }
+
+            const reply =
+                data.response ||
+                data.message ||
+                data.reply ||
+                data.result ||
+                data.text ||
+                null;
+
+            if (!reply) {
+                return { success: false, reply: "No reply from API." };
+            }
+
+            return { success: true, reply: reply };
         }
 
         /* =====================================================
-           GEMINI AI
+           FIXED: GEMINI AI - USING NORMALIZEAPI
         ===================================================== */
 
         async function fetchGemini(prompt, imageUrl = "") {
             try {
                 const url = `${API_CONFIG.gemini}?ask=${encodeURIComponent(prompt)}&imagurl=${encodeURIComponent(imageUrl)}`;
-                const data = await safeFetch(url);
+                
+                console.log("Fetching Gemini:", url);
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                    }
+                });
 
-                return data.response || data.message || data.text || "No response received.";
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log("Gemini raw data:", data);
+
+                // GAMITIN ANG NORMALIZEAPI
+                const normalized = normalizeAPI(data);
+                
+                if (normalized.success) {
+                    return normalized.reply;
+                } else {
+                    return "❌ " + normalized.reply;
+                }
+                
             } catch (err) {
-                console.error("Gemini Error:", err);
-                return "❌ Gemini AI unavailable (server sleeping or CORS).";
+                console.error("Gemini Error Details:", err);
+                return "❌ Gemini AI is having trouble connecting. Please try again.";
             }
         }
 
         /* =====================================================
-           SIMSIMI
+           FIXED: SIMSIMI - USING NORMALIZEAPI
         ===================================================== */
 
         async function fetchSimSimi(message) {
             try {
                 const url = `${API_CONFIG.sim.url}?query=${encodeURIComponent(message)}&apikey=${API_CONFIG.sim.key}`;
-                const data = await safeFetch(url);
+                
+                console.log("Fetching SimSimi:", url);
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                    }
+                });
 
-                return data.message || data.response || data.text || "No reply.";
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log("SimSimi raw data:", data);
+
+                // GAMITIN ANG NORMALIZEAPI
+                const normalized = normalizeAPI(data);
+                
+                if (normalized.success) {
+                    return normalized.reply;
+                } else {
+                    return "❌ " + normalized.reply;
+                }
+                
             } catch (err) {
-                console.error("SimSimi Error:", err);
-                return "❌ SimSimi unavailable.";
+                console.error("SimSimi Error Details:", err);
+                return "❌ SimSimi service is temporarily unavailable. Please try again.";
             }
         }
 
@@ -412,13 +448,14 @@
                 });
 
                 const data = await response.json();
+                console.log("IMGBB response:", data);
 
-                if (!data.success) throw new Error("Upload failed");
+                if (!data.success) throw new Error(data.error?.message || "Upload failed");
 
                 return data.data.url;
             } catch (err) {
                 console.error("Upload Error:", err);
-                throw new Error("Image upload failed.");
+                throw new Error("Image upload failed: " + err.message);
             }
         }
 
@@ -428,7 +465,12 @@
 
         async function defineWord(word) {
             try {
-                const data = await safeFetch(`${API_CONFIG.dictionary}/${encodeURIComponent(word)}`);
+                const response = await fetch(`${API_CONFIG.dictionary}/${encodeURIComponent(word)}`);
+                const data = await response.json();
+                
+                if (data.title === "No Definitions Found") {
+                    return `❌ No definition found for "${word}".`;
+                }
 
                 let result = `📖 **${word}**\n\n`;
                 data[0].meanings.forEach(m => {
@@ -442,7 +484,7 @@
 
                 return result;
             } catch {
-                return `❌ No definition found for "${word}".`;
+                return `❌ Could not find definition for "${word}".`;
             }
         }
 
@@ -452,7 +494,9 @@
 
         async function getSynonyms(word) {
             try {
-                const data = await safeFetch(`${API_CONFIG.datamuse}?rel_syn=${encodeURIComponent(word)}&max=10`);
+                const response = await fetch(`${API_CONFIG.datamuse}?rel_syn=${encodeURIComponent(word)}&max=10`);
+                const data = await response.json();
+                
                 if (!data.length) return `❌ No synonyms found for "${word}".`;
 
                 return "🔤 **Synonyms:**\n" + data.map((w,i)=>`${i+1}. ${w.word}`).join("\n");
@@ -463,7 +507,9 @@
 
         async function getAntonyms(word) {
             try {
-                const data = await safeFetch(`${API_CONFIG.datamuse}?rel_ant=${encodeURIComponent(word)}&max=10`);
+                const response = await fetch(`${API_CONFIG.datamuse}?rel_ant=${encodeURIComponent(word)}&max=10`);
+                const data = await response.json();
+                
                 if (!data.length) return `❌ No antonyms found for "${word}".`;
 
                 return "🔄 **Antonyms:**\n" + data.map((w,i)=>`${i+1}. ${w.word}`).join("\n");
@@ -723,7 +769,7 @@
         }
 
         /* =====================================================
-           COMMAND PROCESSOR (CLEANED)
+           COMMAND PROCESSOR
         ===================================================== */
 
         function getHelp() {
@@ -851,7 +897,7 @@ Created by **ARI** with ❤️
             if (cmd === "/synonym" && args) return await getSynonyms(args);
             if (cmd === "/antonym" && args) return await getAntonyms(args);
 
-            // AI
+            // AI - USING YOUR API with NORMALIZE
             if (cmd === "/ai" && args) {
                 const res = await fetchGemini(args);
                 return "🤖 **AI says:**\n" + res;
@@ -860,7 +906,7 @@ Created by **ARI** with ❤️
                 return "❌ Add a question. Example: /ai what is love?";
             }
 
-            // SimSimi
+            // SimSimi - USING YOUR API with NORMALIZE
             if (cmd === "/sim" && args) {
                 const res = await fetchSimSimi(args);
                 return "💬 **SimSimi says:**\n" + res;
@@ -897,6 +943,7 @@ Created by **ARI** with ❤️
                 addBotMessage(reply, false);
 
             } catch (err) {
+                console.error("Send error:", err);
                 hideTyping();
                 addBotMessage("❌ Unexpected error occurred.", false);
             }
