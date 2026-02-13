@@ -728,32 +728,6 @@ body.light-mode .user-item:hover {
     }
 }
 
-.messages-container::before,
-#pm-messages::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 40px;
-    background: linear-gradient(to bottom, #0e0f16, transparent);
-    pointer-events: none;
-    z-index: 5;
-}
-
-.messages-container::after,
-#pm-messages::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 40px;
-    background: linear-gradient(to top, #0e0f16, transparent);
-    pointer-events: none;
-    z-index: 5;
-}
-
 .message {
     display: flex;
     align-items: flex-end;
