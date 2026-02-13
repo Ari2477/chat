@@ -78,8 +78,8 @@
             <button class="quick-reply-btn" onclick="sendQuickReply('/sim Hello')">
                 <i class="fas fa-comment"></i> /sim
             </button>
-            <button class="quick-reply-btn" onclick="sendQuickReply('/botinfo')">
-                <i class="fas fa-info-circle"></i> /botinfo
+            <button class="quick-reply-btn" onclick="sendQuickReply('/ai what is this?')">
+                <i class="fas fa-image"></i> /ai + image
             </button>
         </div>
 
@@ -101,19 +101,22 @@
     <script>
         const API_CONFIG = {
             ai: {
-                endpoint: "https://echoai-api-qsh3.onrender.com/chat",
-                method: "POST"
+                endpoint: "https://jrmtool-api.vercel.app/api/gemini",
+                method: "GET" 
             },
             sim: {
                 endpoint: "https://simsimi-api-pro.onrender.com/sim?query=",
                 key: "a650beda66094d58b3e5c84b664420e8f2e65edd"
+            },
+            imgbb: {
+                key: "9b8fef2118f0f35e2ae8e7113fe40ae2" // IMGBB API key
             }
         };
 
         const urlParams = new URLSearchParams(window.location.search);
         const userId = urlParams.get('userId');
         const userName = urlParams.get('userName') || 'User';
-        const userPfp = urlParams.get('userPfp') || 'https://ui-avatars.com/api/?name=User&background=4f46e5&color=fff';
+        const userPfp = urlParams.get('userPfp') || 'https://i.ibb.co/KjkPv6xw/Ilustraci-n-de-dibujos-animados-lindo-robot-agitando-la-mano-Vector-Premium.jpg';
 
         const jokes = [
             "Why don't scientists trust atoms? Because they make up everything!",
@@ -173,7 +176,7 @@
 
         function getHelpResponse() {
             return `╭────────────────────╮
-│   🤖 **BOT COMMANDS**   │
+│   🤖  BOT COMMANDS     │
 ╰────────────────────╯
 
 ╭━━━ **[ GENERAL ]** ━━━╮
@@ -186,7 +189,7 @@
 ╰━━━━━━━━━━━━━━╯
 
 ╭━━━ **[ AI & CHAT ]** ━━━╮
-┃ 🤖 \`/ai [msg]\` • Talk to advanced AI *(NEW API!)*
+┃ 🤖 \`/ai [msg]\` • Chat with AI (with image support!)
 ┃ 💬 \`/sim [msg]\` • Chat with SimSimi
 ╰━━━━━━━━━━━━━━╯
 
@@ -218,60 +221,58 @@
         }
 
         function getBotInfo() {
-            return `🤖 **BOT INFORMATION**
+            return `🤖 BOT INFORMATION 
 
 ╭━━━━━━━━━━━━━━━━━━╮
-┃ **Mini Assistant** 
-┃ Version 2.0
-┃ AI API: EchoAI
+┃ [ Mini Assistant ] 
+┃ Version 3.0
+┃ AI API: Gemini AI (with Image)
+┃ Sim API: SimSimi
 ╰━━━━━━━━━━━━━━━━━━╯
 
-📊 **STATISTICS:**
+📊 [ STATISTICS ]
 • Commands: 20+
 • Auto-responses: 200+
 • Users: Active community
 • Uptime: 24/7
 
-⚙️ **FEATURES:**
-• AI Chat
-• SimSimi Chat 
-• Jokes & Facts
-• Dictionary
-• Calculator
-• Notes
-• Timer
-• Reminder
+⚙️ [ FEATURES ]
+• 🤖 Gemini AI (with Image Analysis)
+• 💬 SimSimi Chat
+• 😂 Jokes & Facts
+• 📖 Dictionary
+• 🧮 Calculator
+• 📝 Notes
+• ⏲️ Timer
+• 🔔 Reminder
 
 🔧 **DEVELOPER:**
-Created by **ARI** with ❤️
+Created by [ ARI ] with ❤️
 Built for Mini Messenger
 
-🌐 **API STATUS:**
-• /ai: EchoAI ✅
-• /sim: SimSimi ✅
-• Others: Built-in
-
-💡 **Tip:** Type /help to see all commands!`;
+💡 **Tip:** Type /ai with an image to analyze pictures!`;
         }
 
-        async function fetchAIResponse(message) {
+        async function fetchGeminiResponse(message, imageUrl = null) {
             try {
-                const response = await fetch(API_CONFIG.ai.endpoint, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        message: message,
-                        user: userName || 'User'
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error(`API responded with status: ${response.status}`);
+                let apiUrl;
+                
+                if (imageUrl) {
+                    apiUrl = `${API_CONFIG.ai.endpoint}?ask=${encodeURIComponent(message)}&imagurl=${encodeURIComponent(imageUrl)}`;
+                } else {
+                    apiUrl = `${API_CONFIG.ai.endpoint}?ask=${encodeURIComponent(message)}&imagurl=`;
                 }
-
+                
+                console.log('Gemini URL:', apiUrl);
+                
+                const response = await fetch(apiUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`Gemini API responded with status: ${response.status}`);
+                }
+                
                 const data = await response.json();
+                console.log('Gemini Response:', data);
                 
                 if (data.response) {
                     return data.response;
@@ -281,31 +282,131 @@ Built for Mini Messenger
                     return data.text;
                 } else if (typeof data === 'string') {
                     return data;
+                } else if (data.error) {
+                    return `❌ ${data.error}`;
                 } else {
                     return "I'm here to help! What would you like to know?";
                 }
             } catch (error) {
-                console.error('AI API error:', error);
+                console.error('Gemini API error:', error);
                 const fallbacks = [
-                    "That's interesting! Tell me more.",
-                    "I understand. What else would you like to know?",
-                    "Great question! Let me think about that.",
-                    "I'm here to help! What else can I do for you?",
-                    "Thanks for sharing that with me!"
+                    "I'm having trouble processing that right now. Please try again!",
+                    "The AI service is busy. Let's try again in a moment.",
+                    "I couldn't analyze that. Make sure your message is clear!",
+                    "Sorry, I'm experiencing technical difficulties. Please try again later."
                 ];
-                return `🤖 **EchoAI says:**\n${fallbacks[Math.floor(Math.random() * fallbacks.length)]}`;
+                return fallbacks[Math.floor(Math.random() * fallbacks.length)];
             }
+        }
+
+        
+        async function uploadImageToIMGBB(file) {
+            return new Promise((resolve, reject) => {
+                const formData = new FormData();
+                formData.append('image', file);
+                
+                fetch(`https://api.imgbb.com/1/upload?key=${API_CONFIG.imgbb.key}`, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        resolve(data.data.url);
+                    } else {
+                        reject(data.error);
+                    }
+                })
+                .catch(reject);
+            });
+        }
+
+        async function handleAICommand(args) {
+            if (!args) {
+                return "❌ Please provide a prompt. Example: /ai what is in this image?";
+            }
+
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            
+            return new Promise((resolve) => {
+                input.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) {
+                        resolve("❌ No image selected.");
+                        return;
+                    }
+
+                    addBotMessage(`📤 Uploading image...`, false, true);
+                    
+                    try {
+                        const imageUrl = await uploadImageToIMGBB(file);
+                        
+                        const messagesDiv = document.getElementById('botMessages');
+                        const lastMessage = messagesDiv.lastChild;
+                        if (lastMessage && lastMessage.textContent.includes('Uploading image')) {
+                            lastMessage.remove();
+                        }
+                        
+                        const userMessageDiv = document.createElement('div');
+                        userMessageDiv.className = 'bot-message-wrapper user';
+                        userMessageDiv.innerHTML = `
+                            <div class="bot-message-content">
+                                <div class="bot-message-text">
+                                    <img src="${imageUrl}" class="message-image" style="max-width: 200px; max-height: 200px; border-radius: 10px; margin-bottom: 10px;">
+                                    <br>
+                                    <strong>Prompt:</strong> ${args}
+                                </div>
+                                <div class="bot-message-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                            </div>
+                        `;
+                        messagesDiv.appendChild(userMessageDiv);
+                        
+                        showBotTyping();
+                        
+                        const response = await fetchGeminiResponse(args, imageUrl);
+                        
+                        removeBotTyping();
+                        resolve(`🤖 [ AI says: ]\n${response}`);
+                        
+                    } catch (error) {
+                        console.error('Upload error:', error);
+                        removeBotTyping();
+                        resolve("❌ Failed to upload image. Please try again.");
+                    }
+                };
+                
+                input.click();
+
+                resolve("📸 Select an image to analyze...");
+            });
         }
 
         async function fetchSimSimiResponse(message) {
             try {
-                const url = `${API_CONFIG.sim.endpoint}${encodeURIComponent(message)}&key=${API_CONFIG.sim.key}`;
+                const url = `${API_CONFIG.sim.endpoint}${encodeURIComponent(message)}&apikey=${API_CONFIG.sim.key}`;
+                
                 const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`SimSimi API responded with status: ${response.status}`);
+                }
+                
                 const data = await response.json();
-                return data.message || "Sorry, I don't understand.";
+                
+                if (data.message) {
+                    return data.message;
+                } else if (data.response) {
+                    return data.response;
+                } else if (data.text) {
+                    return data.text;
+                } else {
+                    return "I'm not sure how to respond to that.";
+                }
             } catch (error) {
                 console.error('SimSimi error:', error);
-                return "💬 SimSimi service unavailable. Please try again later.";
+                return "💬 SimSimi service is temporarily unavailable. Please try again later.";
             }
         }
 
@@ -319,7 +420,7 @@ Built for Mini Messenger
                 }
 
                 const entry = data[0];
-                let definition = `📖 **Definition of "${word}":**\n\n`;
+                let definition = `📖 [ Definition of "${word}": ]\n\n`;
                 
                 entry.meanings.forEach((meaning, i) => {
                     definition += `*${meaning.partOfSpeech}*\n`;
@@ -347,7 +448,7 @@ Built for Mini Messenger
                     return `❌ No synonyms found for "${word}".`;
                 }
 
-                let result = `🔤 **Synonyms for "${word}":**\n`;
+                let result = `🔤 [ Synonyms for "${word}": ]\n`;
                 data.forEach((item, i) => {
                     result += `${i + 1}. ${item.word}\n`;
                 });
@@ -366,7 +467,7 @@ Built for Mini Messenger
                     return `❌ No antonyms found for "${word}".`;
                 }
 
-                let result = `🔄 **Antonyms for "${word}":**\n`;
+                let result = `🔄 [ Antonyms for "${word}": ]\n`;
                 data.forEach((item, i) => {
                     result += `${i + 1}. ${item.word}\n`;
                 });
@@ -376,6 +477,7 @@ Built for Mini Messenger
             }
         }
 
+        
         function getJoke() {
             return jokes[Math.floor(Math.random() * jokes.length)];
         }
@@ -391,13 +493,14 @@ Built for Mini Messenger
         function calculate(expression) {
             try {
                 const result = Function('"use strict";return (' + expression + ')')();
-                return `🧮 **Result:** ${expression} = ${result}`;
+                return `🧮 [ Result: ] ${expression} = ${result}`;
             } catch {
                 return "❌ Invalid math expression!";
             }
         }
 
         const autoResponses = {
+            
             'hello': 'Hello! 👋 How can I help you today?',
             'hi': 'Hi there! 🌟 What\'s up?',
             'hey': 'Hey! 😊 Nice to see you!',
@@ -406,22 +509,27 @@ Built for Mini Messenger
             'good evening': 'Good evening! 🌙 Ready to chat?',
             'good night': 'Good night! 😴 Sleep well!',
 
+            
             'who is your creator': 'My creator is **ARI**! 👑 He\'s an amazing developer! Type /botinfo for more details!',
             'who made you': 'I was created by **ARI**! 🚀 He\'s the mastermind behind my code!',
             'your creator': '**ARI** is my creator! 💻 He designed me to be your helpful assistant!',
 
+            
             'what is your name': 'I\'m **Mini Assistant**! 🤖 Your friendly AI helper!',
             'your name': 'My name is **Mini Assistant**! 📛 What\'s yours?',
             'who are you': 'I\'m **Mini Assistant**, an AI bot created to help you! 🌟',
 
+        
             'thank you': 'You\'re very welcome! 😊 Anything else?',
             'thanks': 'My pleasure! 🌟 Happy to help!',
             'thank': 'You\'re welcome! 👍',
+            
             
             'goodbye': 'Goodbye! 👋 Come back anytime!',
             'bye': 'Bye bye! 🎈 It was nice chatting with you!',
             'see you later': 'See you later! 🌟 Take care!',
 
+            
             'default1': 'That\'s interesting! Tell me more! 👂',
             'default2': 'I understand. What else would you like to know? 🤔',
             'default3': 'Great point! Let\'s chat more! 😊',
@@ -605,14 +713,23 @@ Built for Mini Messenger
                 return await getAntonyms(args);
             }
 
-            if (command === '/ai' && args) {
-                const response = await fetchAIResponse(args);
-                return `🤖 **AI says:**\n${response}`;
+            if (command === '/ai') {
+                if (args) {
+                    const wantsImage = confirm("📸 Do you want to include an image with your question?");
+                    if (wantsImage) {
+                        return await handleAICommand(args);
+                    } else {
+                        const response = await fetchGeminiResponse(args);
+                        return `🤖 [ AI says: ]\n${response}`;
+                    }
+                } else {
+                    return "❌ Please provide a prompt. Example: /ai what is in this image?";
+                }
             }
 
             if (command === '/sim' && args) {
                 const response = await fetchSimSimiResponse(args);
-                return `💬 **SimSimi says:**\n${response}`;
+                return `💬 [ SimSimi says: ]\n${response}`;
             }
 
             return null;
@@ -665,7 +782,7 @@ Built for Mini Messenger
         document.addEventListener('DOMContentLoaded', function() {
             if (userName !== 'User') {
                 setTimeout(() => {
-                    addBotMessage(`Welcome back, ${userName}! 👋 I'm your assistant! Type /help to see all commands!`, false, true);
+                    addBotMessage(`Welcome back, ${userName}! 👋 I'm now using Gemini AI with image analysis! Type /help to see all commands!`, false, true);
                 }, 500);
             }
         });
