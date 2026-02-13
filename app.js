@@ -1,4 +1,3 @@
-
 let currentUser = null;
 let currentPMUser = null;
 let unsubscribeGC = null;
@@ -16,12 +15,353 @@ let currentMessageForForward = null;
 let recognition = null;
 let isRecording = false;
 
-// GROUP CHAT ID
+let mediaRecorder = null;
+let audioChunks = [];
+let recordingStartTime = null;
+let recordingTimer = null;
+let currentAudioBlob = null;
+let currentAudioUrl = null;
+let audioPlayer = null;
+let isPlaying = false;
+let currentVoiceMessageId = null;
+
+function initVoicePlayer() {
+    audioPlayer = document.getElementById('voice-audio-player');
+    if (!audioPlayer) return;
+    
+    audioPlayer.addEventListener('timeupdate', updateWaveformProgress);
+    audioPlayer.addEventListener('ended', onVoicePlayEnd);
+    audioPlayer.addEventListener('loadedmetadata', onVoiceLoaded);
+}
+
+async function startVoiceRecording(isGC = true) {
+    try {
+        if (!navigator.mediaDevices || !window.MediaRecorder) {
+            showToast('Voice recording not supported in this browser', 'error');
+            return;
+        }
+
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+            } 
+        });
+
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+
+        mediaRecorder.ondataavailable = (event) => {
+            audioChunks.push(event.data);
+        };
+
+        mediaRecorder.onstop = async () => {
+            
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            currentAudioBlob = audioBlob;
+
+            stream.getTracks().forEach(track => track.stop());
+
+            await sendVoiceMessage(audioBlob, isGC);
+
+            stopRecordingIndicator();
+        };
+
+        mediaRecorder.start();
+        recordingStartTime = Date.now();
+
+        showRecordingIndicator();
+
+        startRecordingTimer();
+        
+        console.log('🎤 Recording started');
+        
+    } catch (error) {
+        console.error('❌ Recording error:', error);
+        showToast('Microphone access denied or not available', 'error');
+    }
+}
+
+function showRecordingIndicator() {
+    let indicator = document.getElementById('voice-recording-indicator');
+    
+    if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.id = 'voice-recording-indicator';
+        indicator.className = 'voice-recording';
+        indicator.innerHTML = `
+            <i class="fas fa-microphone"></i>
+            <span class="voice-timer">0:00</span>
+            <button onclick="stopVoiceRecording()" class="stop-recording">
+                <i class="fas fa-stop"></i> Send
+            </button>
+        `;
+        document.body.appendChild(indicator);
+    }
+    
+    indicator.classList.remove('hidden');
+}
+
+function stopVoiceRecording() {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+    }
+    
+    stopRecordingIndicator();
+}
+
+function stopRecordingIndicator() {
+    const indicator = document.getElementById('voice-recording-indicator');
+    if (indicator) {
+        indicator.classList.add('hidden');
+    }
+    
+    if (recordingTimer) {
+        clearInterval(recordingTimer);
+        recordingTimer = null;
+    }
+}
+
+function startRecordingTimer() {
+    recordingTimer = setInterval(() => {
+        if (!recordingStartTime) return;
+        
+        const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+        const minutes = Math.floor(elapsed / 60);
+        const seconds = elapsed % 60;
+        const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        
+        const timerEl = document.querySelector('.voice-timer');
+        if (timerEl) {
+            timerEl.textContent = timeString;
+        }
+
+        if (elapsed >= 300) {
+            stopVoiceRecording();
+            showToast('Maximum recording time reached', 'info');
+        }
+    }, 1000);
+}
+
+async function sendVoiceMessage(audioBlob, isGC = true) {
+    try {
+        showToast('📤 Uploading voice message...', 'info');
+
+        const base64Audio = await blobToBase64(audioBlob);
+
+        const duration = await getAudioDuration(audioBlob);
+
+        const waveformData = generateWaveformData();
+        
+        if (isGC) {
+            await db.collection('groupChats').doc(GROUP_CHAT_ID)
+                .collection('messages').add({
+                    type: 'voice',
+                    audioData: base64Audio,
+                    duration: duration,
+                    waveformData: waveformData,
+                    senderId: currentUser.uid,
+                    senderName: currentUser.displayName || 'User',
+                    senderPhoto: currentUser.photoURL || '',
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+        } else {
+            if (!currentPMUser) {
+                showToast('Select a user first', 'error');
+                return;
+            }
+            
+            const chatId = [currentUser.uid, currentPMUser.id].sort().join('_');
+            
+            await db.collection('privateChats').doc(chatId)
+                .collection('messages').add({
+                    type: 'voice',
+                    audioData: base64Audio,
+                    duration: duration,
+                    waveformData: waveformData,
+                    senderId: currentUser.uid,
+                    senderName: currentUser.displayName || 'You',
+                    senderPhoto: currentUser.photoURL || '',
+                    receiverId: currentPMUser.id,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    read: false
+                });
+        }
+        
+        showToast('✅ Voice message sent!', 'success');
+        
+    } catch (error) {
+        console.error('❌ Error sending voice message:', error);
+        showToast('Failed to send voice message', 'error');
+    }
+}
+
+function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+}
+
+function getAudioDuration(blob) {
+    return new Promise((resolve) => {
+        const audio = new Audio();
+        audio.src = URL.createObjectURL(blob);
+        audio.onloadedmetadata = () => {
+            resolve(Math.round(audio.duration));
+            URL.revokeObjectURL(audio.src);
+        };
+    });
+}
+
+function generateWaveformData() {
+    const data = [];
+    for (let i = 0; i < 50; i++) {
+        data.push(Math.floor(Math.random() * 40) + 10);
+    }
+    return data;
+}
+
+function playVoiceMessage(audioData, messageId, waveformData = null) {
+    try {
+        const audio = new Audio(audioData);
+        currentAudioUrl = audioData;
+        currentVoiceMessageId = messageId;
+
+        const modal = document.getElementById('voice-player-modal');
+        if (modal) modal.classList.add('active');
+
+        drawWaveform(waveformData || generateWaveformData());
+
+        const player = document.getElementById('voice-audio-player');
+        player.src = audioData;
+
+        player.play();
+        isPlaying = true;
+        updatePlayButton(true);
+
+        player.ontimeupdate = () => {
+            const progress = (player.currentTime / player.duration) * 100 || 0;
+            document.getElementById('voice-progress').style.width = `${progress}%`;
+            document.getElementById('current-time').textContent = formatTime(player.currentTime);
+        };
+        
+        player.onended = () => {
+            isPlaying = false;
+            updatePlayButton(false);
+            document.getElementById('voice-progress').style.width = '0%';
+            document.getElementById('current-time').textContent = '0:00';
+        };
+
+        player.onloadedmetadata = () => {
+            document.getElementById('total-time').textContent = formatTime(player.duration);
+        };
+        
+    } catch (error) {
+        console.error('❌ Error playing voice:', error);
+        showToast('Failed to play voice message', 'error');
+    }
+}
+
+function drawWaveform(waveformData) {
+    const canvas = document.getElementById('waveform-canvas');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+    
+    ctx.clearRect(0, 0, width, height);
+    
+    const barWidth = (width - 20) / waveformData.length;
+    const centerY = height / 2;
+    
+    ctx.fillStyle = '#4f46e5';
+    
+    waveformData.forEach((value, index) => {
+        const barHeight = (value / 100) * (height - 20);
+        const x = 10 + index * barWidth;
+        const y = centerY - barHeight / 2;
+        
+        ctx.fillRect(x, y, barWidth - 2, barHeight);
+    });
+}
+
+function updateWaveformProgress() {
+}
+
+function onVoicePlayEnd() {
+    isPlaying = false;
+    updatePlayButton(false);
+    document.getElementById('voice-progress').style.width = '0%';
+    document.getElementById('current-time').textContent = '0:00';
+}
+
+function onVoiceLoaded() {
+    const audio = document.getElementById('voice-audio-player');
+    if (audio) {
+        document.getElementById('total-time').textContent = formatTime(audio.duration);
+    }
+}
+
+function toggleVoicePlay() {
+    const audio = document.getElementById('voice-audio-player');
+    if (!audio) return;
+    
+    if (audio.paused) {
+        audio.play();
+        isPlaying = true;
+        updatePlayButton(true);
+    } else {
+        audio.pause();
+        isPlaying = false;
+        updatePlayButton(false);
+    }
+}
+
+function updatePlayButton(playing) {
+    const btn = document.getElementById('play-pause-btn');
+    if (!btn) return;
+    
+    if (playing) {
+        btn.innerHTML = '<i class="fas fa-pause"></i>';
+    } else {
+        btn.innerHTML = '<i class="fas fa-play"></i>';
+    }
+}
+
+function seekVoice(event) {
+    const container = event.currentTarget;
+    const rect = container.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const percentage = x / rect.width;
+    
+    const audio = document.getElementById('voice-audio-player');
+    if (audio && audio.duration) {
+        audio.currentTime = audio.duration * percentage;
+    }
+}
+
+function formatTime(seconds) {
+    if (!seconds || isNaN(seconds)) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+function generateWaveformBars() {
+    let bars = '';
+    for (let i = 0; i < 6; i++) {
+        bars += '<div class="voice-bar"></div>';
+    }
+    return bars;
+}
+
 const GROUP_CHAT_ID = "general_chat";
 
-// ============================================
-// AUTHENTICATION
-// ============================================
 firebase.auth().onAuthStateChanged(async (user) => {
     if (!user) {
         window.location.href = 'login.html';
@@ -37,9 +377,6 @@ firebase.auth().onAuthStateChanged(async (user) => {
     }
 });
 
-// ============================================
-// INITIALIZATION
-// ============================================
 async function initializeApp() {
     try {
         console.log('Initializing app for user:', currentUser.uid);
@@ -60,7 +397,6 @@ async function initializeApp() {
             };
         }
 
-        // Save user to Firestore with lastSeen
         await db.collection('users').doc(currentUser.uid).set({
             uid: currentUser.uid,
             name: currentUser.displayName || currentUser.email.split('@')[0] || 'Anonymous',
@@ -77,6 +413,8 @@ async function initializeApp() {
         setupPresence();
         setupEnterKeyListeners();
         loadTheme();
+
+        initVoicePlayer();
         
         console.log('✅ App initialized successfully');
         showToast('✅ Connected to chat!', 'success');
@@ -88,9 +426,6 @@ async function initializeApp() {
     }
 }
 
-// ============================================
-// GROUP CHAT
-// ============================================
 async function initializeGroupChat() {
     const gcRef = db.collection('groupChats').doc(GROUP_CHAT_ID);
     const gcDoc = await gcRef.get();
@@ -173,9 +508,6 @@ function loadGCInfo() {
     });
 }
 
-// ============================================
-// PINNED MESSAGES
-// ============================================
 function listenToPinnedMessage() {
     db.collection('groupChats').doc(GROUP_CHAT_ID).onSnapshot((doc) => {
         if (doc.exists) {
@@ -186,7 +518,6 @@ function listenToPinnedMessage() {
             const pinnedModal = document.getElementById('pinned-text');
             
             if (pinnedId) {
-                // Fetch the pinned message
                 db.collection('groupChats').doc(GROUP_CHAT_ID)
                     .collection('messages').doc(pinnedId)
                     .get().then((msgDoc) => {
@@ -238,9 +569,6 @@ async function unpinMessage() {
     }
 }
 
-// ============================================
-// GROUP CHAT MESSAGES WITH IMAGES & REACTIONS
-// ============================================
 function listenToGCMessages() {
     if (unsubscribeGC) unsubscribeGC();
     
@@ -315,15 +643,26 @@ function appendGCMessage(message, container, userMap = {}, messageId) {
             hour12: true
         }) : 'Just now';
 
-    // Handle image messages
     let contentHtml = '';
+    
     if (message.type === 'image') {
         contentHtml = `<img src="${escapeHTML(message.imageUrl)}" class="message-image" alt="Shared image" onclick="openImage('${escapeHTML(message.imageUrl)}')">`;
+    } else if (message.type === 'voice') {
+        contentHtml = `
+            <div class="voice-message" onclick='playVoiceMessage(\`${escapeHTML(message.audioData)}\`, "${messageId}", ${JSON.stringify(message.waveformData || [])})'>
+                <div class="voice-play-icon">
+                    <i class="fas fa-play"></i>
+                </div>
+                <div class="voice-waveform-small">
+                    ${generateWaveformBars()}
+                </div>
+                <span class="voice-duration">${formatTime(message.duration || 0)}</span>
+            </div>
+        `;
     } else {
         contentHtml = `<div class="message-text">${formatMessageText(message.text || '')}</div>`;
     }
 
-    // Handle reactions
     let reactionsHtml = '';
     if (message.reactions) {
         const reactionCounts = {};
@@ -371,9 +710,6 @@ function appendGCMessage(message, container, userMap = {}, messageId) {
     container.appendChild(messageDiv);
 }
 
-// ============================================
-// IMAGE SHARING
-// ============================================
 async function uploadImageMessage(isGC = true) {
     const input = document.createElement('input');
     input.type = 'file';
@@ -428,70 +764,6 @@ function openImage(url) {
     window.open(url, '_blank');
 }
 
-// ============================================
-// VOICE MESSAGES (Speech to Text)
-// ============================================
-function startVoiceRecording(isGC = true) {
-    if (!('webkitSpeechRecognition' in window)) {
-        showToast('Voice not supported in this browser', 'error');
-        return;
-    }
-    
-    if (isRecording) return;
-    
-    recognition = new webkitSpeechRecognition();
-    recognition.lang = 'en-US';
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    
-    const indicator = document.getElementById('voice-recording-indicator');
-    if (indicator) indicator.classList.remove('hidden');
-    
-    recognition.start();
-    isRecording = true;
-    
-    recognition.onresult = (e) => {
-        const text = e.results[0][0].transcript;
-        if (isGC) {
-            const input = document.getElementById('gc-message-input');
-            if (input) {
-                input.value = text;
-                sendGCMessage();
-            }
-        } else {
-            const input = document.getElementById('pm-message-input');
-            if (input) {
-                input.value = text;
-                sendPM();
-            }
-        }
-        stopVoiceRecording();
-    };
-    
-    recognition.onerror = (e) => {
-        console.error('Voice error:', e);
-        showToast('Voice recognition failed', 'error');
-        stopVoiceRecording();
-    };
-    
-    recognition.onend = () => {
-        stopVoiceRecording();
-    };
-}
-
-function stopVoiceRecording() {
-    if (recognition) {
-        recognition.stop();
-        recognition = null;
-    }
-    isRecording = false;
-    const indicator = document.getElementById('voice-recording-indicator');
-    if (indicator) indicator.classList.add('hidden');
-}
-
-// ============================================
-// MESSAGE REACTIONS
-// ============================================
 function showReactionPicker(messageId, isGC = true) {
     currentMessageForReaction = { messageId, isGC };
     const modal = document.getElementById('reaction-modal');
@@ -504,6 +776,11 @@ async function addReaction(reaction) {
     const { messageId, isGC } = currentMessageForReaction;
     
     try {
+        let chatId = '';
+        if (!isGC && currentPMUser) {
+            chatId = [currentUser.uid, currentPMUser.id].sort().join('_');
+        }
+        
         const collection = isGC ?
             db.collection('groupChats').doc(GROUP_CHAT_ID).collection('messages') :
             db.collection('privateChats').doc(chatId).collection('messages');
@@ -522,13 +799,9 @@ async function addReaction(reaction) {
     currentMessageForReaction = null;
 }
 
-// ============================================
-// MESSAGE FORWARDING
-// ============================================
 async function showForwardModal(messageId, text, type, imageUrl) {
     currentMessageForForward = { messageId, text, type, imageUrl };
-    
-    // Load users list
+
     const usersList = document.getElementById('forward-users-list');
     if (!usersList) return;
     
@@ -552,8 +825,7 @@ async function showForwardModal(messageId, text, type, imageUrl) {
             usersList.appendChild(userDiv);
         }
     });
-    
-    // Show preview
+
     const preview = document.getElementById('forward-message-preview');
     if (preview) {
         if (type === 'image') {
@@ -597,9 +869,6 @@ async function forwardMessageToUser(userId, userName) {
     }
 }
 
-// ============================================
-// SEARCH MESSAGES
-// ============================================
 function toggleSearch() {
     const searchBar = document.getElementById('search-bar');
     if (searchBar) {
@@ -648,7 +917,7 @@ async function performSearch(query) {
     resultsContainer.classList.remove('hidden');
     
     try {
-        // Search in group chat
+
         const gcSnapshot = await db.collection('groupChats').doc(GROUP_CHAT_ID)
             .collection('messages')
             .where('text', '>=', query)
@@ -688,9 +957,6 @@ async function performSearch(query) {
     }
 }
 
-// ============================================
-// THEME TOGGLE (DARK/LIGHT MODE)
-// ============================================
 function toggleTheme() {
     const body = document.body;
     const themeBtn = document.querySelector('.theme-btn i');
@@ -726,9 +992,6 @@ function loadTheme() {
     }
 }
 
-// ============================================
-// TYPING INDICATOR
-// ============================================
 let typingTimeout = null;
 let typingListener = null;
 
@@ -787,9 +1050,6 @@ function listenToTypingIndicator(userId) {
         });
 }
 
-// ============================================
-// USERS & PRIVATE MESSAGES
-// ============================================
 function loadUsers() {
     if (unsubscribeUsers) unsubscribeUsers();
     
@@ -905,9 +1165,6 @@ function displaySidebarUsers(users) {
     });
 }
 
-// ============================================
-// LAST SEEN FORMATTER
-// ============================================
 function formatLastSeen(timestamp) {
     if (!timestamp) return '○ Offline';
     if (!timestamp.toDate) return '○ Offline';
@@ -924,9 +1181,6 @@ function formatLastSeen(timestamp) {
     return '○ Offline';
 }
 
-// ============================================
-// UNREAD MESSAGES & BADGES
-// ============================================
 function listenToUnreadPMs() {
     if (!currentUser) return;
     
@@ -980,9 +1234,6 @@ function updateUserUnreadBadge(userId, count) {
     });
 }
 
-// ============================================
-// PRIVATE CHAT FUNCTIONS
-// ============================================
 async function openPrivateChat(user) {
     if (!user) return;
     
@@ -1092,21 +1343,31 @@ function appendPMMessage(message, container, messageId) {
             hour12: true
         }) : 'Just now';
 
-    // Handle forwarded messages
     let forwardIndicator = '';
     if (message.forwarded) {
         forwardIndicator = '<span class="forward-indicator"><i class="fas fa-share"></i> Forwarded</span>';
     }
 
-    // Handle image messages
     let contentHtml = '';
+    
     if (message.type === 'image') {
         contentHtml = `<img src="${escapeHTML(message.imageUrl)}" class="message-image" alt="Shared image" onclick="openImage('${escapeHTML(message.imageUrl)}')">`;
+    } else if (message.type === 'voice') {
+        contentHtml = `
+            <div class="voice-message" onclick='playVoiceMessage(\`${escapeHTML(message.audioData)}\`, "${messageId}", ${JSON.stringify(message.waveformData || [])})'>
+                <div class="voice-play-icon">
+                    <i class="fas fa-play"></i>
+                </div>
+                <div class="voice-waveform-small">
+                    ${generateWaveformBars()}
+                </div>
+                <span class="voice-duration">${formatTime(message.duration || 0)}</span>
+            </div>
+        `;
     } else {
         contentHtml = `<div class="message-text">${formatMessageText(message.text || '')}</div>`;
     }
 
-    // Handle reactions
     let reactionsHtml = '';
     if (message.reactions) {
         const reactionCounts = {};
@@ -1272,9 +1533,6 @@ function getTotalUnreadCount() {
     return total;
 }
 
-// ============================================
-// IMAGE UPLOAD
-// ============================================
 async function uploadImageToIMGBB(file) {
     return new Promise((resolve, reject) => {
         if (isUploading) {
@@ -1331,9 +1589,6 @@ async function uploadImageToIMGBB(file) {
     });
 }
 
-// ============================================
-// GROUP CHAT SETTINGS
-// ============================================
 async function changeGCPFP() {
     const input = document.createElement('input');
     input.type = 'file';
@@ -1455,9 +1710,6 @@ async function editGCDesc() {
     }
 }
 
-// ============================================
-// UTILITY FUNCTIONS
-// ============================================
 function showToast(message, type = 'info') {
     const existingToast = document.querySelector('.toast');
     if (existingToast) existingToast.remove();
@@ -1590,9 +1842,6 @@ async function logout() {
     }
 }
 
-// ============================================
-// SEND GROUP CHAT MESSAGE
-// ============================================
 async function sendGCMessage() {
     const input = document.getElementById('gc-message-input');
     if (!input) return;
@@ -1642,17 +1891,11 @@ async function sendGCMessage() {
     }
 }
 
-// ============================================
-// INITIALIZE SEARCH LISTENER
-// ============================================
 setTimeout(() => {
     setupSearchListener();
     setupTypingListener();
 }, 2000);
 
-// ============================================
-// TEST FUNCTION
-// ============================================
 async function testMessenger() {
     console.log('🔍 TESTING MINI MESSENGER...');
     console.log('User:', currentUser?.email);
