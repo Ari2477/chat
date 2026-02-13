@@ -467,16 +467,69 @@ async function initializeApp() {
         console.log('✅ App initialized successfully');
         showToast('✅ Connected to chat!', 'success');
         
-        // 🚨 START BOTS AFTER APP LOADS
+        // ✅ FIXED: START BOTS WITH PROPER CHECK
         setTimeout(() => {
-            initBots();
-            console.log('🤖✅ Bot system activated!');
+            if (typeof initBots === 'function') {
+                initBots();
+                console.log('🤖✅ Bot system activated!');
+            } else {
+                console.log('❌ initBots() not found! Creating bots manually...');
+                // Create bots manually
+                createBotsManually();
+            }
         }, 2000);
         
     } catch (error) {
         console.error('❌ Error initializing app:', error);
         showToast('Failed to initialize. Refreshing...', 'error');
         setTimeout(() => window.location.reload(), 2000);
+    }
+}
+
+// ✅ NEW: Manual bot creation function
+async function createBotsManually() {
+    console.log('🤖 Creating bots manually...');
+    
+    try {
+        // Create AI Bot
+        await db.collection('users').doc('ai_bot').set({
+            uid: 'ai_bot',
+            name: '🧠 AI Assistant',
+            photoURL: 'https://ui-avatars.com/api/?name=AI&background=6366f1&color=fff&size=200',
+            email: 'ai@bot.local',
+            online: true,
+            isBot: true,
+            botType: 'ai',
+            showInUserList: true,
+            lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        console.log('✅ AI Bot created');
+        
+        // Create Welcome Bot
+        await db.collection('users').doc('welcome_bot').set({
+            uid: 'welcome_bot',
+            name: '🤖 Welcome Bot',
+            photoURL: 'https://ui-avatars.com/api/?name=WB&background=4f46e5&color=fff&size=200',
+            email: 'welcome@bot.local',
+            online: true,
+            isBot: true,
+            botType: 'welcome',
+            showInUserList: false,
+            lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        console.log('✅ Welcome Bot created');
+        
+        // Force refresh users list
+        loadUsers();
+        
+        // Start listeners manually
+        listenToNewMembers();
+        if (currentUser) {
+            listenToAIBotMessages();
+        }
+        
+    } catch (error) {
+        console.error('❌ Error creating bots:', error);
     }
 }
 
@@ -2625,6 +2678,13 @@ setTimeout(() => {
     setupSearchListener();
     setupTypingListener();
 }, 2000);
+
+// ✅ EXPORT BOT FUNCTIONS TO GLOBAL SCOPE
+window.initBots = initBots;
+window.BOT_CONFIG = BOT_CONFIG;
+window.listenToAIBotMessages = listenToAIBotMessages;
+window.listenToNewMembers = listenToNewMembers;
+window.createBotsManually = createBotsManually;
 
 async function testMessenger() {
     console.log('🔍 TESTING MINI MESSENGER...');
