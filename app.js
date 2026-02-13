@@ -30,6 +30,56 @@ const BOT_IDS = {
     AI_BOT: "ai_bot"
 };
 
+const BOT_CONFIG = {
+    WELCOME_BOT_ID: "welcome_bot",
+    WELCOME_BOT_NAME: "🤖 Welcome Bot",
+    WELCOME_BOT_PHOTO: "https://ui-avatars.com/api/?name=WB&background=4f46e5&color=fff&size=200",
+    
+    AI_BOT_ID: "ai_bot",
+    AI_BOT_NAME: "🧠 AI Assistant",
+    AI_BOT_PHOTO: "https://ui-avatars.com/api/?name=AI&background=6366f1&color=fff&size=200",
+    
+    GROUP_CHAT_ID: "general_chat",
+    TYPING_DELAY: 1000,
+    
+    WELCOME_MESSAGES: [
+        "👋 Welcome {name} to World Chat! Enjoy your stay! 🎉",
+        "Hey {name}! Welcome to the group! 🎊",
+        "Glad to have you here, {name}! 🌟",
+        "Welcome aboard {name}! 🚀",
+        "Nice to see you, {name}! 👋",
+        "Welcome {name}! Hope you enjoy chatting with everyone! 😊",
+        "A wild {name} appeared! Welcome! 🎮",
+        "Welcome to the family, {name}! 💙",
+        "Everyone give a warm welcome to {name}! 👏",
+        "Welcome {name}! You're now part of the squad! 🔥"
+    ],
+    
+    COMMANDS: {
+        "/help": "📖 Show all available commands",
+        "/ai": "🤖 Talk to AI - example: /ai what is JavaScript?",
+        "/time": "🕐 Show current time",
+        "/date": "📅 Show current date",
+        "/weather": "☀️ Weather in Manila",
+        "/calc": "🧮 Calculate - example: /calc 2 + 2",
+        "/joke": "😂 Tell a random joke",
+        "/quote": "💡 Random inspirational quote",
+        "/fact": "🔍 Random interesting fact",
+        "/roll": "🎲 Roll a dice (1-6)",
+        "/flip": "🪙 Flip a coin",
+        "/ping": "🏓 Check bot response time",
+        "/motivate": "💪 Get motivational message",
+        "/advice": "✨ Get random advice",
+        "/riddle": "🧩 Solve a riddle",
+        "/compliment": "💝 Receive a compliment",
+        "/echo": "📢 Echo your message",
+        "/say": "🗣️ Make bot say something",
+        "/botinfo": "ℹ️ About AI Assistant"
+    }
+};
+
+window.BOT_CONFIG = BOT_CONFIG;
+
 function initVoicePlayer() {
     audioPlayer = document.getElementById('voice-audio-player');
     if (!audioPlayer) return;
@@ -62,24 +112,17 @@ async function startVoiceRecording(isGC = true) {
         };
 
         mediaRecorder.onstop = async () => {
-            
             const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
             currentAudioBlob = audioBlob;
-
             stream.getTracks().forEach(track => track.stop());
-
             await sendVoiceMessage(audioBlob, isGC);
-
             stopRecordingIndicator();
         };
 
         mediaRecorder.start();
         recordingStartTime = Date.now();
-
         showRecordingIndicator();
-
         startRecordingTimer();
-        
         console.log('🎤 Recording started');
         
     } catch (error) {
@@ -112,7 +155,6 @@ function stopVoiceRecording() {
     if (mediaRecorder && mediaRecorder.state !== 'inactive') {
         mediaRecorder.stop();
     }
-    
     stopRecordingIndicator();
 }
 
@@ -121,7 +163,6 @@ function stopRecordingIndicator() {
     if (indicator) {
         indicator.classList.add('hidden');
     }
-    
     if (recordingTimer) {
         clearInterval(recordingTimer);
         recordingTimer = null;
@@ -154,9 +195,7 @@ async function sendVoiceMessage(audioBlob, isGC = true) {
         showToast('📤 Uploading voice message...', 'info');
 
         const base64Audio = await blobToBase64(audioBlob);
-
         const duration = await getAudioDuration(audioBlob);
-
         const waveformData = generateWaveformData();
         
         if (isGC) {
@@ -295,8 +334,7 @@ function drawWaveform(waveformData) {
     });
 }
 
-function updateWaveformProgress() {
-}
+function updateWaveformProgress() {}
 
 function onVoicePlayEnd() {
     isPlaying = false;
@@ -418,7 +456,6 @@ async function initializeApp() {
         setupPresence();
         setupEnterKeyListeners();
         loadTheme();
-
         initVoicePlayer();
         
         console.log('✅ App initialized successfully');
@@ -427,9 +464,15 @@ async function initializeApp() {
         setTimeout(() => {
             if (typeof initBots === 'function') {
                 initBots();
-                console.log('🤖 Bot system activated!');
+                console.log('🤖✅ Bot system activated!');
             } else {
                 console.log('⏳ Waiting for bot.js to load...');
+                setTimeout(() => {
+                    if (typeof initBots === 'function') {
+                        initBots();
+                        console.log('🤖✅ Bot system activated (retry)!');
+                    }
+                }, 2000);
             }
         }, 2000);
         
@@ -1083,7 +1126,6 @@ function loadUsers() {
                             online: true
                         });
                     } 
-
                     else if (doc.id !== "welcome_bot") {
                         users.push({ 
                             id: doc.id, 
@@ -1094,6 +1136,7 @@ function loadUsers() {
                 }
             });
 
+            
             users.sort((a, b) => {
                 if (a.id === "ai_bot") return -1;
                 if (b.id === "ai_bot") return 1;
@@ -1137,7 +1180,7 @@ function displayUsers(users) {
         const statusClass = user.online ? 'online' : 'offline';
         let statusText = user.online ? '● Online' : formatLastSeen(user.lastSeen);
         
-        if (user.id === BOT_IDS.AI_BOT) {
+        if (user.id === "ai_bot") {
             statusText = '🧠 AI Assistant';
         }
         
@@ -1147,7 +1190,7 @@ function displayUsers(users) {
                      alt="${escapeHTML(user.name || 'User')}"
                      loading="lazy"
                      onerror="this.onerror=null; this.src='${escapeHTML(fallbackAvatar)}';">
-                <span class="status-indicator ${user.id === BOT_IDS.AI_BOT ? 'online' : statusClass}"></span>
+                <span class="status-indicator ${user.id === "ai_bot" ? 'online' : statusClass}"></span>
             </div>
             <div class="user-item-info">
                 <div class="user-item-name">${escapeHTML(user.name || 'User')}</div>
@@ -1181,7 +1224,7 @@ function displaySidebarUsers(users) {
         const statusClass = user.online ? 'online' : 'offline';
         let statusText = user.online ? '● Online' : formatLastSeen(user.lastSeen);
         
-        if (user.id === BOT_IDS.AI_BOT) {
+        if (user.id === "ai_bot") {
             statusText = '🧠 AI Assistant';
         }
         
@@ -1191,7 +1234,7 @@ function displaySidebarUsers(users) {
                      alt="${escapeHTML(user.name || 'User')}"
                      loading="lazy"
                      onerror="this.onerror=null; this.src='${escapeHTML(fallbackAvatar)}';">
-                <span class="status-indicator ${user.id === BOT_IDS.AI_BOT ? 'online' : statusClass}"></span>
+                <span class="status-indicator ${user.id === "ai_bot" ? 'online' : statusClass}"></span>
             </div>
             <div class="user-item-info">
                 <div class="user-item-name">${escapeHTML(user.name || 'User')}</div>
@@ -1244,7 +1287,7 @@ function listenToUnreadPMs() {
                 document.title = 'Mini Messenger';
             } else {
                 unreadMap.forEach((count, senderId) => {                   
-                    if (senderId !== BOT_IDS.AI_BOT) {
+                    if (senderId !== "ai_bot") {
                         updateUserUnreadBadge(senderId, count);
                     }
                 });
