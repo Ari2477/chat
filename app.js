@@ -1,3 +1,4 @@
+
 let currentUser = null;
 let currentPMUser = null;
 let unsubscribeGC = null;
@@ -5,10 +6,22 @@ let unsubscribePM = null;
 let unsubscribeUsers = null;
 let unsubscribeMembers = null;
 let unsubscribeUnreadPMs = null;
+let unsubscribeTyping = null;
 let isUploading = false;
+let currentTheme = 'dark';
+let searchTimeout = null;
+let currentPinnedMessageId = null;
+let currentMessageForReaction = null;
+let currentMessageForForward = null;
+let recognition = null;
+let isRecording = false;
 
+// GROUP CHAT ID
 const GROUP_CHAT_ID = "general_chat";
 
+// ============================================
+// AUTHENTICATION
+// ============================================
 firebase.auth().onAuthStateChanged(async (user) => {
     if (!user) {
         window.location.href = 'login.html';
@@ -24,6 +37,9 @@ firebase.auth().onAuthStateChanged(async (user) => {
     }
 });
 
+// ============================================
+// INITIALIZATION
+// ============================================
 async function initializeApp() {
     try {
         console.log('Initializing app for user:', currentUser.uid);
@@ -44,6 +60,7 @@ async function initializeApp() {
             };
         }
 
+        // Save user to Firestore with lastSeen
         await db.collection('users').doc(currentUser.uid).set({
             uid: currentUser.uid,
             name: currentUser.displayName || currentUser.email.split('@')[0] || 'Anonymous',
@@ -55,14 +72,11 @@ async function initializeApp() {
         }, { merge: true });
 
         await initializeGroupChat();
-
         loadUsers();
-
         listenToUnreadPMs();
-
         setupPresence();
-        
         setupEnterKeyListeners();
+        loadTheme();
         
         console.log('✅ App initialized successfully');
         showToast('✅ Connected to chat!', 'success');
@@ -74,6 +88,9 @@ async function initializeApp() {
     }
 }
 
+// ============================================
+// GROUP CHAT
+// ============================================
 async function initializeGroupChat() {
     const gcRef = db.collection('groupChats').doc(GROUP_CHAT_ID);
     const gcDoc = await gcRef.get();
@@ -86,7 +103,8 @@ async function initializeGroupChat() {
             createdBy: currentUser.uid,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             members: [currentUser.uid],
-            memberCount: 1
+            memberCount: 1,
+            pinnedMessage: null
         });
     } else {
         const members = gcDoc.data().members || [];
@@ -101,6 +119,7 @@ async function initializeGroupChat() {
     loadGCInfo();
     listenToGCMessages();
     listenToGCMembers();
+    listenToPinnedMessage();
 }
 
 function loadGCInfo() {
@@ -137,10 +156,91 @@ function loadGCInfo() {
                 const el = document.getElementById(id);
                 if (el) el.textContent = `${memberCount} members`;
             });
+
+            // Created date
+            if (data.createdAt) {
+                const date = data.createdAt.toDate();
+                const createdEl = document.getElementById('gc-created');
+                if (createdEl) {
+                    createdEl.textContent = date.toLocaleDateString('en-US', {
+                        month: 'long',
+                        day: 'numeric',
+                        year: 'numeric'
+                    });
+                }
+            }
         }
     });
 }
 
+// ============================================
+// PINNED MESSAGES
+// ============================================
+function listenToPinnedMessage() {
+    db.collection('groupChats').doc(GROUP_CHAT_ID).onSnapshot((doc) => {
+        if (doc.exists) {
+            const data = doc.data();
+            const pinnedId = data.pinnedMessage;
+            const pinnedEl = document.getElementById('pinned-message');
+            const pinnedContent = document.getElementById('pinned-content');
+            const pinnedModal = document.getElementById('pinned-text');
+            
+            if (pinnedId) {
+                // Fetch the pinned message
+                db.collection('groupChats').doc(GROUP_CHAT_ID)
+                    .collection('messages').doc(pinnedId)
+                    .get().then((msgDoc) => {
+                        if (msgDoc.exists) {
+                            const msg = msgDoc.data();
+                            if (pinnedEl) {
+                                pinnedEl.classList.remove('hidden');
+                                pinnedContent.innerHTML = `<span>📌 ${escapeHTML(msg.text || 'Image message')}</span>`;
+                            }
+                            if (pinnedModal) {
+                                pinnedModal.textContent = msg.text || 'Image message';
+                            }
+                            currentPinnedMessageId = pinnedId;
+                        }
+                    });
+            } else {
+                if (pinnedEl) pinnedEl.classList.add('hidden');
+                if (pinnedModal) pinnedModal.textContent = 'No pinned message';
+                currentPinnedMessageId = null;
+            }
+        }
+    });
+}
+
+async function pinMessage(messageId, messageText) {
+    if (!currentUser) return;
+    
+    try {
+        await db.collection('groupChats').doc(GROUP_CHAT_ID).update({
+            pinnedMessage: messageId,
+            pinnedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            pinnedBy: currentUser.uid
+        });
+        showToast('📌 Message pinned!', 'success');
+    } catch (error) {
+        console.error('Error pinning message:', error);
+        showToast('Failed to pin message', 'error');
+    }
+}
+
+async function unpinMessage() {
+    try {
+        await db.collection('groupChats').doc(GROUP_CHAT_ID).update({
+            pinnedMessage: null
+        });
+        showToast('📌 Message unpinned', 'info');
+    } catch (error) {
+        console.error('Error unpinning message:', error);
+    }
+}
+
+// ============================================
+// GROUP CHAT MESSAGES WITH IMAGES & REACTIONS
+// ============================================
 function listenToGCMessages() {
     if (unsubscribeGC) unsubscribeGC();
     
@@ -176,7 +276,7 @@ function listenToGCMessages() {
                 
                 snapshot.forEach((doc) => {
                     const message = doc.data();
-                    appendGCMessage(message, messagesContainer, userMap);
+                    appendGCMessage(message, messagesContainer, userMap, doc.id);
                 });
                 
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -188,9 +288,10 @@ function listenToGCMessages() {
         });
 }
 
-function appendGCMessage(message, container, userMap = {}) {
+function appendGCMessage(message, container, userMap = {}, messageId) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${message.senderId === currentUser?.uid ? 'sent' : 'received'}`;
+    messageDiv.id = `msg-${messageId}`;
 
     let senderName = message.senderName || 'Unknown';
     let senderPhoto = message.senderPhoto || '';
@@ -213,6 +314,29 @@ function appendGCMessage(message, container, userMap = {}) {
             minute: '2-digit',
             hour12: true
         }) : 'Just now';
+
+    // Handle image messages
+    let contentHtml = '';
+    if (message.type === 'image') {
+        contentHtml = `<img src="${escapeHTML(message.imageUrl)}" class="message-image" alt="Shared image" onclick="openImage('${escapeHTML(message.imageUrl)}')">`;
+    } else {
+        contentHtml = `<div class="message-text">${formatMessageText(message.text || '')}</div>`;
+    }
+
+    // Handle reactions
+    let reactionsHtml = '';
+    if (message.reactions) {
+        const reactionCounts = {};
+        Object.values(message.reactions).forEach(r => {
+            reactionCounts[r] = (reactionCounts[r] || 0) + 1;
+        });
+        
+        reactionsHtml = '<div class="message-reactions">';
+        Object.entries(reactionCounts).forEach(([reaction, count]) => {
+            reactionsHtml += `<span class="reaction-badge" onclick="addReaction('${messageId}', '${reaction}', true)">${reaction} ${count}</span>`;
+        });
+        reactionsHtml += '</div>';
+    }
     
     messageDiv.innerHTML = `
         <div class="message-avatar">
@@ -223,149 +347,449 @@ function appendGCMessage(message, container, userMap = {}) {
         </div>
         <div class="message-content">
             <div class="message-sender">${escapeHTML(message.senderId === currentUser?.uid ? 'You' : senderName)}</div>
-            <div class="message-text">${formatMessageText(message.text || '')}</div>
-            <div class="message-time">${time}</div>
+            ${contentHtml}
+            ${reactionsHtml}
+            <div class="message-footer">
+                <span class="message-time">${time}</span>
+                <div class="message-actions">
+                    <button onclick="showReactionPicker('${messageId}', true)" class="action-btn" title="React">
+                        <i class="fas fa-smile"></i>
+                    </button>
+                    <button onclick="showForwardModal('${messageId}', '${message.text || ''}', '${message.type || 'text'}', '${message.imageUrl || ''}')" class="action-btn" title="Forward">
+                        <i class="fas fa-share"></i>
+                    </button>
+                    ${message.senderId === currentUser?.uid ? `
+                        <button onclick="pinMessage('${messageId}', '${escapeHTML(message.text || '')}')" class="action-btn" title="Pin">
+                            <i class="fas fa-thumbtack"></i>
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
         </div>
     `;
     
     container.appendChild(messageDiv);
 }
 
-function formatMessageText(text) {
-    if (!text) return '';
+// ============================================
+// IMAGE SHARING
+// ============================================
+async function uploadImageMessage(isGC = true) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        try {
+            showToast('📤 Uploading image...', 'info');
+            const imageUrl = await uploadImageToIMGBB(file);
+            
+            if (isGC) {
+                await db.collection('groupChats').doc(GROUP_CHAT_ID)
+                    .collection('messages').add({
+                        type: 'image',
+                        imageUrl: imageUrl,
+                        senderId: currentUser.uid,
+                        senderName: currentUser.displayName || 'User',
+                        senderPhoto: currentUser.photoURL || '',
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+            } else {
+                if (!currentPMUser) {
+                    showToast('Select a user first', 'error');
+                    return;
+                }
+                const chatId = [currentUser.uid, currentPMUser.id].sort().join('_');
+                await db.collection('privateChats').doc(chatId)
+                    .collection('messages').add({
+                        type: 'image',
+                        imageUrl: imageUrl,
+                        senderId: currentUser.uid,
+                        senderName: currentUser.displayName || 'You',
+                        senderPhoto: currentUser.photoURL || '',
+                        receiverId: currentPMUser.id,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                        read: false
+                    });
+            }
+            showToast('✅ Image sent!', 'success');
+        } catch (error) {
+            console.error('Error uploading image:', error);
+            showToast('Failed to upload image', 'error');
+        }
+    };
+    input.click();
+}
 
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    text = text.replace(urlRegex, '<a href="$1" target="_blank" rel="noopener noreferrer" class="message-link">$1</a>');
+function openImage(url) {
+    window.open(url, '_blank');
+}
 
-    text = text.replace(/\n/g, '<br>');
-
-    const emojiMap = {
-        ':)': '😊',
-        ':(': '😢',
-        ':D': '😃',
-        ';)': '😉',
-        '<3': '❤️',
-        'lol': '😂',
-        'omg': '😱',
-        ':p': '😋',
-        ':P': '😋'
+// ============================================
+// VOICE MESSAGES (Speech to Text)
+// ============================================
+function startVoiceRecording(isGC = true) {
+    if (!('webkitSpeechRecognition' in window)) {
+        showToast('Voice not supported in this browser', 'error');
+        return;
+    }
+    
+    if (isRecording) return;
+    
+    recognition = new webkitSpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    
+    const indicator = document.getElementById('voice-recording-indicator');
+    if (indicator) indicator.classList.remove('hidden');
+    
+    recognition.start();
+    isRecording = true;
+    
+    recognition.onresult = (e) => {
+        const text = e.results[0][0].transcript;
+        if (isGC) {
+            const input = document.getElementById('gc-message-input');
+            if (input) {
+                input.value = text;
+                sendGCMessage();
+            }
+        } else {
+            const input = document.getElementById('pm-message-input');
+            if (input) {
+                input.value = text;
+                sendPM();
+            }
+        }
+        stopVoiceRecording();
     };
     
-    Object.keys(emojiMap).forEach(key => {
-        const regex = new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-        text = text.replace(regex, emojiMap[key]);
-    });
+    recognition.onerror = (e) => {
+        console.error('Voice error:', e);
+        showToast('Voice recognition failed', 'error');
+        stopVoiceRecording();
+    };
     
-    return text;
+    recognition.onend = () => {
+        stopVoiceRecording();
+    };
 }
 
-async function sendGCMessage() {
-    const input = document.getElementById('gc-message-input');
-    if (!input) return;
-    
-    const text = input.value.trim();
-    if (!text) {
-        showToast('Please type a message', 'error');
-        return;
+function stopVoiceRecording() {
+    if (recognition) {
+        recognition.stop();
+        recognition = null;
     }
-    
-    if (!currentUser) {
-        showToast('You are not logged in', 'error');
-        return;
-    }
+    isRecording = false;
+    const indicator = document.getElementById('voice-recording-indicator');
+    if (indicator) indicator.classList.add('hidden');
+}
 
-    input.disabled = true;
-    const sendBtn = document.querySelector('#gc-view .send-btn');
-    if (sendBtn) {
-        sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-        sendBtn.disabled = true;
-    }
+// ============================================
+// MESSAGE REACTIONS
+// ============================================
+function showReactionPicker(messageId, isGC = true) {
+    currentMessageForReaction = { messageId, isGC };
+    const modal = document.getElementById('reaction-modal');
+    if (modal) modal.classList.add('active');
+}
 
-    input.value = '';
+async function addReaction(reaction) {
+    if (!currentMessageForReaction) return;
+    
+    const { messageId, isGC } = currentMessageForReaction;
     
     try {
-        const gcRef = db.collection('groupChats').doc(GROUP_CHAT_ID);
-        const gcDoc = await gcRef.get();
+        const collection = isGC ?
+            db.collection('groupChats').doc(GROUP_CHAT_ID).collection('messages') :
+            db.collection('privateChats').doc(chatId).collection('messages');
         
-        if (!gcDoc.exists) {
-            await gcRef.set({
-                name: 'World Chat 🌏',
-                description: 'Welcome to the group! 👋',
-                photoURL: 'https://i.ibb.co/qYky078V/Screenshot-20260212-134936-1.jpg',
-                createdBy: currentUser.uid,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                members: [currentUser.uid],
-                memberCount: 1
-            });
-        }
-
-        await gcRef.collection('messages').add({
-            text: text,
-            senderId: currentUser.uid,
-            senderName: currentUser.displayName || currentUser.email.split('@')[0] || 'User',
-            senderPhoto: currentUser.photoURL || '',
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        await collection.doc(messageId).update({
+            [`reactions.${currentUser.uid}`]: reaction
+        }, { merge: true });
         
-        console.log('✅ Message sent successfully');
-        
+        showToast(`Reacted ${reaction}`, 'success');
     } catch (error) {
-        console.error('❌ Error sending message:', error);
-        showToast('Failed to send message', 'error');
+        console.error('Error adding reaction:', error);
+        showToast('Failed to add reaction', 'error');
+    }
+    
+    closeModal('reaction-modal');
+    currentMessageForReaction = null;
+}
 
-        input.value = text;
-    } finally {
-        input.disabled = false;
-        input.focus();
-        if (sendBtn) {
-            sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
-            sendBtn.disabled = false;
+// ============================================
+// MESSAGE FORWARDING
+// ============================================
+async function showForwardModal(messageId, text, type, imageUrl) {
+    currentMessageForForward = { messageId, text, type, imageUrl };
+    
+    // Load users list
+    const usersList = document.getElementById('forward-users-list');
+    if (!usersList) return;
+    
+    const snapshot = await db.collection('users').get();
+    usersList.innerHTML = '';
+    
+    snapshot.forEach(doc => {
+        if (doc.id !== currentUser.uid) {
+            const user = doc.data();
+            const userDiv = document.createElement('div');
+            userDiv.className = 'user-item';
+            userDiv.onclick = () => forwardMessageToUser(doc.id, user.name);
+            userDiv.innerHTML = `
+                <div class="user-item-avatar">
+                    <img src="${user.photoURL || `https://ui-avatars.com/api/?name=${user.name?.charAt(0) || 'U'}&background=4f46e5&color=fff&size=100`}">
+                </div>
+                <div class="user-item-info">
+                    <div class="user-item-name">${escapeHTML(user.name || 'User')}</div>
+                </div>
+            `;
+            usersList.appendChild(userDiv);
+        }
+    });
+    
+    // Show preview
+    const preview = document.getElementById('forward-message-preview');
+    if (preview) {
+        if (type === 'image') {
+            preview.innerHTML = `<img src="${imageUrl}" class="forward-preview-image">`;
+        } else {
+            preview.innerHTML = `<p>${escapeHTML(text)}</p>`;
+        }
+    }
+    
+    const modal = document.getElementById('forward-modal');
+    if (modal) modal.classList.add('active');
+}
+
+async function forwardMessageToUser(userId, userName) {
+    if (!currentMessageForForward) return;
+    
+    const { text, type, imageUrl } = currentMessageForForward;
+    const chatId = [currentUser.uid, userId].sort().join('_');
+    
+    try {
+        await db.collection('privateChats').doc(chatId)
+            .collection('messages').add({
+                text: type === 'image' ? '📷 Image' : text,
+                type: type,
+                imageUrl: imageUrl,
+                senderId: currentUser.uid,
+                senderName: currentUser.displayName || 'You',
+                senderPhoto: currentUser.photoURL || '',
+                receiverId: userId,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                read: false,
+                forwarded: true,
+                forwardedFrom: currentPMUser?.name || 'Unknown'
+            });
+        
+        showToast(`✅ Forwarded to ${userName}`, 'success');
+        closeModal('forward-modal');
+    } catch (error) {
+        console.error('Error forwarding message:', error);
+        showToast('Failed to forward message', 'error');
+    }
+}
+
+// ============================================
+// SEARCH MESSAGES
+// ============================================
+function toggleSearch() {
+    const searchBar = document.getElementById('search-bar');
+    if (searchBar) {
+        searchBar.classList.toggle('hidden');
+        if (!searchBar.classList.contains('hidden')) {
+            document.getElementById('search-input')?.focus();
+        } else {
+            document.getElementById('search-results')?.classList.add('hidden');
         }
     }
 }
 
-function listenToGCMembers() {
-    if (unsubscribeMembers) unsubscribeMembers();
+function closeSearch() {
+    const searchBar = document.getElementById('search-bar');
+    const searchResults = document.getElementById('search-results');
+    if (searchBar) searchBar.classList.add('hidden');
+    if (searchResults) searchResults.classList.add('hidden');
+}
+
+function setupSearchListener() {
+    const searchInput = document.getElementById('search-input');
+    if (!searchInput) return;
     
-    unsubscribeMembers = db.collection('groupChats')
-        .doc(GROUP_CHAT_ID)
-        .onSnapshot(async (doc) => {
+    searchInput.addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        const query = e.target.value.trim();
+        
+        if (query.length < 2) {
+            document.getElementById('search-results')?.classList.add('hidden');
+            return;
+        }
+        
+        searchTimeout = setTimeout(() => {
+            performSearch(query);
+        }, 500);
+    });
+}
+
+async function performSearch(query) {
+    if (!currentUser) return;
+    
+    const resultsContainer = document.getElementById('search-results');
+    if (!resultsContainer) return;
+    
+    resultsContainer.innerHTML = '<div class="search-loading">Searching...</div>';
+    resultsContainer.classList.remove('hidden');
+    
+    try {
+        // Search in group chat
+        const gcSnapshot = await db.collection('groupChats').doc(GROUP_CHAT_ID)
+            .collection('messages')
+            .where('text', '>=', query)
+            .where('text', '<=', query + '\uf8ff')
+            .orderBy('text')
+            .limit(10)
+            .get();
+        
+        let results = [];
+        gcSnapshot.forEach(doc => {
+            results.push({
+                ...doc.data(),
+                id: doc.id,
+                chatType: 'Group Chat'
+            });
+        });
+        
+        if (results.length === 0) {
+            resultsContainer.innerHTML = '<div class="no-results">No messages found</div>';
+        } else {
+            resultsContainer.innerHTML = '<h4>Search Results</h4>';
+            results.forEach(msg => {
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'search-result-item';
+                resultDiv.onclick = () => scrollToMessage(msg.id);
+                resultDiv.innerHTML = `
+                    <div class="search-result-sender">${escapeHTML(msg.senderName || 'User')}</div>
+                    <div class="search-result-text">${escapeHTML(msg.text || '')}</div>
+                    <div class="search-result-time">${msg.chatType}</div>
+                `;
+                resultsContainer.appendChild(resultDiv);
+            });
+        }
+    } catch (error) {
+        console.error('Search error:', error);
+        resultsContainer.innerHTML = '<div class="search-error">Search failed</div>';
+    }
+}
+
+// ============================================
+// THEME TOGGLE (DARK/LIGHT MODE)
+// ============================================
+function toggleTheme() {
+    const body = document.body;
+    const themeBtn = document.querySelector('.theme-btn i');
+    
+    if (body.classList.contains('light-mode')) {
+        body.classList.remove('light-mode');
+        localStorage.setItem('messenger-theme', 'dark');
+        if (themeBtn) {
+            themeBtn.classList.remove('fa-sun');
+            themeBtn.classList.add('fa-moon');
+        }
+    } else {
+        body.classList.add('light-mode');
+        localStorage.setItem('messenger-theme', 'light');
+        if (themeBtn) {
+            themeBtn.classList.remove('fa-moon');
+            themeBtn.classList.add('fa-sun');
+        }
+    }
+}
+
+function loadTheme() {
+    const savedTheme = localStorage.getItem('messenger-theme') || 'dark';
+    const body = document.body;
+    const themeBtn = document.querySelector('.theme-btn i');
+    
+    if (savedTheme === 'light') {
+        body.classList.add('light-mode');
+        if (themeBtn) {
+            themeBtn.classList.remove('fa-moon');
+            themeBtn.classList.add('fa-sun');
+        }
+    }
+}
+
+// ============================================
+// TYPING INDICATOR
+// ============================================
+let typingTimeout = null;
+let typingListener = null;
+
+function setupTypingListener() {
+    const pmInput = document.getElementById('pm-message-input');
+    if (!pmInput) return;
+    
+    pmInput.addEventListener('input', () => {
+        if (!currentPMUser) return;
+        sendTypingIndicator();
+    });
+}
+
+async function sendTypingIndicator() {
+    if (!currentPMUser) return;
+    
+    const chatId = [currentUser.uid, currentPMUser.id].sort().join('_');
+    
+    try {
+        await db.collection('privateChats').doc(chatId).update({
+            [`typing.${currentUser.uid}`]: true,
+            [`typingTimestamp.${currentUser.uid}`]: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(async () => {
+            await db.collection('privateChats').doc(chatId).update({
+                [`typing.${currentUser.uid}`]: false
+            });
+        }, 2000);
+    } catch (error) {
+        console.error('Error sending typing indicator:', error);
+    }
+}
+
+function listenToTypingIndicator(userId) {
+    if (typingListener) typingListener();
+    
+    const chatId = [currentUser.uid, userId].sort().join('_');
+    
+    typingListener = db.collection('privateChats').doc(chatId)
+        .onSnapshot((doc) => {
             if (doc.exists) {
-                const members = doc.data().members || [];
-                const membersList = document.getElementById('members-list');
-                if (!membersList) return;
+                const data = doc.data();
+                const isTyping = data.typing?.[userId] || false;
+                const typingEl = document.getElementById('typing-indicator');
                 
-                membersList.innerHTML = '';
-                
-                for (const memberId of members) {
-                    const userDoc = await db.collection('users').doc(memberId).get();
-                    if (userDoc.exists) {
-                        const user = userDoc.data();
-                        const firstLetter = (user.name || 'User').charAt(0).toUpperCase();
-                        const fallbackAvatar = `https://ui-avatars.com/api/?name=${firstLetter}&background=4f46e5&color=fff&size=100&bold=true`;
-                        const avatarUrl = user.photoURL || fallbackAvatar;
-                        
-                        const memberDiv = document.createElement('div');
-                        memberDiv.className = 'member-item';
-                        memberDiv.innerHTML = `
-                            <div class="member-avatar">
-                                <img src="${escapeHTML(avatarUrl)}" 
-                                     alt="${escapeHTML(user.name || 'User')}"
-                                     loading="lazy"
-                                     onerror="this.onerror=null; this.src='${escapeHTML(fallbackAvatar)}';">
-                            </div>
-                            <div class="member-info">
-                                <div class="member-name">${escapeHTML(user.name || 'User')}</div>
-                                <div class="member-role">${memberId === currentUser?.uid ? '👑 You' : '👤 Member'}</div>
-                            </div>
-                        `;
-                        membersList.appendChild(memberDiv);
+                if (typingEl) {
+                    if (isTyping) {
+                        typingEl.classList.remove('hidden');
+                    } else {
+                        typingEl.classList.add('hidden');
                     }
                 }
             }
         });
 }
 
+// ============================================
+// USERS & PRIVATE MESSAGES
+// ============================================
 function loadUsers() {
     if (unsubscribeUsers) unsubscribeUsers();
     
@@ -421,7 +845,7 @@ function displayUsers(users) {
         const avatarUrl = user.photoURL || fallbackAvatar;
         
         const statusClass = user.online ? 'online' : 'offline';
-        const statusText = user.online ? '● Online' : '○ Offline';
+        const statusText = user.online ? '● Online' : formatLastSeen(user.lastSeen);
         
         userDiv.innerHTML = `
             <div class="user-item-avatar">
@@ -430,7 +854,6 @@ function displayUsers(users) {
                      loading="lazy"
                      onerror="this.onerror=null; this.src='${escapeHTML(fallbackAvatar)}';">
                 <span class="status-indicator ${statusClass}"></span>
-                <!-- BADGE WILL BE ADDED VIA JAVASCRIPT -->
             </div>
             <div class="user-item-info">
                 <div class="user-item-name">${escapeHTML(user.name || 'User')}</div>
@@ -462,7 +885,7 @@ function displaySidebarUsers(users) {
         const avatarUrl = user.photoURL || fallbackAvatar;
         
         const statusClass = user.online ? 'online' : 'offline';
-        const statusText = user.online ? '● Online' : '○ Offline';
+        const statusText = user.online ? '● Online' : formatLastSeen(user.lastSeen);
         
         userDiv.innerHTML = `
             <div class="user-item-avatar">
@@ -471,7 +894,6 @@ function displaySidebarUsers(users) {
                      loading="lazy"
                      onerror="this.onerror=null; this.src='${escapeHTML(fallbackAvatar)}';">
                 <span class="status-indicator ${statusClass}"></span>
-                <!-- BADGE WILL BE ADDED VIA JAVASCRIPT -->
             </div>
             <div class="user-item-info">
                 <div class="user-item-name">${escapeHTML(user.name || 'User')}</div>
@@ -483,31 +905,43 @@ function displaySidebarUsers(users) {
     });
 }
 
+// ============================================
+// LAST SEEN FORMATTER
+// ============================================
+function formatLastSeen(timestamp) {
+    if (!timestamp) return '○ Offline';
+    if (!timestamp.toDate) return '○ Offline';
+    
+    const lastSeen = timestamp.toDate();
+    const now = new Date();
+    const diffSeconds = Math.floor((now - lastSeen) / 1000);
+    
+    if (diffSeconds < 60) return '○ Just now';
+    if (diffSeconds < 3600) return `○ ${Math.floor(diffSeconds / 60)}m ago`;
+    if (diffSeconds < 86400) return `○ ${Math.floor(diffSeconds / 3600)}h ago`;
+    if (diffSeconds < 604800) return `○ ${Math.floor(diffSeconds / 86400)}d ago`;
+    
+    return '○ Offline';
+}
+
+// ============================================
+// UNREAD MESSAGES & BADGES
+// ============================================
 function listenToUnreadPMs() {
-    if (!currentUser) {
-        console.log('❌ No current user');
-        return;
-    }
+    if (!currentUser) return;
     
-    console.log('🔔 REAL TIME Listening to unread messages for:', currentUser.uid);
-    
-    if (unsubscribeUnreadPMs) {
-        unsubscribeUnreadPMs();
-    }
+    if (unsubscribeUnreadPMs) unsubscribeUnreadPMs();
 
     unsubscribeUnreadPMs = db.collectionGroup('messages')
         .where('receiverId', '==', currentUser.uid)
         .where('read', '==', false)
         .onSnapshot((snapshot) => {
-            console.log(`📨 REAL TIME: ${snapshot.size} unread messages`);
-            
             const unreadMap = new Map();
             
             snapshot.forEach(doc => {
                 const msg = doc.data();
                 const senderId = msg.senderId;
                 unreadMap.set(senderId, (unreadMap.get(senderId) || 0) + 1);
-                console.log(`📩 Unread from ${senderId}: ${unreadMap.get(senderId)}`);
             });
 
             document.querySelectorAll('.user-item-avatar .unread-badge').forEach(badge => {
@@ -524,8 +958,6 @@ function listenToUnreadPMs() {
                 const totalUnread = Array.from(unreadMap.values()).reduce((a, b) => a + b, 0);
                 document.title = `(${totalUnread}) Mini Messenger`;
             }
-        }, (error) => {
-            console.error('❌ REAL TIME Error:', error);
         });
 }
 
@@ -537,127 +969,25 @@ function updateUserUnreadBadge(userId, count) {
         if (!avatarContainer) return;
 
         const existingBadge = avatarContainer.querySelector('.unread-badge');
-        if (existingBadge) {
-            existingBadge.remove();
-        }
+        if (existingBadge) existingBadge.remove();
 
         if (count > 0) {
             const badge = document.createElement('span');
             badge.className = 'unread-badge';
             badge.textContent = count > 99 ? '99+' : count;
-            badge.style.display = 'flex';
-            badge.style.position = 'absolute';
-            badge.style.top = '-6px';
-            badge.style.right = '-6px';
-            badge.style.minWidth = '22px';
-            badge.style.height = '22px';
-            badge.style.background = '#ef4444';
-            badge.style.color = 'white';
-            badge.style.borderRadius = '22px';
-            badge.style.padding = '0 6px';
-            badge.style.fontSize = '12px';
-            badge.style.fontWeight = '700';
-            badge.style.border = '2px solid white';
-            badge.style.boxShadow = '0 2px 8px rgba(239, 68, 68, 0.5)';
-            badge.style.zIndex = '999';
-            badge.style.animation = 'pulse 2s infinite';
-            
             avatarContainer.appendChild(badge);
-            console.log(`✅ Badge added for ${userId}: ${count}`);
         }
     });
 }
 
-async function markMessagesAsRead(senderId) {
-    if (!currentUser || !senderId) {
-        console.log('❌ No current user or senderId');
-        return;
-    }
-    
-    const chatId = [currentUser.uid, senderId].sort().join('_');
-    console.log(`📖 Marking messages as read for chat: ${chatId}`);
-    
-    try {
-        const messagesRef = db.collection('privateChats')
-            .doc(chatId)
-            .collection('messages')
-            .where('receiverId', '==', currentUser.uid)
-            .where('read', '==', false);
-        
-        const snapshot = await messagesRef.get();
-        
-        if (snapshot.size > 0) {
-            console.log(`📖 Found ${snapshot.size} unread messages`);
-
-            const batch = db.batch();
-            snapshot.forEach(doc => {
-                batch.update(doc.ref, { 
-                    read: true,
-                    readAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-            });
-            
-            await batch.commit();
-            console.log(`✅ REAL TIME: Marked ${snapshot.size} messages as read`);
-
-            updateUserUnreadBadge(senderId, 0);
-
-            const unreadSnapshot = await db.collectionGroup('messages')
-                .where('receiverId', '==', currentUser.uid)
-                .where('read', '==', false)
-                .get();
-            
-            console.log(`📨 Remaining unread: ${unreadSnapshot.size}`);
-            
-            if (unreadSnapshot.size === 0) {
-                document.title = 'Mini Messenger';
-            } else {
-                document.title = `(${unreadSnapshot.size}) Mini Messenger`;
-            }
-        } else {
-            console.log('✅ No unread messages found');
-        }
-        
-    } catch (error) {
-        console.error('❌ Error marking messages as read:', error);
-    }
-}
-
-function resetPMNotifications(senderId) {
-    updateUserUnreadBadge(senderId, 0);
-
-    const totalUnread = getTotalUnreadCount();
-    document.title = totalUnread > 0 ? `(${totalUnread}) Mini Messenger` : 'Mini Messenger';
-}
-
-function resetGCNotifications() {
-    const totalUnread = getTotalUnreadCount();
-    document.title = totalUnread > 0 ? `(${totalUnread}) Mini Messenger` : 'Mini Messenger';
-}
-
-function getTotalUnreadCount() {
-    let total = 0;
-    const badges = document.querySelectorAll('.user-item-avatar .unread-badge');
-    badges.forEach(badge => {
-        if (badge.style.display !== 'none') {
-            const count = badge.textContent;
-            if (count === '99+') {
-                total += 99;
-            } else {
-                total += parseInt(count) || 0;
-            }
-        }
-    });
-    return total;
-}
-
+// ============================================
+// PRIVATE CHAT FUNCTIONS
+// ============================================
 async function openPrivateChat(user) {
     if (!user) return;
     
     currentPMUser = user;
-
     await markMessagesAsRead(user.id);
-
     resetPMNotifications(user.id);
     
     const pmNameEl = document.getElementById('pm-user-name');
@@ -684,6 +1014,7 @@ async function openPrivateChat(user) {
     if (pmChatArea) pmChatArea.classList.remove('hidden');
     
     listenToPMMessages(user.id);
+    listenToTypingIndicator(user.id);
 }
 
 function closePM() {
@@ -696,6 +1027,7 @@ function closePM() {
     if (pmChatArea) pmChatArea.classList.add('hidden');
     
     if (unsubscribePM) unsubscribePM();
+    if (typingListener) typingListener();
 }
 
 function listenToPMMessages(otherUserId) {
@@ -720,7 +1052,7 @@ function listenToPMMessages(otherUserId) {
             
             snapshot.forEach((doc) => {
                 const message = doc.data();
-                appendPMMessage(message, messagesContainer);
+                appendPMMessage(message, messagesContainer, doc.id);
             });
             
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -731,9 +1063,10 @@ function listenToPMMessages(otherUserId) {
         });
 }
 
-function appendPMMessage(message, container) {
+function appendPMMessage(message, container, messageId) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${message.senderId === currentUser?.uid ? 'sent' : 'received'}`;
+    messageDiv.id = `pm-msg-${messageId}`;
     
     const isSentByMe = message.senderId === currentUser?.uid;
     
@@ -758,12 +1091,41 @@ function appendPMMessage(message, container) {
             minute: '2-digit',
             hour12: true
         }) : 'Just now';
+
+    // Handle forwarded messages
+    let forwardIndicator = '';
+    if (message.forwarded) {
+        forwardIndicator = '<span class="forward-indicator"><i class="fas fa-share"></i> Forwarded</span>';
+    }
+
+    // Handle image messages
+    let contentHtml = '';
+    if (message.type === 'image') {
+        contentHtml = `<img src="${escapeHTML(message.imageUrl)}" class="message-image" alt="Shared image" onclick="openImage('${escapeHTML(message.imageUrl)}')">`;
+    } else {
+        contentHtml = `<div class="message-text">${formatMessageText(message.text || '')}</div>`;
+    }
+
+    // Handle reactions
+    let reactionsHtml = '';
+    if (message.reactions) {
+        const reactionCounts = {};
+        Object.values(message.reactions).forEach(r => {
+            reactionCounts[r] = (reactionCounts[r] || 0) + 1;
+        });
+        
+        reactionsHtml = '<div class="message-reactions">';
+        Object.entries(reactionCounts).forEach(([reaction, count]) => {
+            reactionsHtml += `<span class="reaction-badge" onclick="addReaction('${messageId}', '${reaction}', false)">${reaction} ${count}</span>`;
+        });
+        reactionsHtml += '</div>';
+    }
     
     let readStatus = '';
     if (isSentByMe) {
         readStatus = message.read 
-            ? '<span class="status-read"><i class="fas fa-check-double"></i></span>' 
-            : '<span class="status-sent"><i class="fas fa-check"></i></span>';
+            ? '<span class="status-read" title="Read"><i class="fas fa-check-double"></i></span>' 
+            : '<span class="status-sent" title="Sent"><i class="fas fa-check"></i></span>';
     }
     
     messageDiv.innerHTML = `
@@ -775,10 +1137,22 @@ function appendPMMessage(message, container) {
         </div>
         <div class="message-content">
             <div class="message-sender">${escapeHTML(senderName)}</div>
-            <div class="message-text">${formatMessageText(message.text || '')}</div>
-            <div class="message-time">
-                ${time}
+            ${forwardIndicator}
+            ${contentHtml}
+            ${reactionsHtml}
+            <div class="message-footer">
+                <span class="message-time">${time}</span>
                 ${readStatus}
+                ${!isSentByMe ? `
+                    <div class="message-actions">
+                        <button onclick="showReactionPicker('${messageId}', false)" class="action-btn" title="React">
+                            <i class="fas fa-smile"></i>
+                        </button>
+                        <button onclick="showForwardModal('${messageId}', '${escapeHTML(message.text || '')}', '${message.type || 'text'}', '${message.imageUrl || ''}')" class="action-btn" title="Forward">
+                            <i class="fas fa-share"></i>
+                        </button>
+                    </div>
+                ` : ''}
             </div>
         </div>
     `;
@@ -826,8 +1200,6 @@ async function sendPM() {
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                 read: false 
             });
-            
-        console.log('✅ PM sent successfully - REAL TIME!');
         
     } catch (error) {
         console.error('❌ Error sending PM:', error);
@@ -843,6 +1215,66 @@ async function sendPM() {
     }
 }
 
+async function markMessagesAsRead(senderId) {
+    if (!currentUser || !senderId) return;
+    
+    const chatId = [currentUser.uid, senderId].sort().join('_');
+    
+    try {
+        const messagesRef = db.collection('privateChats')
+            .doc(chatId)
+            .collection('messages')
+            .where('receiverId', '==', currentUser.uid)
+            .where('read', '==', false);
+        
+        const snapshot = await messagesRef.get();
+        
+        if (snapshot.size > 0) {
+            const batch = db.batch();
+            snapshot.forEach(doc => {
+                batch.update(doc.ref, { 
+                    read: true,
+                    readAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            });
+            
+            await batch.commit();
+            updateUserUnreadBadge(senderId, 0);
+        }
+        
+    } catch (error) {
+        console.error('❌ Error marking messages as read:', error);
+    }
+}
+
+function resetPMNotifications(senderId) {
+    updateUserUnreadBadge(senderId, 0);
+    const totalUnread = getTotalUnreadCount();
+    document.title = totalUnread > 0 ? `(${totalUnread}) Mini Messenger` : 'Mini Messenger';
+}
+
+function resetGCNotifications() {
+    const totalUnread = getTotalUnreadCount();
+    document.title = totalUnread > 0 ? `(${totalUnread}) Mini Messenger` : 'Mini Messenger';
+}
+
+function getTotalUnreadCount() {
+    let total = 0;
+    const badges = document.querySelectorAll('.user-item-avatar .unread-badge');
+    badges.forEach(badge => {
+        const count = badge.textContent;
+        if (count === '99+') {
+            total += 99;
+        } else {
+            total += parseInt(count) || 0;
+        }
+    });
+    return total;
+}
+
+// ============================================
+// IMAGE UPLOAD
+// ============================================
 async function uploadImageToIMGBB(file) {
     return new Promise((resolve, reject) => {
         if (isUploading) {
@@ -875,8 +1307,6 @@ async function uploadImageToIMGBB(file) {
         const formData = new FormData();
         formData.append('image', file);
         
-        showToast('📤 Uploading image...', 'info');
-        
         fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
             method: 'POST',
             body: formData
@@ -886,7 +1316,6 @@ async function uploadImageToIMGBB(file) {
             isUploading = false;
             
             if (data.success) {
-                showToast('✅ Image uploaded successfully!', 'success');
                 resolve(data.data.url);
             } else {
                 showToast('❌ Upload failed', 'error');
@@ -902,6 +1331,9 @@ async function uploadImageToIMGBB(file) {
     });
 }
 
+// ============================================
+// GROUP CHAT SETTINGS
+// ============================================
 async function changeGCPFP() {
     const input = document.createElement('input');
     input.type = 'file';
@@ -913,20 +1345,16 @@ async function changeGCPFP() {
         
         try {
             const imageUrl = await uploadImageToIMGBB(file);
-            
             await db.collection('groupChats').doc(GROUP_CHAT_ID).update({
                 photoURL: imageUrl,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
-            
             showToast('✅ Group photo updated!', 'success');
-            
         } catch (error) {
             console.error('Error updating GC photo:', error);
             showToast('❌ Failed to update group photo', 'error');
         }
     };
-    
     input.click();
 }
 
@@ -952,21 +1380,84 @@ async function changeProfilePicture() {
             });
             
             const userPfpEl = document.getElementById('current-user-pfp');
-            if (userPfpEl) {
-                userPfpEl.src = imageUrl;
-            }
+            if (userPfpEl) userPfpEl.src = imageUrl;
             
             showToast('✅ Profile picture updated!', 'success');
-            
         } catch (error) {
             console.error('Error updating profile:', error);
             showToast('❌ Failed to update profile picture', 'error');
         }
     };
-    
     input.click();
 }
 
+function listenToGCMembers() {
+    if (unsubscribeMembers) unsubscribeMembers();
+    
+    unsubscribeMembers = db.collection('groupChats')
+        .doc(GROUP_CHAT_ID)
+        .onSnapshot(async (doc) => {
+            if (doc.exists) {
+                const members = doc.data().members || [];
+                const membersList = document.getElementById('members-list');
+                if (!membersList) return;
+                
+                membersList.innerHTML = '';
+                
+                for (const memberId of members) {
+                    const userDoc = await db.collection('users').doc(memberId).get();
+                    if (userDoc.exists) {
+                        const user = userDoc.data();
+                        const firstLetter = (user.name || 'User').charAt(0).toUpperCase();
+                        const fallbackAvatar = `https://ui-avatars.com/api/?name=${firstLetter}&background=4f46e5&color=fff&size=100&bold=true`;
+                        const avatarUrl = user.photoURL || fallbackAvatar;
+                        
+                        const memberDiv = document.createElement('div');
+                        memberDiv.className = 'member-item';
+                        memberDiv.innerHTML = `
+                            <div class="member-avatar">
+                                <img src="${escapeHTML(avatarUrl)}" 
+                                     alt="${escapeHTML(user.name || 'User')}"
+                                     loading="lazy"
+                                     onerror="this.onerror=null; this.src='${escapeHTML(fallbackAvatar)}';">
+                            </div>
+                            <div class="member-info">
+                                <div class="member-name">${escapeHTML(user.name || 'User')}</div>
+                                <div class="member-role">${memberId === currentUser?.uid ? '👑 You' : '👤 Member'}</div>
+                            </div>
+                        `;
+                        membersList.appendChild(memberDiv);
+                    }
+                }
+            }
+        });
+}
+
+async function editGCName() {
+    const currentName = document.getElementById('display-gc-name')?.textContent || 'World Chat 🌏';
+    const newName = prompt('Enter new group name:', currentName);
+    if (newName?.trim()) {
+        await db.collection('groupChats').doc(GROUP_CHAT_ID).update({
+            name: newName.trim()
+        });
+        showToast('✅ Group name updated!', 'success');
+    }
+}
+
+async function editGCDesc() {
+    const currentDesc = document.getElementById('display-gc-desc')?.textContent || 'Welcome to the group! 👋';
+    const newDesc = prompt('Enter new group description:', currentDesc);
+    if (newDesc?.trim()) {
+        await db.collection('groupChats').doc(GROUP_CHAT_ID).update({
+            description: newDesc.trim()
+        });
+        showToast('✅ Description updated!', 'success');
+    }
+}
+
+// ============================================
+// UTILITY FUNCTIONS
+// ============================================
 function showToast(message, type = 'info') {
     const existingToast = document.querySelector('.toast');
     if (existingToast) existingToast.remove();
@@ -977,7 +1468,6 @@ function showToast(message, type = 'info') {
     let icon = 'info-circle';
     if (type === 'success') icon = 'check-circle';
     if (type === 'error') icon = 'exclamation-circle';
-    if (type === 'warning') icon = 'exclamation-triangle';
     
     toast.innerHTML = `<i class="fas fa-${icon}"></i><span>${message}</span>`;
     document.body.appendChild(toast);
@@ -987,6 +1477,33 @@ function showToast(message, type = 'info') {
         toast.classList.remove('show');
         setTimeout(() => toast.remove(), 300);
     }, 3000);
+}
+
+function formatMessageText(text) {
+    if (!text) return '';
+    
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    text = text.replace(urlRegex, '<a href="$1" target="_blank" rel="noopener noreferrer" class="message-link">$1</a>');
+    text = text.replace(/\n/g, '<br>');
+    
+    const emojiMap = {
+        ':)': '😊', ':(': '😢', ':D': '😃', ';)': '😉',
+        '<3': '❤️', 'lol': '😂', 'omg': '😱', ':p': '😋'
+    };
+    
+    Object.keys(emojiMap).forEach(key => {
+        const regex = new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+        text = text.replace(regex, emojiMap[key]);
+    });
+    
+    return text;
+}
+
+function escapeHTML(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 function setupEnterKeyListeners() {
@@ -1028,9 +1545,7 @@ function switchTab(tab) {
     if (gcView) gcView.classList.toggle('active', tab === 'gc');
     if (pmView) pmView.classList.toggle('active', tab === 'pm');
 
-    if (tab === 'gc') {
-        resetGCNotifications();
-    }
+    if (tab === 'gc') resetGCNotifications();
 }
 
 function toggleSidebar() {
@@ -1048,39 +1563,8 @@ function closeModal(modalId) {
     if (modal) modal.classList.remove('active');
 }
 
-async function editGCName() {
-    const currentName = document.getElementById('display-gc-name')?.textContent || 'World Chat 🌏';
-    const newName = prompt('Enter new group name:', currentName);
-    if (newName?.trim()) {
-        await db.collection('groupChats').doc(GROUP_CHAT_ID).update({
-            name: newName.trim()
-        });
-        showToast('✅ Group name updated!', 'success');
-    }
-}
-
-async function editGCDesc() {
-    const currentDesc = document.getElementById('display-gc-desc')?.textContent || 'Welcome to the group! 👋';
-    const newDesc = prompt('Enter new group description:', currentDesc);
-    if (newDesc?.trim()) {
-        await db.collection('groupChats').doc(GROUP_CHAT_ID).update({
-            description: newDesc.trim()
-        });
-        showToast('✅ Description updated!', 'success');
-    }
-}
-
 function setupPresence() {
     window.addEventListener('beforeunload', () => {
-        if (currentUser) {
-            db.collection('users').doc(currentUser.uid).update({
-                online: false,
-                lastSeen: firebase.firestore.FieldValue.serverTimestamp()
-            });
-        }
-    });
-    
-    window.addEventListener('pagehide', () => {
         if (currentUser) {
             db.collection('users').doc(currentUser.uid).update({
                 online: false,
@@ -1098,23 +1582,77 @@ async function logout() {
                 lastSeen: firebase.firestore.FieldValue.serverTimestamp()
             });
         }
-        
         await firebase.auth().signOut();
         window.location.href = 'login.html';
-        
     } catch (error) {
         console.error('Logout error:', error);
         window.location.href = 'login.html';
     }
 }
 
-function escapeHTML(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+// ============================================
+// SEND GROUP CHAT MESSAGE
+// ============================================
+async function sendGCMessage() {
+    const input = document.getElementById('gc-message-input');
+    if (!input) return;
+    
+    const text = input.value.trim();
+    if (!text) {
+        showToast('Please type a message', 'error');
+        return;
+    }
+    
+    if (!currentUser) {
+        showToast('You are not logged in', 'error');
+        return;
+    }
+
+    input.disabled = true;
+    const sendBtn = document.querySelector('#gc-view .send-btn');
+    if (sendBtn) {
+        sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        sendBtn.disabled = true;
+    }
+
+    input.value = '';
+    
+    try {
+        const gcRef = db.collection('groupChats').doc(GROUP_CHAT_ID);
+        
+        await gcRef.collection('messages').add({
+            text: text,
+            senderId: currentUser.uid,
+            senderName: currentUser.displayName || currentUser.email.split('@')[0] || 'User',
+            senderPhoto: currentUser.photoURL || '',
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+    } catch (error) {
+        console.error('❌ Error sending message:', error);
+        showToast('Failed to send message', 'error');
+        input.value = text;
+    } finally {
+        input.disabled = false;
+        input.focus();
+        if (sendBtn) {
+            sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+            sendBtn.disabled = false;
+        }
+    }
 }
 
+// ============================================
+// INITIALIZE SEARCH LISTENER
+// ============================================
+setTimeout(() => {
+    setupSearchListener();
+    setupTypingListener();
+}, 2000);
+
+// ============================================
+// TEST FUNCTION
+// ============================================
 async function testMessenger() {
     console.log('🔍 TESTING MINI MESSENGER...');
     console.log('User:', currentUser?.email);
@@ -1124,12 +1662,9 @@ async function testMessenger() {
     try {
         await db.collection('test').doc('test').set({ test: Date.now() });
         console.log('✅ Firestore write OK');
-        
         const testDoc = await db.collection('test').doc('test').get();
         console.log('✅ Firestore read OK');
-        
         showToast('✅ Messenger is working!', 'success');
-        
     } catch (error) {
         console.error('❌ Firestore error:', error);
         showToast('❌ Connection error', 'error');
