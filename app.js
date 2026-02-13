@@ -57,17 +57,24 @@ async function startVoiceRecording(isGC = true) {
         };
 
         mediaRecorder.onstop = async () => {
+            
             const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
             currentAudioBlob = audioBlob;
+
             stream.getTracks().forEach(track => track.stop());
+
             await sendVoiceMessage(audioBlob, isGC);
+
             stopRecordingIndicator();
         };
 
         mediaRecorder.start();
         recordingStartTime = Date.now();
+
         showRecordingIndicator();
+
         startRecordingTimer();
+        
         console.log('🎤 Recording started');
         
     } catch (error) {
@@ -100,6 +107,7 @@ function stopVoiceRecording() {
     if (mediaRecorder && mediaRecorder.state !== 'inactive') {
         mediaRecorder.stop();
     }
+    
     stopRecordingIndicator();
 }
 
@@ -108,6 +116,7 @@ function stopRecordingIndicator() {
     if (indicator) {
         indicator.classList.add('hidden');
     }
+    
     if (recordingTimer) {
         clearInterval(recordingTimer);
         recordingTimer = null;
@@ -140,7 +149,9 @@ async function sendVoiceMessage(audioBlob, isGC = true) {
         showToast('📤 Uploading voice message...', 'info');
 
         const base64Audio = await blobToBase64(audioBlob);
+
         const duration = await getAudioDuration(audioBlob);
+
         const waveformData = generateWaveformData();
         
         if (isGC) {
@@ -279,7 +290,8 @@ function drawWaveform(waveformData) {
     });
 }
 
-function updateWaveformProgress() {}
+function updateWaveformProgress() {
+}
 
 function onVoicePlayEnd() {
     isPlaying = false;
@@ -396,11 +408,12 @@ async function initializeApp() {
         }, { merge: true });
 
         await initializeGroupChat();
-        loadUsers(); 
+        loadUsers();
         listenToUnreadPMs();
         setupPresence();
         setupEnterKeyListeners();
         loadTheme();
+
         initVoicePlayer();
         
         console.log('✅ App initialized successfully');
@@ -479,6 +492,7 @@ function loadGCInfo() {
                 if (el) el.textContent = `${memberCount} members`;
             });
 
+            // Created date
             if (data.createdAt) {
                 const date = data.createdAt.toDate();
                 const createdEl = document.getElementById('gc-created');
@@ -903,6 +917,7 @@ async function performSearch(query) {
     resultsContainer.classList.remove('hidden');
     
     try {
+
         const gcSnapshot = await db.collection('groupChats').doc(GROUP_CHAT_ID)
             .collection('messages')
             .where('text', '>=', query)
@@ -1042,12 +1057,10 @@ function loadUsers() {
         .onSnapshot((snapshot) => {
             const users = [];
             snapshot.forEach((doc) => {
-                const userData = doc.data();
-                
                 if (doc.id !== currentUser?.uid) {
                     users.push({ 
                         id: doc.id, 
-                        ...userData,
+                        ...doc.data(),
                         unreadCount: 0 
                     });
                 }
@@ -1092,7 +1105,7 @@ function displayUsers(users) {
         const avatarUrl = user.photoURL || fallbackAvatar;
         
         const statusClass = user.online ? 'online' : 'offline';
-        let statusText = user.online ? '● Online' : formatLastSeen(user.lastSeen);
+        const statusText = user.online ? '● Online' : formatLastSeen(user.lastSeen);
         
         userDiv.innerHTML = `
             <div class="user-item-avatar">
@@ -1132,7 +1145,7 @@ function displaySidebarUsers(users) {
         const avatarUrl = user.photoURL || fallbackAvatar;
         
         const statusClass = user.online ? 'online' : 'offline';
-        let statusText = user.online ? '● Online' : formatLastSeen(user.lastSeen);
+        const statusText = user.online ? '● Online' : formatLastSeen(user.lastSeen);
         
         userDiv.innerHTML = `
             <div class="user-item-avatar">
