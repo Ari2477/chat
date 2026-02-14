@@ -155,8 +155,6 @@ async function sendVoiceMessage(audioBlob, isGC = true) {
         const duration = await getAudioDuration(audioBlob);
         const waveformData = generateWaveformData();
         
-        const now = new Date();
-        
         if (isGC) {
             await db.collection('groupChats').doc(GROUP_CHAT_ID)
                 .collection('messages').add({
@@ -167,9 +165,7 @@ async function sendVoiceMessage(audioBlob, isGC = true) {
                     senderId: currentUser.uid,
                     senderName: currentUser.displayName || 'User',
                     senderPhoto: currentUser.photoURL || '',
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                    createdAt: now.toISOString(),
-                    clientTime: now.getTime()
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
         } else {
             if (!currentPMUser) {
@@ -190,8 +186,6 @@ async function sendVoiceMessage(audioBlob, isGC = true) {
                     senderPhoto: currentUser.photoURL || '',
                     receiverId: currentPMUser.id,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                    createdAt: now.toISOString(),
-                    clientTime: now.getTime(),
                     read: false
                 });
         }
@@ -420,7 +414,7 @@ async function initializeApp() {
 
         await initializeGroupChat();
         loadUsers();
-        listenToUnreadPMs();
+        listenToUnreadPMs(); 
         setupPresence();
         setupEnterKeyListeners();
         loadTheme();
@@ -586,13 +580,11 @@ function listenToGCMessages() {
     if (!messagesContainer) return;
 
     messagesContainer.innerHTML = '';
-    window.displayedGCMessageIds.clear();
     
     unsubscribeGC = db.collection('groupChats')
         .doc(GROUP_CHAT_ID)
         .collection('messages')
         .orderBy('timestamp', 'asc')
-        .orderBy('clientTime', 'asc')
         .onSnapshot((snapshot) => {
 
             snapshot.docChanges().forEach((change) => {
@@ -601,6 +593,7 @@ function listenToGCMessages() {
                 
                 if (change.type === 'added') {
                     if (window.displayedGCMessageIds.has(messageId)) {
+                        console.log('Skipping duplicate GC message:', messageId);
                         return;
                     }
                     
@@ -618,6 +611,7 @@ function listenToGCMessages() {
                                 appendGCMessage(message, messagesContainer, userMap, messageId);
                             })
                             .catch(error => {
+                                console.error('Error fetching user:', error);
                                 appendGCMessage(message, messagesContainer, {}, messageId);
                             });
                     }
@@ -654,19 +648,15 @@ function listenToGCMessages() {
             });
       
             if (snapshot.docChanges().length > 0) {
-                const isNearBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight < 200;
-                if (isNearBottom) {
-                    setTimeout(() => {
-                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                    }, 50);
-                }
-            }
-
-            if (!window.gcMessagesLoaded && messagesContainer.children.length > 0) {
-                setTimeout(() => {
+                const lastChange = snapshot.docChanges()[snapshot.docChanges().length - 1];
+                if (lastChange.type === 'added' && lastChange.doc.data().senderId === currentUser?.uid) {
                     messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                    window.gcMessagesLoaded = true;
-                }, 200);
+                } else {
+                    const isNearBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight < 100;
+                    if (isNearBottom) {
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    }
+                }
             }
             
             if (messagesContainer.children.length === 0) {
@@ -699,18 +689,12 @@ function appendGCMessage(message, container, userMap = {}, messageId) {
 
     const avatarUrl = senderPhoto || fallbackAvatar;
     
-    let timeDisplay = 'Just now';
-    if (message.timestamp) {
-        try {
-            timeDisplay = new Date(message.timestamp.toDate()).toLocaleTimeString('en-US', {
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true
-            });
-        } catch (e) {
-            timeDisplay = 'Just now';
-        }
-    }
+    const time = message.timestamp ? 
+        new Date(message.timestamp.toDate()).toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        }) : 'Just now';
 
     let contentHtml = '';
     
@@ -758,7 +742,7 @@ function appendGCMessage(message, container, userMap = {}, messageId) {
             ${contentHtml}
             ${reactionsHtml}
             <div class="message-footer">
-                <span class="message-time">${timeDisplay}</span>
+                <span class="message-time">${time}</span>
                 <div class="message-actions">
                     <button onclick="showReactionPicker('${messageId}', true)" class="action-btn" title="React">
                         <i class="fas fa-smile"></i>
@@ -792,8 +776,6 @@ async function uploadImageMessage(isGC = true) {
             showToast('📤 Uploading image...', 'info');
             const imageUrl = await uploadImageToIMGBB(file);
             
-            const now = new Date();
-            
             if (isGC) {
                 await db.collection('groupChats').doc(GROUP_CHAT_ID)
                     .collection('messages').add({
@@ -802,9 +784,7 @@ async function uploadImageMessage(isGC = true) {
                         senderId: currentUser.uid,
                         senderName: currentUser.displayName || 'User',
                         senderPhoto: currentUser.photoURL || '',
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                        createdAt: now.toISOString(),
-                        clientTime: now.getTime()
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
                     });
             } else {
                 if (!currentPMUser) {
@@ -821,8 +801,6 @@ async function uploadImageMessage(isGC = true) {
                         senderPhoto: currentUser.photoURL || '',
                         receiverId: currentPMUser.id,
                         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                        createdAt: now.toISOString(),
-                        clientTime: now.getTime(),
                         read: false
                     });
             }
@@ -920,8 +898,6 @@ async function forwardMessageToUser(userId, userName) {
     const { text, type, imageUrl } = currentMessageForForward;
     const chatId = [currentUser.uid, userId].sort().join('_');
     
-    const now = new Date();
-    
     try {
         await db.collection('privateChats').doc(chatId)
             .collection('messages').add({
@@ -933,8 +909,6 @@ async function forwardMessageToUser(userId, userName) {
                 senderPhoto: currentUser.photoURL || '',
                 receiverId: userId,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                createdAt: now.toISOString(),
-                clientTime: now.getTime(),
                 read: false,
                 forwarded: true,
                 forwardedFrom: currentPMUser?.name || 'Unknown'
@@ -1247,16 +1221,14 @@ function formatLastSeen(timestamp) {
     if (!timestamp) return '○ Offline';
     if (!timestamp.toDate) return '○ Offline';
     
-    try {
-        const lastSeen = timestamp.toDate();
-        const now = new Date();
-        const diffSeconds = Math.floor((now - lastSeen) / 1000);
-        
-        if (diffSeconds < 60) return '○ Just now';
-        if (diffSeconds < 3600) return `○ ${Math.floor(diffSeconds / 60)}m ago`;
-        if (diffSeconds < 86400) return `○ ${Math.floor(diffSeconds / 3600)}h ago`;
-        if (diffSeconds < 604800) return `○ ${Math.floor(diffSeconds / 86400)}d ago`;
-    } catch (e) {}
+    const lastSeen = timestamp.toDate();
+    const now = new Date();
+    const diffSeconds = Math.floor((now - lastSeen) / 1000);
+    
+    if (diffSeconds < 60) return '○ Just now';
+    if (diffSeconds < 3600) return `○ ${Math.floor(diffSeconds / 60)}m ago`;
+    if (diffSeconds < 86400) return `○ ${Math.floor(diffSeconds / 3600)}h ago`;
+    if (diffSeconds < 604800) return `○ ${Math.floor(diffSeconds / 86400)}d ago`;
     
     return '○ Offline';
 }
@@ -1350,7 +1322,6 @@ async function openPrivateChat(user) {
     if (!user) return;
 
     window.displayedPMMessageIds.clear();
-    window.pmMessagesLoaded = false;
     
     currentPMUser = user;
     await markMessagesAsRead(user.id);
@@ -1387,7 +1358,6 @@ function closePM() {
     currentPMUser = null;
 
     window.displayedPMMessageIds.clear();
-    window.pmMessagesLoaded = false;
     
     const usersList = document.getElementById('users-list');
     const pmChatArea = document.getElementById('pm-chat-area');
@@ -1406,7 +1376,6 @@ function listenToPMMessages(otherUserId) {
     if (!messagesContainer) return;
 
     messagesContainer.innerHTML = '';
-    window.displayedPMMessageIds.clear();
     
     const chatId = [currentUser.uid, otherUserId].sort().join('_');
     
@@ -1414,7 +1383,6 @@ function listenToPMMessages(otherUserId) {
         .doc(chatId)
         .collection('messages')
         .orderBy('timestamp', 'asc')
-        .orderBy('clientTime', 'asc')
         .onSnapshot((snapshot) => {
 
             snapshot.docChanges().forEach((change) => {
@@ -1423,6 +1391,7 @@ function listenToPMMessages(otherUserId) {
                 
                 if (change.type === 'added') {
                     if (window.displayedPMMessageIds.has(messageId)) {
+                        console.log('Skipping duplicate PM message:', messageId);
                         return;
                     }
                     
@@ -1452,19 +1421,15 @@ function listenToPMMessages(otherUserId) {
             });
             
             if (snapshot.docChanges().length > 0) {
-                const isNearBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight < 200;
-                if (isNearBottom) {
-                    setTimeout(() => {
-                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                    }, 50);
-                }
-            }
-
-            if (!window.pmMessagesLoaded && currentPMUser?.id === otherUserId && messagesContainer.children.length > 0) {
-                setTimeout(() => {
+                const lastChange = snapshot.docChanges()[snapshot.docChanges().length - 1];
+                if (lastChange.type === 'added' && lastChange.doc.data().senderId === currentUser?.uid) {
                     messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                    window.pmMessagesLoaded = true;
-                }, 200);
+                } else {
+                    const isNearBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight < 100;
+                    if (isNearBottom) {
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    }
+                }
             }
 
             if (messagesContainer.children.length === 0) {
@@ -1499,18 +1464,12 @@ function appendPMMessage(message, container, messageId) {
     const fallbackAvatar = `https://ui-avatars.com/api/?name=${senderFirstLetter}&background=${isSentByMe ? '4f46e5' : '64748b'}&color=fff&size=100&bold=true`;
     const avatarUrl = senderPhoto || fallbackAvatar;
     
-    let timeDisplay = 'Just now';
-    if (message.timestamp) {
-        try {
-            timeDisplay = new Date(message.timestamp.toDate()).toLocaleTimeString('en-US', {
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true
-            });
-        } catch (e) {
-            timeDisplay = 'Just now';
-        }
-    }
+    const time = message.timestamp ? 
+        new Date(message.timestamp.toDate()).toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        }) : 'Just now';
 
     let forwardIndicator = '';
     if (message.forwarded) {
@@ -1571,7 +1530,7 @@ function appendPMMessage(message, container, messageId) {
             ${contentHtml}
             ${reactionsHtml}
             <div class="message-footer">
-                <span class="message-time">${timeDisplay}</span>
+                <span class="message-time">${time}</span>
                 ${readStatus}
                 ${!isSentByMe ? `
                     <div class="message-actions">
@@ -1615,8 +1574,6 @@ async function sendPM() {
     const messageText = input.value;
     input.value = '';
     
-    const now = new Date();
-    
     try {
         const chatId = [currentUser.uid, currentPMUser.id].sort().join('_');
 
@@ -1630,8 +1587,6 @@ async function sendPM() {
                 senderPhoto: currentUser.photoURL || '',
                 receiverId: currentPMUser.id,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                createdAt: now.toISOString(),
-                clientTime: now.getTime(),
                 read: false 
             });
         
@@ -1673,8 +1628,6 @@ async function sendGCMessage() {
 
     input.value = '';
     
-    const now = new Date();
-    
     try {
         const gcRef = db.collection('groupChats').doc(GROUP_CHAT_ID);
         
@@ -1683,9 +1636,7 @@ async function sendGCMessage() {
             senderId: currentUser.uid,
             senderName: currentUser.displayName || currentUser.email.split('@')[0] || 'User',
             senderPhoto: currentUser.photoURL || '',
-            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-            createdAt: now.toISOString(),
-            clientTime: now.getTime()
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
         
     } catch (error) {
@@ -1727,7 +1678,9 @@ async function markMessagesAsRead(senderId) {
             
             await batch.commit();
             
+            
             updateUserUnreadBadge(senderId, 0);
+            
             
             const saved = localStorage.getItem('messenger_unread');
             if (saved) {
@@ -1736,6 +1689,7 @@ async function markMessagesAsRead(senderId) {
                 localStorage.setItem('messenger_unread', JSON.stringify(unreadData));
             }
             
+        
             const totalUnread = getTotalUnreadCount();
             document.title = totalUnread > 0 ? `(${totalUnread}) Mini Messenger` : 'Mini Messenger';
         }
@@ -2034,28 +1988,7 @@ function switchTab(tab) {
     if (gcView) gcView.classList.toggle('active', tab === 'gc');
     if (pmView) pmView.classList.toggle('active', tab === 'pm');
 
-    if (tab === 'gc') {
-        window.gcMessagesLoaded = false;
-        window.displayedGCMessageIds.clear();
-        resetGCNotifications();
-        
-        setTimeout(() => {
-            const gcMessages = document.getElementById('gc-messages');
-            if (gcMessages) {
-                gcMessages.scrollTop = gcMessages.scrollHeight;
-            }
-        }, 200);
-    } else {
-        window.pmMessagesLoaded = false;
-        window.displayedPMMessageIds.clear();
-        
-        setTimeout(() => {
-            const pmMessages = document.getElementById('pm-messages');
-            if (pmMessages && currentPMUser) {
-                pmMessages.scrollTop = pmMessages.scrollHeight;
-            }
-        }, 200);
-    }
+    if (tab === 'gc') resetGCNotifications();
 }
 
 function toggleSidebar() {
