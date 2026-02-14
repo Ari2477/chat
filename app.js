@@ -573,7 +573,6 @@ async function unpinMessage() {
     }
 }
 
-// ✅ FIXED: Hindi na magkakadikit ang messages!
 function listenToGCMessages() {
     if (unsubscribeGC) unsubscribeGC();
     
@@ -653,43 +652,46 @@ function listenToGCMessages() {
         });
 }
 
-// ✅ FIXED: Bawat message may sariling avatar at name!
 function appendGCMessage(message, container, userMap = {}, messageId) {
-    const messageWrapper = document.createElement('div');
-    messageWrapper.className = 'message-wrapper';
-    messageWrapper.id = `msg-${messageId}`;
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${message.senderId === currentUser?.uid ? 'sent' : 'received'}`;
+    messageDiv.id = `msg-${messageId}`;
 
-    // Get sender info
     let senderName = message.senderName || 'Unknown';
     let senderPhoto = message.senderPhoto || '';
+    let senderId = message.senderId;
 
     if (message.senderId !== currentUser?.uid && userMap[message.senderId]) {
         senderName = userMap[message.senderId].name || senderName;
         senderPhoto = userMap[message.senderId].photoURL || senderPhoto;
+        senderId = message.senderId;
     }
 
-    // Avatar
     const firstLetter = senderName.charAt(0).toUpperCase();
     const fallbackAvatar = `https://ui-avatars.com/api/?name=${firstLetter}&background=${message.senderId === currentUser?.uid ? '4f46e5' : '64748b'}&color=fff&size=100&bold=true`;
+
     const avatarUrl = senderPhoto || fallbackAvatar;
     
-    // Time
     const time = message.timestamp ? 
-        new Date(message.timestamp).toLocaleTimeString('en-US', {
+        new Date(message.timestamp.toDate()).toLocaleTimeString('en-US', {
             hour: 'numeric',
             minute: '2-digit',
             hour12: true
         }) : 'Just now';
 
-    // Content
     let contentHtml = '';
+    
     if (message.type === 'image') {
         contentHtml = `<img src="${escapeHTML(message.imageUrl)}" class="message-image" alt="Shared image" onclick="openImage('${escapeHTML(message.imageUrl)}')">`;
     } else if (message.type === 'voice') {
         contentHtml = `
             <div class="voice-message" onclick='playVoiceMessage(\`${escapeHTML(message.audioData)}\`, "${messageId}", ${JSON.stringify(message.waveformData || [])})'>
-                <div class="voice-play-icon"><i class="fas fa-play"></i></div>
-                <div class="voice-waveform-small">${generateWaveformBars()}</div>
+                <div class="voice-play-icon">
+                    <i class="fas fa-play"></i>
+                </div>
+                <div class="voice-waveform-small">
+                    ${generateWaveformBars()}
+                </div>
                 <span class="voice-duration">${formatTime(message.duration || 0)}</span>
             </div>
         `;
@@ -697,11 +699,12 @@ function appendGCMessage(message, container, userMap = {}, messageId) {
         contentHtml = `<div class="message-text">${formatMessageText(message.text || '')}</div>`;
     }
 
-    // Reactions
     let reactionsHtml = '';
     if (message.reactions) {
         const reactionCounts = {};
-        Object.values(message.reactions).forEach(r => reactionCounts[r] = (reactionCounts[r] || 0) + 1);
+        Object.values(message.reactions).forEach(r => {
+            reactionCounts[r] = (reactionCounts[r] || 0) + 1;
+        });
         
         reactionsHtml = '<div class="message-reactions">';
         Object.entries(reactionCounts).forEach(([reaction, count]) => {
@@ -710,8 +713,7 @@ function appendGCMessage(message, container, userMap = {}, messageId) {
         reactionsHtml += '</div>';
     }
     
-    // ✅ BAWAT MESSAGE MAY SARILING STRUCTURE - hindi nagdidikit!
-    messageWrapper.innerHTML = `
+    messageDiv.innerHTML = `
         <div class="message-avatar">
             <img src="${escapeHTML(avatarUrl)}" 
                  alt="${escapeHTML(senderName)}" 
@@ -720,24 +722,28 @@ function appendGCMessage(message, container, userMap = {}, messageId) {
         </div>
         <div class="message-content">
             <div class="message-sender">${escapeHTML(message.senderId === currentUser?.uid ? 'You' : senderName)}</div>
-            <div class="message-bubble ${message.senderId === currentUser?.uid ? 'sent' : 'received'}">
-                ${contentHtml}
-            </div>
+            ${contentHtml}
             ${reactionsHtml}
             <div class="message-footer">
                 <span class="message-time">${time}</span>
                 <div class="message-actions">
-                    <button onclick="showReactionPicker('${messageId}', true)" class="action-btn" title="React"><i class="fas fa-smile"></i></button>
-                    <button onclick="showForwardModal('${messageId}', '${escapeHTML(message.text || '')}', '${message.type || 'text'}', '${message.imageUrl || ''}')" class="action-btn" title="Forward"><i class="fas fa-share"></i></button>
+                    <button onclick="showReactionPicker('${messageId}', true)" class="action-btn" title="React">
+                        <i class="fas fa-smile"></i>
+                    </button>
+                    <button onclick="showForwardModal('${messageId}', '${escapeHTML(message.text || '')}', '${message.type || 'text'}', '${message.imageUrl || ''}')" class="action-btn" title="Forward">
+                        <i class="fas fa-share"></i>
+                    </button>
                     ${message.senderId === currentUser?.uid ? `
-                        <button onclick="pinMessage('${messageId}', '${escapeHTML(message.text || '')}')" class="action-btn" title="Pin"><i class="fas fa-thumbtack"></i></button>
+                        <button onclick="pinMessage('${messageId}', '${escapeHTML(message.text || '')}')" class="action-btn" title="Pin">
+                            <i class="fas fa-thumbtack"></i>
+                        </button>
                     ` : ''}
                 </div>
             </div>
         </div>
     `;
     
-    container.appendChild(messageWrapper);
+    container.appendChild(messageDiv);
 }
 
 async function uploadImageMessage(isGC = true) {
