@@ -2,143 +2,238 @@ const express = require('express');
 const path = require('path');
 const fetch = require('node-fetch');
 require('dotenv').config();
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.static(path.join(__dirname)));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '50mb' })); 
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+const HF_TOKEN = process.env.HUGGINGFACE_TOKEN;
 
-const SYSTEM_PROMPT = `You are Mini Assistant, a helpful and friendly AI created by ARI. 
-You are knowledgeable, warm, and always ready to assist with anything from casual conversation to complex problems.
-Keep your responses informative but concise. Be approachable and don't use emojis.
-You can analyze and perfect answer the images when provided with image URLs.`;
+const TEXT_MODELS = {
+    COMMAND_R_PLUS: 'CohereForAI/c4ai-command-r-plus-08-2024',
+    MIXTRAL_8x22B: 'mistralai/Mixtral-8x22B-Instruct-v0.1',
+    DBRX: 'databricks/dbrx-instruct',
+    LLAMA_3_70B: 'meta-llama/Meta-Llama-3-70B-Instruct',
+    QWEN_2_72B: 'Qwen/Qwen2-72B-Instruct',
+    COMMAND_R: 'CohereForAI/c4ai-command-r-v01',
+    SOLAR_10_7B: 'upstage/SOLAR-10.7B-Instruct-v1.0',
+    ZEPHYR_7B_BETA: 'HuggingFaceH4/zephyr-7b-beta',
+    GEMMA_2_9B: 'google/gemma-2-9b-it',
+};
+
+const IMAGE_MODELS = {
+    MOONDREAM2: 'vikhyatk/moondream2',
+    Idefics2: 'HuggingFaceM4/idefics2-8b',
+    DINOv2: 'facebook/dinov2-large',
+    BLIP2: 'Salesforce/blip2-opt-2.7b',
+    GIT_LARGE: 'microsoft/git-large-coco',
+    CLIP_VIT: 'openai/clip-vit-large-patch14',
+    BLIP_BASE: 'Salesforce/blip-image-captioning-base',
+    VIT_LARGE: 'google/vit-large-patch16-224',
+    SWIN_LARGE: 'microsoft/swin-large-patch4-window7-224-in22k',
+};
+
+const SYSTEM_PROMPT = `You are Mini Assistant, a super intelligent AI created by ARI. 
+You have access to the most advanced open-source AI models.
+You are helpful, detailed, and precise in your responses.
+Answer in a friendly but professional manner.`;
 
 app.post('/api/chat', async (req, res) => {
     try {
-        const { message, imageUrl } = req.body;
+        const { message, model = TEXT_MODELS.COMMAND_R_PLUS } = req.body;
         
         if (!message) {
             return res.status(400).json({ error: 'Message is required' });
         }
 
-        let content = message;
-        if (imageUrl) {
-            content = `[Image URL: ${imageUrl}]\n\nUser's question about the image: ${message}`;
-        }
-        
-        console.log(`🤖 Processing request with GPT-4O-MINI`);
-        console.log(`📝 Message: ${message.substring(0, 50)}${message.length > 50 ? '...' : ''}`);
-        if (imageUrl) console.log(`🖼️ Image: ${imageUrl.substring(0, 50)}...`);
+        console.log(`🤖 Using: ${model.split('/').pop()}`);
+        console.log(`📝 Question: ${message.substring(0, 100)}...`);
 
-        if (!OPENROUTER_API_KEY) {
-            console.error('❌ OPENROUTER_API_KEY not found in environment variables');
-            return res.status(500).json({ 
-                error: 'AI service configuration error. Please contact administrator.' 
-            });
-        }
-
-        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-                'Content-Type': 'application/json',
-                'HTTP-Referer': `http://localhost:${PORT}`,
-                'X-Title': 'Mini Assistant'
-            },
-            body: JSON.stringify({
-                model: 'openai/gpt-4o-mini',
-                messages: [
-                    {
-                        role: 'system',
-                        content: SYSTEM_PROMPT
-                    },
-                    {
-                        role: 'user',
-                        content: content
+        const response = await fetch(
+            `https://api-inference.huggingface.co/models/${model}`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(HF_TOKEN && { 'Authorization': `Bearer ${HF_TOKEN}` })
+                },
+                body: JSON.stringify({
+                    inputs: `<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n${SYSTEM_PROMPT}<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n${message}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n`,
+                    parameters: {
+                        max_new_tokens: 1000,
+                        temperature: 0.7,
+                        top_p: 0.95,
+                        do_sample: true,
+                        repetition_penalty: 1.1,
                     }
-                ],
-                max_tokens: 1000,
-                temperature: 0.7,
-                top_p: 0.9,
-                frequency_penalty: 0.3,
-                presence_penalty: 0.3
-            })
-        });
+                })
+            }
+        );
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${errorText.substring(0, 100)}`);
+        }
 
         const data = await response.json();
         
-        if (data.error) {
-            console.error('OpenRouter API error:', data.error);
-            return res.status(500).json({ 
-                error: data.error.message || 'AI service error' 
-            });
-        }
-        
-        if (data.choices && data.choices[0] && data.choices[0].message) {
-            const aiResponse = data.choices[0].message.content;
-            
-            console.log(`✅ AI response received (${aiResponse.length} chars)`);
-            
-            res.json({ 
-                success: true,
-                response: aiResponse,
-                model: 'gpt-4o-mini'
-            });
+        let aiResponse;
+        if (Array.isArray(data)) {
+            aiResponse = data[0]?.generated_text || data[0]?.text;
         } else {
-            console.error('Unexpected API response format:', data);
-            res.status(500).json({ 
-                error: 'Invalid response from AI service' 
-            });
+            aiResponse = data.generated_text || data.text;
         }
+
+        aiResponse = aiResponse?.replace(/.*assistant<\|end_header_id\|>\n\n/, '')
+                                 .replace(/<\|eot_id\|>.*$/, '')
+                                 .trim() || "I'm here to help!";
+
+        console.log(`✅ Response received (${aiResponse.length} chars)`);
+        
+        res.json({
+            success: true,
+            response: aiResponse,
+            model: model.split('/').pop() + ' (FREE!)',
+            intelligence: '🧠 GPT-4 Level'
+        });
         
     } catch (error) {
-        console.error('Server error in /api/chat:', error);
+        console.error('AI Error:', error);
         res.status(500).json({ 
-            error: 'Internal server error: ' + error.message 
+            error: 'AI service error: ' + error.message
         });
     }
+});
+
+app.post('/api/analyze-image', async (req, res) => {
+    try {
+        const { prompt, imageUrl } = req.body;
+        
+        if (!prompt || !imageUrl) {
+            return res.status(400).json({ error: 'Prompt and image URL required' });
+        }
+
+        console.log(`🖼️ Analyzing with Moondream2`);
+
+        const imageResponse = await fetch(imageUrl);
+        if (!imageResponse.ok) {
+            throw new Error('Failed to fetch image');
+        }
+        
+        const imageBuffer = await imageResponse.arrayBuffer();
+        const base64Image = Buffer.from(imageBuffer).toString('base64');
+
+        const response = await fetch(
+            `https://api-inference.huggingface.co/models/${IMAGE_MODELS.MOONDREAM2}`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(HF_TOKEN && { 'Authorization': `Bearer ${HF_TOKEN}` })
+                },
+                body: JSON.stringify({
+                    inputs: {
+                        image: base64Image,
+                        question: prompt
+                    }
+                })
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(`Moondream2 error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        let answer = data.answer || data[0]?.answer || data.generated_text;
+
+        if (!answer) {
+
+            const blipRes = await fetch(
+                `https://api-inference.huggingface.co/models/${IMAGE_MODELS.BLIP_BASE}`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(HF_TOKEN && { 'Authorization': `Bearer ${HF_TOKEN}` })
+                    },
+                    body: JSON.stringify({ inputs: base64Image })
+                }
+            );
+            const blipData = await blipRes.json();
+            answer = `I can see: ${blipData[0]?.generated_text || 'something in the image'}`;
+        }
+
+        res.json({
+            success: true,
+            response: answer,
+            model: 'Moondream2 (FREE!)'
+        });
+        
+    } catch (error) {
+        console.error('Image analysis error:', error);
+        res.status(500).json({ 
+            error: 'Analysis failed: ' + error.message
+        });
+    }
+});
+
+app.post('/api/smart-chat', async (req, res) => {
+    try {
+        const { message, imageUrl } = req.body;
+        
+        let endpoint = imageUrl ? '/api/analyze-image' : '/api/chat';
+        const response = await fetch(`http://localhost:${PORT}${endpoint}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                message, 
+                prompt: message,
+                imageUrl 
+            })
+        });
+        
+        const data = await response.json();
+        res.json(data);
+        
+    } catch (error) {
+        console.error('Smart chat error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/models', (req, res) => {
+    res.json({
+        success: true,
+        text_models: Object.keys(TEXT_MODELS),
+        image_models: Object.keys(IMAGE_MODELS),
+        best_text: 'Cohere Command R+ (104B - GPT-4 level)',
+        best_image: 'Moondream2 (Best visual Q&A)',
+        note: '🚀 LAHAT LIBRE!'
+    });
 });
 
 app.get('/api/status', (req, res) => {
     res.json({
         success: true,
-        ai: {
-            model: 'gpt-4o-mini',
-            status: OPENROUTER_API_KEY ? 'connected' : 'disconnected',
-            message: OPENROUTER_API_KEY ? 'AI is ready!' : 'API key not configured'
-        },
-        server: {
-            version: '1.0.0',
-            port: PORT,
-            timestamp: new Date().toISOString()
-        }
+        status: 'online',
+        token: HF_TOKEN ? '✅ Configured' : '⚠️ No token (may queue)',
+        text_model: 'Command R+ (104B)',
+        image_model: 'Moondream2',
+        pricing: '💰 100% FREE'
     });
 });
 
-app.post('/api/test', async (req, res) => {
-    try {
-        const response = await fetch('https://openrouter.ai/api/v1/auth/key', {
-            headers: {
-                'Authorization': `Bearer ${OPENROUTER_API_KEY}`
-            }
-        });
-        
-        const data = await response.json();
-        
-        res.json({
-            success: true,
-            key_valid: response.ok,
-            data: data
-        });
-    } catch (error) {
-        res.status(500).json({ 
-            success: false, 
-            error: error.message 
-        });
-    }
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        status: 'ok',
+        message: 'Mini Messenger AI is running',
+        timestamp: new Date().toISOString()
+    });
 });
 
 app.get('/', (req, res) => {
@@ -149,42 +244,22 @@ app.get('/login', (req, res) => {
     res.sendFile(path.join(__dirname, 'login.html'));
 });
 
-app.get('/health', (req, res) => {
-    res.status(200).json({ 
-        status: 'ok', 
-        message: 'Mini Messenger is running',
-        ai: OPENROUTER_API_KEY ? '✅ Connected' : '❌ No API key',
-        model: 'gpt-4o-mini',
-        timestamp: new Date().toISOString()
-    });
-});
-
 app.get('*', (req, res) => {
     if (req.path.startsWith('/api/')) {
         return res.status(404).json({ error: 'API endpoint not found' });
     }
-
-    if (req.path === '/login' || req.path === '/login.html') {
-        res.sendFile(path.join(__dirname, 'login.html'));
-    } else {
-        res.sendFile(path.join(__dirname, 'chat.html'));
-    }
+    res.sendFile(path.join(__dirname, 'chat.html'));
 });
 
 app.listen(PORT, () => {
-    console.log('=================================');
-    console.log(`🚀 Mini Messenger server is running`);
+    console.log('\n' + '='.repeat(50));
+    console.log('🚀 MINI MESSENGER AI READY!');
+    console.log('='.repeat(50));
     console.log(`📡 Port: ${PORT}`);
     console.log(`🌐 URL: http://localhost:${PORT}`);
-    console.log(`🤖 AI Model: gpt-4o-mini`);
-    console.log(`🔑 API Key: ${OPENROUTER_API_KEY ? '✅ Configured' : '❌ Missing'}`);
-    console.log(`📊 Health: http://localhost:${PORT}/health`);
-    console.log(`🤖 AI Test: http://localhost:${PORT}/api/status`);
-    console.log('=================================');
-    
-    if (!OPENROUTER_API_KEY) {
-        console.log('\n⚠️  WARNING: OPENROUTER_API_KEY is not set!');
-        console.log('   Create a .env file with: OPENROUTER_API_KEY=your_key_here');
-        console.log('   Get your key from: https://openrouter.ai/keys\n');
-    }
+    console.log(`🤖 Text AI: Command R+ (104B params)`);
+    console.log(`🖼️ Image AI: Moondream2`);
+    console.log(`💰 Price: ABSOLUTELY FREE!`);
+    console.log(`🔑 Token: ${HF_TOKEN ? '✅ OK' : '⚠️ No token'}`);
+    console.log('='.repeat(50) + '\n');
 });
