@@ -136,9 +136,6 @@
             <button class="quick-reply-btn" onclick="sendQuickReply('/ai hello')">
                 <i class="fas fa-robot"></i> /ai
             </button>
-            <button class="quick-reply-btn" onclick="sendQuickReply('/sim hi')">
-                <i class="fas fa-comment"></i> /sim
-            </button>
             <button class="quick-reply-btn" onclick="sendQuickReply('/info')">
                 <i class="fas fa-info-circle"></i> /info
             </button>
@@ -164,15 +161,12 @@
 
     <script>
         /* =====================================================
-           YOUR ORIGINAL APIS - TOTOO AT BUHAY!
+           OPENROUTER AI - GPT-4O-MINI (with Image Support!)
         ===================================================== */
         
         const API_CONFIG = {
-            gemini: "https://jrmtool-api.vercel.app/api/gemini",
-            sim: {
-                url: "https://simsimi-api-pro.onrender.com/sim",
-                key: "a650beda66094d58b3e5c84b664420e8f2e65edd"
-            },
+            // OpenRouter AI (replaces Gemini and SimSimi)
+            openrouter: '/api/chat',  // Your backend endpoint
             imgbb: "https://api.imgbb.com/1/upload",
             imgbbKey: "87b58d438e0cbe5226c1df0a8071621e",
             dictionary: "https://api.dictionaryapi.dev/api/v2/entries/en",
@@ -327,109 +321,33 @@
         let userNotes = JSON.parse(localStorage.getItem('botNotes')) || [];
 
         /* =====================================================
-           THE MISSING PIECE - NORMALIZE API FUNCTION
-           Ito ang SOLUTION para gumana ang LAHAT ng APIs!
+           OPENROUTER AI FUNCTION (with Image Support)
         ===================================================== */
 
-        function normalizeAPI(data) {
-            if (!data) {
-                return { success: false, reply: "Empty response from server." };
-            }
-
-            if (data.error) {
-                return { success: false, reply: data.error };
-            }
-
-            const reply =
-                data.response ||
-                data.message ||
-                data.reply ||
-                data.result ||
-                data.text ||
-                null;
-
-            if (!reply) {
-                return { success: false, reply: "No reply from API." };
-            }
-
-            return { success: true, reply: reply };
-        }
-
-        /* =====================================================
-           FIXED: GEMINI AI - USING NORMALIZEAPI
-        ===================================================== */
-
-        async function fetchGemini(prompt, imageUrl = "") {
+        async function fetchOpenRouter(prompt, imageUrl = "") {
             try {
-                const url = `${API_CONFIG.gemini}?ask=${encodeURIComponent(prompt)}&imagurl=${encodeURIComponent(imageUrl)}`;
-                
-                console.log("Fetching Gemini:", url);
-                
-                const response = await fetch(url, {
-                    method: 'GET',
+                const response = await fetch(API_CONFIG.openrouter, {
+                    method: 'POST',
                     headers: {
-                        'Accept': 'application/json',
-                    }
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: prompt,
+                        imageUrl: imageUrl
+                    })
                 });
 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
                 const data = await response.json();
-                console.log("Gemini raw data:", data);
-
-                // GAMITIN ANG NORMALIZEAPI
-                const normalized = normalizeAPI(data);
                 
-                if (normalized.success) {
-                    return normalized.reply;
-                } else {
-                    return "❌ " + normalized.reply;
+                if (data.error) {
+                    return "❌ " + data.error;
                 }
+                
+                return data.response || "I received your message!";
                 
             } catch (err) {
-                console.error("Gemini Error Details:", err);
-                return "❌ Gemini AI is having trouble connecting. Please try again.";
-            }
-        }
-
-        /* =====================================================
-           FIXED: SIMSIMI - USING NORMALIZEAPI
-        ===================================================== */
-
-        async function fetchSimSimi(message) {
-            try {
-                const url = `${API_CONFIG.sim.url}?query=${encodeURIComponent(message)}&apikey=${API_CONFIG.sim.key}`;
-                
-                console.log("Fetching SimSimi:", url);
-                
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const data = await response.json();
-                console.log("SimSimi raw data:", data);
-
-                // GAMITIN ANG NORMALIZEAPI
-                const normalized = normalizeAPI(data);
-                
-                if (normalized.success) {
-                    return normalized.reply;
-                } else {
-                    return "❌ " + normalized.reply;
-                }
-                
-            } catch (err) {
-                console.error("SimSimi Error Details:", err);
-                return "❌ SimSimi service is temporarily unavailable. Please try again.";
+                console.error("OpenRouter Error:", err);
+                return "❌ AI service unavailable. Please try again.";
             }
         }
 
@@ -666,7 +584,8 @@
                     
                     showTyping();
                     
-                    const response = await fetchGemini(prompt, imageUrl);
+                    // Use OpenRouter AI instead of Gemini
+                    const response = await fetchOpenRouter(prompt, imageUrl);
                     
                     hideTyping();
                     addBotMessage(`🤖 **AI says:**\n${response}`, false);
@@ -779,7 +698,6 @@
 
 ╭━━━ **[ AI & CHAT ]** ━━━╮
 ┃ 🤖 /ai [question] • Ask AI (with image)
-┃ 💬 /sim [message] • Chat with SimSimi
 ╰━━━━━━━━━━━━━━╯
 
 ╭━━━ **[ FUN ]** ━━━╮
@@ -816,8 +734,8 @@
 
 ╭━━━━━━━━━━━━━━╮
 ┃ Mini Assistant
-┃ Version 3.1
-┃ API: Gemini + SimSimi
+┃ Version 4.0
+┃ AI: GPT-4O-MINI
 ╰━━━━━━━━━━━━━━╯
 
 📊 **STATISTICS:**
@@ -827,8 +745,7 @@
 • Dictionary: ✅
 
 ⚙️ **FEATURES:**
-• 🤖 Gemini AI (with images)
-• 💬 SimSimi Chat
+• 🤖 GPT-4O-MINI AI (with images)
 • 😂 Jokes & Facts
 • 📖 Dictionary
 • 🧮 Calculator
@@ -897,19 +814,13 @@ Created by **ARI** with ❤️
             if (cmd === "/synonym" && args) return await getSynonyms(args);
             if (cmd === "/antonym" && args) return await getAntonyms(args);
 
-            // AI - USING YOUR API with NORMALIZE
+            // AI - USING OPENROUTER (replaces Gemini and SimSimi)
             if (cmd === "/ai" && args) {
-                const res = await fetchGemini(args);
+                const res = await fetchOpenRouter(args);
                 return "🤖 **AI says:**\n" + res;
             }
             if (cmd === "/ai" && !args) {
                 return "❌ Add a question. Example: /ai what is love?";
-            }
-
-            // SimSimi - USING YOUR API with NORMALIZE
-            if (cmd === "/sim" && args) {
-                const res = await fetchSimSimi(args);
-                return "💬 **SimSimi says:**\n" + res;
             }
 
             return null;
