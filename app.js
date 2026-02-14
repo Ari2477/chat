@@ -579,98 +579,59 @@ function listenToGCMessages() {
     const messagesContainer = document.getElementById('gc-messages');
     if (!messagesContainer) return;
 
-    messagesContainer.innerHTML = '';
-    window.displayedGCMessageIds.clear();
-    window.gcMessagesLoaded = false;
-    
     unsubscribeGC = db.collection('groupChats')
         .doc(GROUP_CHAT_ID)
         .collection('messages')
-        .orderBy('timestamp', 'asc')  
+        .orderBy('timestamp', 'asc')
         .onSnapshot((snapshot) => {
-
+            
             if (snapshot.empty) {
                 messagesContainer.innerHTML = '<div class="no-messages">👋 No messages yet. Say hello!</div>';
                 return;
             }
 
-            snapshot.docChanges().forEach((change) => {
-                const message = change.doc.data();
-                const messageId = change.doc.id;
-                
-                if (change.type === 'added') {
-                    if (document.getElementById(`msg-${messageId}`)) {
-                        return; 
-                    }
-                    
-                    window.displayedGCMessageIds.add(messageId);
+            messagesContainer.innerHTML = '';
 
-                    if (message.senderId === currentUser?.uid) {
-                        appendGCMessage(message, messagesContainer, {}, messageId);
-                    } else {
-                        db.collection('users').doc(message.senderId).get()
-                            .then((userDoc) => {
-                                const userMap = {};
-                                if (userDoc.exists) {
-                                    userMap[message.senderId] = userDoc.data();
-                                }
-                                if (!document.getElementById(`msg-${messageId}`)) {
-                                    appendGCMessage(message, messagesContainer, userMap, messageId);
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Error fetching user:', error);
-                                if (!document.getElementById(`msg-${messageId}`)) {
-                                    appendGCMessage(message, messagesContainer, {}, messageId);
-                                }
-                            });
-                    }
-                }
-                
-                if (change.type === 'modified') {
-                    const existingMsg = document.getElementById(`msg-${messageId}`);
-                    if (existingMsg) {
-                        existingMsg.remove();
-                        window.displayedGCMessageIds.delete(messageId);
+            const messages = [];
+            snapshot.forEach(doc => {
+                messages.push({
+                    id: doc.id,
+                    ...doc.data()
+                });
+            });
+            
+            messages.sort((a, b) => {
+                const timeA = a.timestamp?.toDate?.() || new Date(0);
+                const timeB = b.timestamp?.toDate?.() || new Date(0);
+                return timeA - timeB;
+            });
 
-                        if (message.senderId === currentUser?.uid) {
-                            appendGCMessage(message, messagesContainer, {}, messageId);
-                        } else {
-                            db.collection('users').doc(message.senderId).get()
-                                .then((userDoc) => {
-                                    const userMap = {};
-                                    if (userDoc.exists) {
-                                        userMap[message.senderId] = userDoc.data();
-                                    }
-                                    appendGCMessage(message, messagesContainer, userMap, messageId);
-                                });
-                        }
-                    }
-                }
-                
-                if (change.type === 'removed') {
-                    const existingMsg = document.getElementById(`msg-${messageId}`);
-                    if (existingMsg) {
-                        existingMsg.remove();
-                        window.displayedGCMessageIds.delete(messageId);
-                    }
+            messages.forEach(msg => {
+                if (msg.senderId === currentUser?.uid) {
+                    appendGCMessage(msg, messagesContainer, {}, msg.id);
+                } else {
+                    db.collection('users').doc(msg.senderId).get()
+                        .then((userDoc) => {
+                            const userMap = {};
+                            if (userDoc.exists) {
+                                userMap[msg.senderId] = userDoc.data();
+                            }
+                            if (!document.getElementById(`msg-${msg.id}`)) {
+                                appendGCMessage(msg, messagesContainer, userMap, msg.id);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error fetching user:', error);
+                            if (!document.getElementById(`msg-${msg.id}`)) {
+                                appendGCMessage(msg, messagesContainer, {}, msg.id);
+                            }
+                        });
                 }
             });
 
-            if (snapshot.docChanges().length > 0) {
-                const lastChange = snapshot.docChanges()[snapshot.docChanges().length - 1];
-                
-                if (lastChange.type === 'added') {
-                    const isOwnMessage = lastChange.doc.data().senderId === currentUser?.uid;
-                    const isNearBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight < 150;
-                    
-                    if (isOwnMessage || isNearBottom) {
-                        setTimeout(() => {
-                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                        }, 100);
-                    }
-                }
-            }
+            setTimeout(() => {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }, 100);
             
         }, (error) => {
             console.error('❌ GC Message listener error:', error);
@@ -679,18 +640,20 @@ function listenToGCMessages() {
 }
 
 function appendGCMessage(message, container, userMap = {}, messageId) {
+    if (document.getElementById(`msg-${messageId}`)) {
+        return;
+    }
+    
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${message.senderId === currentUser?.uid ? 'sent' : 'received'}`;
     messageDiv.id = `msg-${messageId}`;
 
     let senderName = message.senderName || 'Unknown';
     let senderPhoto = message.senderPhoto || '';
-    let senderId = message.senderId;
 
     if (message.senderId !== currentUser?.uid && userMap[message.senderId]) {
         senderName = userMap[message.senderId].name || senderName;
         senderPhoto = userMap[message.senderId].photoURL || senderPhoto;
-        senderId = message.senderId;
     }
 
     const firstLetter = senderName.charAt(0).toUpperCase();
@@ -1384,16 +1347,12 @@ function listenToPMMessages(otherUserId) {
     const messagesContainer = document.getElementById('pm-messages');
     if (!messagesContainer) return;
 
-    messagesContainer.innerHTML = '';
-    window.displayedPMMessageIds.clear();
-    window.pmMessagesLoaded = false;
-    
     const chatId = [currentUser.uid, otherUserId].sort().join('_');
     
     unsubscribePM = db.collection('privateChats')
         .doc(chatId)
         .collection('messages')
-        .orderBy('timestamp', 'asc')  
+        .orderBy('timestamp', 'asc')
         .onSnapshot((snapshot) => {
 
             if (snapshot.empty) {
@@ -1401,54 +1360,32 @@ function listenToPMMessages(otherUserId) {
                 return;
             }
 
-            snapshot.docChanges().forEach((change) => {
-                const message = change.doc.data();
-                const messageId = change.doc.id;
-                
-                if (change.type === 'added') {
-                    if (document.getElementById(`pm-msg-${messageId}`)) {
-                        return; 
-                    }
-                    
-                    window.displayedPMMessageIds.add(messageId);
-                    appendPMMessage(message, messagesContainer, messageId);
-                }
-                
-                if (change.type === 'modified') {
-                    const existingMsg = document.getElementById(`pm-msg-${messageId}`);
-                    if (existingMsg) {
-                        existingMsg.remove();
-                        window.displayedPMMessageIds.delete(messageId);
-                        
-                        window.displayedPMMessageIds.add(messageId);
-                        appendPMMessage(message, messagesContainer, messageId);
-                    }
-                }
-                
-                if (change.type === 'removed') {
-                    const existingMsg = document.getElementById(`pm-msg-${messageId}`);
-                    if (existingMsg) {
-                        existingMsg.remove();
-                        window.displayedPMMessageIds.delete(messageId);
-                    }
+            messagesContainer.innerHTML = '';
+
+            const messages = [];
+            snapshot.forEach(doc => {
+                messages.push({
+                    id: doc.id,
+                    ...doc.data()
+                });
+            });
+
+            messages.sort((a, b) => {
+                const timeA = a.timestamp?.toDate?.() || new Date(0);
+                const timeB = b.timestamp?.toDate?.() || new Date(0);
+                return timeA - timeB;
+            });
+
+            messages.forEach(msg => {
+                if (!document.getElementById(`pm-msg-${msg.id}`)) {
+                    appendPMMessage(msg, messagesContainer, msg.id);
                 }
             });
 
-            if (snapshot.docChanges().length > 0) {
-                const lastChange = snapshot.docChanges()[snapshot.docChanges().length - 1];
-                
-                if (lastChange.type === 'added') {
-                    const isOwnMessage = lastChange.doc.data().senderId === currentUser?.uid;
-                    const isNearBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight < 150;
-                    
-                    if (isOwnMessage || isNearBottom) {
-                        setTimeout(() => {
-                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                        }, 100);
-                    }
-                }
-            }
-            
+            setTimeout(() => {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }, 100);
+
             if (currentPMUser?.id === otherUserId) {
                 markMessagesAsRead(otherUserId);
             }
@@ -1456,6 +1393,10 @@ function listenToPMMessages(otherUserId) {
 }
 
 function appendPMMessage(message, container, messageId) {
+    if (document.getElementById(`pm-msg-${messageId}`)) {
+        return;
+    }
+    
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${message.senderId === currentUser?.uid ? 'sent' : 'received'}`;
     messageDiv.id = `pm-msg-${messageId}`;
