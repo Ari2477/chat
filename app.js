@@ -414,7 +414,7 @@ async function initializeApp() {
 
         await initializeGroupChat();
         loadUsers();
-        listenToUnreadPMs();
+        listenToUnreadPMs(); 
         setupPresence();
         setupEnterKeyListeners();
         loadTheme();
@@ -1264,7 +1264,39 @@ function listenToUnreadPMs() {
                 const totalUnread = Array.from(unreadMap.values()).reduce((a, b) => a + b, 0);
                 document.title = `(${totalUnread}) Mini Messenger`;
             }
+
+            saveUnreadCounts(unreadMap);
+            
+        }, (error) => {
+            console.error('❌ Unread messages listener error:', error);
+            loadSavedUnreadCounts();
         });
+}
+
+function saveUnreadCounts(unreadMap) {
+    try {
+        const unreadData = {};
+        unreadMap.forEach((count, senderId) => {
+            unreadData[senderId] = count;
+        });
+        localStorage.setItem('messenger_unread', JSON.stringify(unreadData));
+    } catch (e) {
+        console.log('Error saving to localStorage:', e);
+    }
+}
+
+function loadSavedUnreadCounts() {
+    try {
+        const saved = localStorage.getItem('messenger_unread');
+        if (saved) {
+            const unreadData = JSON.parse(saved);
+            Object.entries(unreadData).forEach(([senderId, count]) => {
+                updateUserUnreadBadge(senderId, count);
+            });
+        }
+    } catch (e) {
+        console.log('Error loading from localStorage:', e);
+    }
 }
 
 function updateUserUnreadBadge(userId, count) {
@@ -1645,7 +1677,21 @@ async function markMessagesAsRead(senderId) {
             });
             
             await batch.commit();
+            
+            
             updateUserUnreadBadge(senderId, 0);
+            
+            
+            const saved = localStorage.getItem('messenger_unread');
+            if (saved) {
+                const unreadData = JSON.parse(saved);
+                delete unreadData[senderId];
+                localStorage.setItem('messenger_unread', JSON.stringify(unreadData));
+            }
+            
+        
+            const totalUnread = getTotalUnreadCount();
+            document.title = totalUnread > 0 ? `(${totalUnread}) Mini Messenger` : 'Mini Messenger';
         }
         
     } catch (error) {
