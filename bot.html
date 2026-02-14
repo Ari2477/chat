@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mini Assistant - Ultimate AI</title>
+    <title>Mini Assistant</title>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
@@ -125,7 +125,7 @@
             </div>
             <div class="bot-info">
                 <h2>Mini Assistant</h2>
-                <p><i class="fas fa-circle"></i> Online • AI Powered</p>
+                <p><i class="fas fa-circle"></i> Online • GPT-4o-mini</p>
             </div>
         </div>
 
@@ -144,7 +144,7 @@
         <div id="botMessages" class="bot-messages-container">
             <div class="welcome-message">
                 <i class="fas fa-robot" style="font-size: 32px; color: var(--primary); margin-bottom: 10px; display: block;"></i>
-                Hi! I'm Mini Assistant.<br>Type <strong>/help</strong> to see commands!
+                Hi! I'm Mini Assistant with GPT-4o-mini.<br>Type <strong>/help</strong> to see commands!
             </div>
         </div>
 
@@ -162,8 +162,6 @@
     <script>       
         const API_CONFIG = {
             chat: '/api/chat',                    
-            analyze: '/api/analyze-image',        
-            smart: '/api/smart-chat',              
             imgbb: "https://api.imgbb.com/1/upload",
             imgbbKey: "87b58d438e0cbe5226c1df0a8071621e",
             dictionary: "https://api.dictionaryapi.dev/api/v2/entries/en",
@@ -175,9 +173,6 @@
         const userName = urlParams.get('userName') || 'User';
         const userPfp = urlParams.get('userPfp') || 'https://ui-avatars.com/api/?name=User&background=4f46e5&color=fff';
 
-        // =====================================================
-        // DATA COLLECTIONS - MARAMING MESSAGES!
-        // =====================================================
         const jokes = [
             "Why don't scientists trust atoms? Because they make up everything!",
             "Why did the scarecrow win an award? He was outstanding in his field!",
@@ -300,20 +295,19 @@
 
         let userNotes = JSON.parse(localStorage.getItem('botNotes')) || [];
 
-        // =====================================================
-        // UPDATED AI FUNCTIONS - WITH BETTER ERROR HANDLING
-        // =====================================================
  
-        async function fetchAI(prompt) {
+        async function askAI(prompt, imageUrl = null) {
             try {
+                const body = imageUrl 
+                    ? { message: prompt, imageUrl: imageUrl }
+                    : { message: prompt };
+                
                 const response = await fetch(API_CONFIG.chat, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({
-                        message: prompt
-                    })
+                    body: JSON.stringify(body)
                 });
 
                 const data = await response.json();
@@ -327,60 +321,6 @@
             } catch (err) {
                 console.error("AI Error:", err);
                 return "❌ AI service unavailable. Please try again.";
-            }
-        }
- 
-        async function analyzeImage(prompt, imageUrl) {
-            try {
-                const response = await fetch(API_CONFIG.analyze, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        prompt: prompt,
-                        imageUrl: imageUrl
-                    })
-                });
-
-                const data = await response.json();
-                
-                if (data.error) {
-                    return "❌ " + data.error;
-                }
-                
-                return data.response || "I've analyzed the image!";
-                
-            } catch (err) {
-                console.error("Image Analysis Error:", err);
-                return "❌ Image analysis failed. Please try again.";
-            }
-        }
-
-        async function smartChat(message, imageUrl = "") {
-            try {
-                const response = await fetch(API_CONFIG.smart, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        message: message,
-                        imageUrl: imageUrl
-                    })
-                });
-
-                const data = await response.json();
-                
-                if (data.error) {
-                    return "❌ " + data.error;
-                }
-                
-                return data.response || "I'm here to help!";
-                
-            } catch (err) {
-                console.error("Smart Chat Error:", err);
-                return "❌ Service unavailable. Please try again.";
             }
         }
 
@@ -438,7 +378,7 @@
                 
                 if (!data.length) return `❌ No synonyms found for "${word}".`;
 
-                return "🔤 **Synonyms:**\n" + data.map((w,i)=>`${i+1}. ${w.word}`).join("\n");
+                return "🔤 Synonyms:\n" + data.map((w,i)=>`${i+1}. ${w.word}`).join("\n");
             } catch {
                 return "❌ Synonym service unavailable.";
             }
@@ -451,7 +391,7 @@
                 
                 if (!data.length) return `❌ No antonyms found for "${word}".`;
 
-                return "🔄 **Antonyms:**\n" + data.map((w,i)=>`${i+1}. ${w.word}`).join("\n");
+                return "🔄 Antonyms:\n" + data.map((w,i)=>`${i+1}. ${w.word}`).join("\n");
             } catch {
                 return "❌ Antonym service unavailable.";
             }
@@ -462,21 +402,21 @@
         }
 
         function getJoke() {
-            return `😂 **Joke:**\n${getRandomFromArray(jokes)}`;
+            return `😂 Joke:\n${getRandomFromArray(jokes)}`;
         }
 
         function getFact() {
-            return `🤔 **Did you know?**\n${getRandomFromArray(facts)}`;
+            return `🤔 Did you know?\n${getRandomFromArray(facts)}`;
         }
 
         function getQuote() {
-            return `💭 **Quote:**\n${getRandomFromArray(quotes)}`;
+            return `💭 [ Quote: ]\n${getRandomFromArray(quotes)}`;
         }
 
         function calculate(expr) {
             try {
                 const result = Function('"use strict";return (' + expr + ')')();
-                return `🧮 **Result:** ${expr} = ${result}`;
+                return `🧮 Result: ${expr} = ${result}`;
             } catch {
                 return "❌ Invalid math expression!";
             }
@@ -580,11 +520,10 @@
                     
                     showTyping();
 
-                    // Use analyzeImage directly for better control
-                    const response = await analyzeImage(prompt, imageUrl);
+                    const response = await askAI(prompt, imageUrl);
                     
                     hideTyping();
-                    addBotMessage(`🤖 **AI says:**\n${response}`, false);
+                    addBotMessage(`🤖 [ AI Says ]\n${response}`, false);
                     
                     input.value = '';
                     
@@ -681,7 +620,7 @@
 
         function getHelp() {
             return `╭────────────────────╮
-│   🤖 **COMMANDS**   │
+│   🤖 [ COMMANDS ]   │
 ╰────────────────────╯
 
 ╭━━━ **[ AI & CHAT ]** ━━━╮
@@ -714,7 +653,7 @@
 ┃ 🧹 /clear • Clear chat
 ╰━━━━━━━━━━━━━━╯
 
-📸 **IMAGE:** Type /ai + question, click 📷`;
+📸 [ IMAGE ] => Type /ai + question, click 📷`;
         }
 
         function getInfo() {
@@ -722,31 +661,32 @@
 
 ╭━━━━━━━━━━━━━━╮
 ┃ Mini Assistant
-┃ Version 6.0
-┃ AI: Qwen2-72B (GPT-4 level)
-┃ Vision: Idefics2 (Best image Q&A)
+┃ Version 1.0
+┃ AI: GPT-4o-mini
 ╰━━━━━━━━━━━━━━╯
 
-📊 **STATISTICS:**
-• Text AI: Qwen2-72B (Fastest & Smartest)
-• Image AI: Idefics2 (Detailed analysis)
+📊 [ STATISTICS ]
+• Model: openai/gpt-4o-mini
+• Capability: ✅ Text + Image Analysis
+• Speed: ⚡ 1-2 seconds
+• Intelligence: 🧠 GPT-4 level
+• Price: 💰 ₱0.008 per chat
 • Commands: 20+
 • Auto-responses: 200+
-• Price: 💯 ABSOLUTELY FREE!
 
-⚙️ **FEATURES:**
-• 🤖 Qwen2-72B AI (Fastest: 1-2s / Smartest: 5-10s)
-• 🖼️ Idefics2 Image Analysis (with Q&A)
+⚙️ [ FEATURES ]
+• 🤖 Text Chat with GPT-4o-mini
+• 🖼️ Image Analysis with Vision
 • 😂 Jokes & Facts
 • 📖 Dictionary
 • 🧮 Calculator
 • 📝 Notes
 • ⏲️ Timer
 
-🔧 **DEVELOPER:**
-Created by **ARI** with ❤️
+🔧 DEVELOPER:
+Created by ARI with ❤️
 
-💡 **Tip:** Type /ai + question + 📷 for images!`;
+💡 [ Tip ] => Type /ai + question + 📷 for images!`;
         }
 
         async function processCommand(msg) {
@@ -799,8 +739,8 @@ Created by **ARI** with ❤️
             if (cmd === "/antonym" && args) return await getAntonyms(args);
 
             if (cmd === "/ai" && args) {
-                const res = await fetchAI(args);
-                return `🤖 **AI says:**\n${res}`;
+                const res = await askAI(args);
+                return `🤖 **GPT-4o-mini says:**\n${res}`;
             }
             if (cmd === "/ai" && !args) {
                 return "❌ Add a question. Example: /ai what is love?";
