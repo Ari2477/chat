@@ -159,29 +159,20 @@
         </div>
     </div>
 
-    <script>
-        /* =====================================================
-           OPENROUTER AI - GPT-4O-MINI (with Image Support!)
-        ===================================================== */
-        
+    <script>       
         const API_CONFIG = {
-            // OpenRouter AI (replaces Gemini and SimSimi)
-            openrouter: '/api/chat',  // Your backend endpoint
+            openrouter: '/api/chat',  
             imgbb: "https://api.imgbb.com/1/upload",
             imgbbKey: "87b58d438e0cbe5226c1df0a8071621e",
             dictionary: "https://api.dictionaryapi.dev/api/v2/entries/en",
             datamuse: "https://api.datamuse.com/words"
         };
 
-        // User data
         const urlParams = new URLSearchParams(window.location.search);
         const userId = urlParams.get('userId');
         const userName = urlParams.get('userName') || 'User';
         const userPfp = urlParams.get('userPfp') || 'https://ui-avatars.com/api/?name=User&background=4f46e5&color=fff';
 
-        /* =====================================================
-           DATA COLLECTIONS - MARAMING MESSAGES!
-        ===================================================== */
         
         const jokes = [
             "Why don't scientists trust atoms? Because they make up everything!",
@@ -320,9 +311,6 @@
 
         let userNotes = JSON.parse(localStorage.getItem('botNotes')) || [];
 
-        /* =====================================================
-           OPENROUTER AI FUNCTION (with Image Support)
-        ===================================================== */
 
         async function fetchOpenRouter(prompt, imageUrl = "") {
             try {
@@ -351,9 +339,6 @@
             }
         }
 
-        /* =====================================================
-           IMAGE UPLOAD (IMGBB)
-        ===================================================== */
 
         async function uploadImage(file) {
             try {
@@ -377,9 +362,6 @@
             }
         }
 
-        /* =====================================================
-           DICTIONARY
-        ===================================================== */
 
         async function defineWord(word) {
             try {
@@ -406,9 +388,6 @@
             }
         }
 
-        /* =====================================================
-           SYNONYMS / ANTONYMS
-        ===================================================== */
 
         async function getSynonyms(word) {
             try {
@@ -417,7 +396,7 @@
                 
                 if (!data.length) return `❌ No synonyms found for "${word}".`;
 
-                return "🔤 **Synonyms:**\n" + data.map((w,i)=>`${i+1}. ${w.word}`).join("\n");
+                return "🔤 [ Synonyms: ]\n" + data.map((w,i)=>`${i+1}. ${w.word}`).join("\n");
             } catch {
                 return "❌ Synonym service unavailable.";
             }
@@ -430,99 +409,92 @@
                 
                 if (!data.length) return `❌ No antonyms found for "${word}".`;
 
-                return "🔄 **Antonyms:**\n" + data.map((w,i)=>`${i+1}. ${w.word}`).join("\n");
+                return "🔄 [ Antonyms: ]\n" + data.map((w,i)=>`${i+1}. ${w.word}`).join("\n");
             } catch {
                 return "❌ Antonym service unavailable.";
             }
         }
 
-        /* =====================================================
-           HELPER FUNCTIONS
-        ===================================================== */
 
         function getRandomFromArray(arr) {
             return arr[Math.floor(Math.random() * arr.length)];
         }
 
         function getJoke() {
-            return `😂 **Joke:**\n${getRandomFromArray(jokes)}`;
+            return `😂 [ Joke: ]\n${getRandomFromArray(jokes)}`;
         }
 
         function getFact() {
-            return `🤔 **Did you know?**\n${getRandomFromArray(facts)}`;
+            return `🤔 [ Did you know? ]\n${getRandomFromArray(facts)}`;
         }
 
         function getQuote() {
-            return `💭 **Quote:**\n${getRandomFromArray(quotes)}`;
+            return `💭 [ Quote: ]\n${getRandomFromArray(quotes)}`;
         }
 
         function calculate(expr) {
             try {
                 const result = Function('"use strict";return (' + expr + ')')();
-                return `🧮 **Result:** ${expr} = ${result}`;
+                return `🧮 [ Result: ] ${expr} = ${result}`;
             } catch {
                 return "❌ Invalid math expression!";
             }
         }
 
-        /* =====================================================
-           AUTO-RESPONSES (MARAMING MESSAGES!)
-        ===================================================== */
 
         function getAutoResponse(message) {
             const lower = message.toLowerCase().trim();
 
-            // Greetings
+            
             if (lower.match(/^(hello|hi|hey|hola|kamusta|musta)/)) {
                 return getRandomFromArray(greetings);
             }
 
-            // Farewells
+        
             if (lower.match(/^(bye|goodbye|see you|cya|ttyl|paalam)/)) {
                 return getRandomFromArray(farewells);
             }
 
-            // Thanks
+        
             if (lower.match(/thank|thanks|salamat|ty|thank you/)) {
                 return getRandomFromArray(thanks);
             }
 
-            // Creator
-            if (lower.match(/creator|who made you|your creator|who is your master|ari/)) {
+    
+            if (lower.match(/creator|who made you|your creator|who is your master|ari|sino gumagawa sayo?/)) {
                 return getRandomFromArray(creatorInfo);
             }
 
-            // About bot
+    
             if (lower.match(/who are you|what are you|your name|introduce/)) {
                 return getRandomFromArray(aboutBot);
             }
 
-            // Love
+    
             if (lower.match(/love|miss you|i like you|you're cute|i love you/)) {
                 return getRandomFromArray(loveMessages);
             }
 
-            // Compliments
+        
             if (lower.match(/good bot|you're great|nice|awesome|cool/)) {
                 return getRandomFromArray(compliments);
             }
 
-            // How are you
+        
             if (lower.match(/how are you|how do you do|how's it going/)) {
                 return "I'm doing great! Thanks for asking! 😊 How about you?";
             }
 
-            // What's up
+    
             if (lower.match(/what'?s up|sup|what's happening/)) {
                 return "Not much, just waiting for your messages! 🌟 What's up with you?";
             }
 
-            // Age
+        
             if (lower.match(/how old are you|your age/)) {
                 return "I'm ageless! But I was born when ARI coded me! 🎂";
             }
 
-            // Default responses
             const defaultResponses = [
                 "That's interesting! Tell me more! 👂",
                 "I see! What else would you like to share? 💭",
@@ -539,9 +511,6 @@
             return getRandomFromArray(defaultResponses);
         }
 
-        /* =====================================================
-           IMAGE HANDLER
-        ===================================================== */
 
         async function handleImageUpload() {
             const input = document.getElementById('botMessageInput');
@@ -573,22 +542,19 @@
                 try {
                     const imageUrl = await uploadImage(file);
                     
-                    // Remove uploading message
                     const msgs = document.getElementById('botMessages');
                     if (msgs.lastChild && msgs.lastChild.textContent.includes('Uploading')) {
                         msgs.lastChild.remove();
                     }
                     
-                    // Show user message with image
                     addUserMessageWithImage(prompt, imageUrl);
                     
                     showTyping();
                     
-                    // Use OpenRouter AI instead of Gemini
                     const response = await fetchOpenRouter(prompt, imageUrl);
                     
                     hideTyping();
-                    addBotMessage(`🤖 **AI says:**\n${response}`, false);
+                    addBotMessage(`🤖 [ AI says: ]\n${response}`, false);
                     
                     input.value = '';
                     
@@ -601,9 +567,6 @@
             fileInput.click();
         }
 
-        /* =====================================================
-           MESSAGE FUNCTIONS
-        ===================================================== */
 
         function addBotMessage(text, isUser = false) {
             const container = document.getElementById('botMessages');
@@ -613,7 +576,7 @@
             if (!isUser) {
                 const avatar = document.createElement('div');
                 avatar.className = 'bot-message-avatar';
-                avatar.innerHTML = '<img src="https://ui-avatars.com/api/?name=AI&background=4f46e5&color=fff" alt="Bot">';
+                avatar.innerHTML = '<img src="https://i.ibb.co/KjkPv6xw/Ilustraci-n-de-dibujos-animados-lindo-robot-agitando-la-mano-Vector-Premium.jpg" alt="Bot">';
                 wrapper.appendChild(avatar);
             }
             
@@ -687,9 +650,6 @@
             if (typing) typing.remove();
         }
 
-        /* =====================================================
-           COMMAND PROCESSOR
-        ===================================================== */
 
         function getHelp() {
             return `╭────────────────────╮
@@ -726,11 +686,11 @@
 ┃ 🧹 /clear • Clear chat
 ╰━━━━━━━━━━━━━━╯
 
-📸 **IMAGE:** Type /ai + question, click 📷`;
+📸 [ IMAGE: ] Type /ai + question, click 📷`;
         }
 
         function getInfo() {
-            return `🤖 **BOT INFORMATION**
+            return `🤖 BOT INFORMATION
 
 ╭━━━━━━━━━━━━━━╮
 ┃ Mini Assistant
@@ -738,24 +698,24 @@
 ┃ AI: GPT-4O-MINI
 ╰━━━━━━━━━━━━━━╯
 
-📊 **STATISTICS:**
-• Commands: 20+
+📊 [ STATISTICS: ]
+• Commands: 10+
 • Auto-responses: 200+
 • Image support: ✅
 • Dictionary: ✅
 
-⚙️ **FEATURES:**
-• 🤖 GPT-4O-MINI AI (with images)
+⚙️ [ FEATURES: ]
+• 🤖 GPT-4O-MINI AI
 • 😂 Jokes & Facts
 • 📖 Dictionary
 • 🧮 Calculator
 • 📝 Notes
 • ⏲️ Timer
 
-🔧 **DEVELOPER:**
-Created by **ARI** with ❤️
+🔧 [ DEVELOPER: ]
+Created by ARI with ❤️
 
-💡 **Tip:** Type /ai + question + 📷 for images!`;
+💡 Tip: Type /ai + question + 📷 for images!`;
         }
 
         async function processCommand(msg) {
@@ -763,7 +723,6 @@ Created by **ARI** with ❤️
             const cmd = parts[0].toLowerCase();
             const args = parts.slice(1).join(" ");
 
-            // Help & Info
             if (cmd === "/help") return getHelp();
             if (cmd === "/info") return getInfo();
             if (cmd === "/clear") {
@@ -771,16 +730,13 @@ Created by **ARI** with ❤️
                 return "Chat cleared! Type /help to see commands.";
             }
 
-            // Fun
             if (cmd === "/joke") return getJoke();
             if (cmd === "/fact") return getFact();
             if (cmd === "/quote") return getQuote();
 
-            // Math
             if (cmd === "/calc" && args) return calculate(args);
             if (cmd === "/math" && args) return calculate(args);
 
-            // Notes
             if (cmd === "/note" && args) {
                 userNotes.push({ text: args, date: new Date().toLocaleString() });
                 localStorage.setItem('botNotes', JSON.stringify(userNotes));
@@ -788,14 +744,13 @@ Created by **ARI** with ❤️
             }
             if (cmd === "/notes") {
                 if (!userNotes.length) return "📭 No notes yet.";
-                let result = "📋 **YOUR NOTES:**\n\n";
+                let result = "📋 [ YOUR NOTES: ]\n\n";
                 userNotes.forEach((note, i) => {
                     result += `${i+1}. ${note.text} (${note.date})\n`;
                 });
                 return result;
             }
 
-            // Timer
             if (cmd === "/timer" && args) {
                 let sec = parseInt(args);
                 if (isNaN(sec)) return "❌ Invalid seconds!";
@@ -803,21 +758,18 @@ Created by **ARI** with ❤️
                 return `⏲️ Timer set for ${sec}s`;
             }
 
-            // Reminder
             if (cmd === "/remind" && args) {
                 setTimeout(() => addBotMessage(`🔔 Reminder: ${args}`, false), 10000);
                 return "✅ Reminder set (10 seconds)";
             }
 
-            // Dictionary
             if (cmd === "/define" && args) return await defineWord(args);
             if (cmd === "/synonym" && args) return await getSynonyms(args);
             if (cmd === "/antonym" && args) return await getAntonyms(args);
 
-            // AI - USING OPENROUTER (replaces Gemini and SimSimi)
             if (cmd === "/ai" && args) {
                 const res = await fetchOpenRouter(args);
-                return "🤖 **AI says:**\n" + res;
+                return "🤖 [ AI says: ]\n" + res;
             }
             if (cmd === "/ai" && !args) {
                 return "❌ Add a question. Example: /ai what is love?";
@@ -826,9 +778,6 @@ Created by **ARI** with ❤️
             return null;
         }
 
-        /* =====================================================
-           SEND MESSAGE
-        ===================================================== */
 
         async function sendMessage() {
             const input = document.getElementById("botMessageInput");
@@ -873,7 +822,6 @@ Created by **ARI** with ❤️
             window.location.href = 'index.html';
         }
 
-        // Welcome message
         document.addEventListener('DOMContentLoaded', () => {
             if (userName !== 'User') {
                 setTimeout(() => {
