@@ -1,7 +1,7 @@
 {
   "name": "mini-messenger",
-  "version": "6.0.0",
-  "description": "Ultimate Mini Messenger with Hugging Face SOTA AI Models - 100% FREE! Features Qwen2-72B (GPT-4 level), Llama-3-70B, Idefics2 for images, Moondream2 for fast Q&A",
+  "version": "7.0.0",
+  "description": "Mini Messenger with OpenRouter GPT-4o-mini - Super intelligent AI for text and image analysis! Fast, accurate, and affordable.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -14,24 +14,18 @@
     "firebase",
     "real-time",
     "ai",
-    "huggingface",
-    "qwen2-72b",
-    "llama-3",
-    "idefics2",
-    "moondream2",
-    "artificial-intelligence",
-    "free-ai",
-    "open-source",
-    "gpt-4-level",
+    "openrouter",
+    "gpt-4o-mini",
+    "vision",
     "image-analysis",
-    "vision-language",
-    "openai-compatible"
+    "artificial-intelligence",
+    "gpt-4",
+    "multimodal"
   ],
   "author": "ARI",
   "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",
-    "openai": "^4.20.0",
     "node-fetch": "^2.7.0",
     "dotenv": "^16.3.1"
   },
