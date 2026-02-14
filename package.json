@@ -1,7 +1,7 @@
 {
   "name": "mini-messenger",
-  "version": "5.0.0",
-  "description": "Mini Messenger with SOTA AI Models from Hugging Face - 100% FREE! Features Command R+ (104B), Mixtral 8x22B, Llama 3, Moondream2 for images",
+  "version": "6.0.0",
+  "description": "Ultimate Mini Messenger with Hugging Face SOTA AI Models - 100% FREE! Features Qwen2-72B (GPT-4 level), Llama-3-70B, Idefics2 for images, Moondream2 for fast Q&A",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -15,20 +15,23 @@
     "real-time",
     "ai",
     "huggingface",
-    "command-r-plus",
-    "mixtral",
+    "qwen2-72b",
     "llama-3",
+    "idefics2",
     "moondream2",
     "artificial-intelligence",
     "free-ai",
     "open-source",
     "gpt-4-level",
-    "image-analysis"
+    "image-analysis",
+    "vision-language",
+    "openai-compatible"
   ],
   "author": "ARI",
   "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",
+    "openai": "^4.20.0",
     "node-fetch": "^2.7.0",
     "dotenv": "^16.3.1"
   },
@@ -36,6 +39,6 @@
     "nodemon": "^3.0.1"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=18.0.0"
   }
 }
