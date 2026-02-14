@@ -1258,32 +1258,7 @@ body.light-mode .user-item:hover {
     padding: 20px 16px;
     background: #0e0f16;
     background-image: 
-        radial-gradient(circle at 8% 15%, rgba(139, 92, 246, 0.14) 0%, transparent 32%),
-        radial-gradient(circle at 92% 72%, rgba(79, 70, 229, 0.14) 0%, transparent 35%),
-        radial-gradient(circle at 25% 82%, rgba(99, 102, 241, 0.12) 0%, transparent 30%),
-        radial-gradient(circle at 75% 28%, rgba(79, 70, 229, 0.12) 0%, transparent 33%),
-        radial-gradient(circle at 45% 45%, rgba(139, 92, 246, 0.1) 0%, transparent 40%),
-        radial-gradient(circle at 60% 60%, rgba(99, 102, 241, 0.1) 0%, transparent 38%),
-
-        repeating-radial-gradient(circle at 12% 18%, rgba(139, 92, 246, 0.09) 2.5px, transparent 3.5px, transparent 32px),
-        repeating-radial-gradient(circle at 88% 68%, rgba(99, 102, 241, 0.09) 2.5px, transparent 3.5px, transparent 35px),
-        repeating-radial-gradient(circle at 32% 78%, rgba(79, 70, 229, 0.08) 2px, transparent 3px, transparent 28px),
-        repeating-radial-gradient(circle at 68% 22%, rgba(79, 70, 229, 0.08) 2px, transparent 3px, transparent 30px),
-        repeating-radial-gradient(circle at 20% 55%, rgba(139, 92, 246, 0.07) 1.8px, transparent 2.8px, transparent 26px),
-        repeating-radial-gradient(circle at 80% 45%, rgba(99, 102, 241, 0.07) 1.8px, transparent 2.8px, transparent 28px),
-        repeating-radial-gradient(circle at 40% 30%, rgba(79, 70, 229, 0.06) 1.5px, transparent 2.5px, transparent 24px),
-        repeating-radial-gradient(circle at 55% 85%, rgba(79, 70, 229, 0.06) 1.5px, transparent 2.5px, transparent 25px),
-        repeating-radial-gradient(circle at 70% 50%, rgba(139, 92, 246, 0.06) 1.5px, transparent 2.5px, transparent 27px),
-
-        repeating-linear-gradient(45deg, rgba(139, 92, 246, 0.05) 0px, rgba(139, 92, 246, 0.05) 2px, transparent 2px, transparent 22px),
-        repeating-linear-gradient(-45deg, rgba(79, 70, 229, 0.05) 0px, rgba(79, 70, 229, 0.05) 2px, transparent 2px, transparent 24px),
-        repeating-linear-gradient(135deg, rgba(99, 102, 241, 0.04) 0px, rgba(99, 102, 241, 0.04) 1.5px, transparent 1.5px, transparent 18px),
-        repeating-linear-gradient(225deg, rgba(139, 92, 246, 0.04) 0px, rgba(139, 92, 246, 0.04) 1.5px, transparent 1.5px, transparent 20px),
-
-        repeating-radial-gradient(ellipse at 15% 22%, rgba(79,70,229,0.05) 1px, transparent 2px, transparent 20px),
-        repeating-radial-gradient(ellipse at 85% 75%, rgba(99,102,241,0.05) 1px, transparent 2px, transparent 22px),
-
-        linear-gradient(145deg, #0e0f16 0%, #1a1b26 100%);
+        url('https://i.ibb.co/W4hjZsXv/Screenshot-20260214-192633-1.jpg');
     
     display: flex;
     flex-direction: column;
