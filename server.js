@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const { OpenAI } = require('openai');
 const fetch = require('node-fetch');
 require('dotenv').config();
 
@@ -7,264 +8,264 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.static(path.join(__dirname)));
-app.use(express.json({ limit: '50mb' })); 
+app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // =====================================================
-// 🤖 HUGGING FACE CONFIG
+// 🏆 ULTIMATE MODELS - OPENAI COMPATIBLE
 // =====================================================
 const HF_TOKEN = process.env.HUGGINGFACE_TOKEN;
 
-// ✅ BAGONG ENDPOINT (ito ang gagamitin!)
-const HF_API_BASE = 'https://router.huggingface.co/hf-inference/models';
+const client = new OpenAI({
+    baseURL: "https://router.huggingface.co/v1",
+    apiKey: HF_TOKEN,
+});
 
-// ==========================
-// 🔥 BEST PRIORITY TEXT MODELS
-// ==========================
+// 📝 BEST TEXT MODELS
 const TEXT_MODELS = {
-    // 🥇 Strongest reasoning (deep logic, math, analysis)
-    QWEN_2_72B: 'Qwen/Qwen2-72B-Instruct',
-
-    // 🥈 Very strong and stable structured answers
-    LLAMA_3_70B: 'meta-llama/Meta-Llama-3-70B-Instruct',
-
-    // 🥉 Creative + long-form strong model
-    MIXTRAL_8x22B: 'mistralai/Mixtral-8x22B-Instruct-v0.1',
-
-    // Other strong models
-    DBRX: 'databricks/dbrx-instruct',
-    COMMAND_R_PLUS: 'CohereForAI/c4ai-command-r-plus-08-2024',
-    COMMAND_R: 'CohereForAI/c4ai-command-r-v01',
-
-    // Mid-tier (reliable fallbacks)
-    GEMMA_2_9B: 'google/gemma-2-9b-it',
-    SOLAR_10_7B: 'upstage/SOLAR-10.7B-Instruct-v1.0',
-    ZEPHYR_7B_BETA: 'HuggingFaceH4/zephyr-7b-beta',
+    // 🥇 SMARTEST (GPT-4 level) - 5-10 seconds
+    SMARTEST: "Qwen/Qwen2-72B-Instruct",
+    
+    // 🥈 FASTEST - 1-2 seconds only!
+    FASTEST: "Qwen/Qwen2-72B:fastest",
+    
+    // 🥉 BALANCED - 2-3 seconds
+    BALANCED: "meta-llama/Meta-Llama-3-70B-Instruct",
+    
+    // Backup models
+    MIXTRAL: "mistralai/Mixtral-8x7B-Instruct-v0.1",
+    COMMAND_R: "CohereForAI/c4ai-command-r-plus-08-2024",
+    LLAMA_3_8B: "meta-llama/Meta-Llama-3-8B-Instruct",
+    MISTRAL_7B: "mistralai/Mistral-7B-Instruct-v0.2",
 };
 
-// ==========================
-// 🖼 IMAGE / VISION MODELS
-// ==========================
+// 🖼️ BEST IMAGE MODELS
 const IMAGE_MODELS = {
-    // 🥇 Best image reasoning + explanation
-    IDEFICS2: 'HuggingFaceM4/idefics2-8b',
-
-    // 🥈 Good caption + visual Q&A
-    BLIP2: 'Salesforce/blip2-opt-2.7b',
-
-    // 🥉 Lightweight vision-language
-    MOONDREAM2: 'vikhyatk/moondream2',
-
-    // Feature extractors (NOT conversational)
-    DINOv2: 'facebook/dinov2-large',
-    CLIP_VIT: 'openai/clip-vit-large-patch14',
-    GIT_LARGE: 'microsoft/git-large-coco',
-    BLIP_BASE: 'Salesforce/blip-image-captioning-base',
-    VIT_LARGE: 'google/vit-large-patch16-224',
-    SWIN_LARGE: 'microsoft/swin-large-patch4-window7-224-in22k',
+    // 🥇 SMARTEST (with Q&A) - Best for detailed questions
+    SMARTEST: "HuggingFaceM4/idefics2-8b",
+    
+    // 🥈 FASTEST (with Q&A) - 2-3 seconds
+    FASTEST: "vikhyatk/moondream2",
+    
+    // 🥉 BALANCED (with Q&A)
+    BALANCED: "Salesforce/blip2-opt-2.7b",
+    
+    // Caption models (no Q&A, just descriptions)
+    CAPTION_FAST: "Salesforce/blip-image-captioning-base",
+    CAPTION_GIT: "microsoft/git-base-coco",
+    CAPTION_VIT: "nlpconnect/vit-gpt2-image-captioning",
 };
 
-// System prompt para consistent ang personality
+// System prompt for consistent personality
 const SYSTEM_PROMPT = `You are Mini Assistant, a super intelligent AI created by ARI. 
 You are helpful, detailed, and precise in your responses.
-Answer in a friendly but professional manner.`;
+Answer in a friendly but professional manner. Keep responses concise but informative.`;
 
 // =====================================================
-// 📝 TEXT CHAT - with priority models
+// 📝 TEXT CHAT ENDPOINT
 // =====================================================
 app.post('/api/chat', async (req, res) => {
     try {
-        const { message } = req.body;
+        const { message, model = TEXT_MODELS.FASTEST } = req.body;
         
         if (!message) {
             return res.status(400).json({ error: 'Message is required' });
         }
 
-        // ✅ PRIORITY ORDER ng models (from strongest to fallback)
-        const modelPriority = [
-            TEXT_MODELS.QWEN_2_72B,      // 1st - strongest reasoning
-            TEXT_MODELS.LLAMA_3_70B,      // 2nd - stable structured
-            TEXT_MODELS.MIXTRAL_8x22B,    // 3rd - creative long-form
-            TEXT_MODELS.DBRX,              // 4th - strong alternative
-            TEXT_MODELS.COMMAND_R_PLUS,    // 5th - reliable
-            TEXT_MODELS.ZEPHYR_7B_BETA,    // 6th - fast fallback
-            'mistralai/Mistral-7B-Instruct-v0.2' // Last resort - sureball
-        ];
-        
-        let aiResponse = null;
-        let lastError = null;
+        console.log(`🤖 Text model: ${model}`);
+        console.log(`📝 Question: ${message.substring(0, 50)}...`);
 
-        for (const model of modelPriority) {
-            try {
-                console.log(`🔄 Trying model: ${model.split('/').pop()}`);
-                
-                const response = await fetch(
-                    `${HF_API_BASE}/${model}`,
-                    {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            ...(HF_TOKEN && { 'Authorization': `Bearer ${HF_TOKEN}` })
-                        },
-                        body: JSON.stringify({
-                            inputs: message,
-                            parameters: {
-                                max_new_tokens: 500,
-                                temperature: 0.7,
-                                top_p: 0.95,
-                                do_sample: true,
-                            }
-                        })
-                    }
-                );
+        const chatCompletion = await client.chat.completions.create({
+            model: model,
+            messages: [
+                { role: "system", content: SYSTEM_PROMPT },
+                { role: "user", content: message }
+            ],
+            max_tokens: 500,
+            temperature: 0.7,
+        });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    aiResponse = Array.isArray(data) ? data[0]?.generated_text : data.generated_text;
-                    console.log(`✅ Model ${model.split('/').pop()} works!`);
-                    break;
-                } else {
-                    const errorText = await response.text();
-                    console.log(`❌ Model ${model.split('/').pop()} failed: ${response.status}`);
-                    lastError = errorText;
-                }
-                
-            } catch (e) {
-                console.log(`❌ Model error: ${e.message}`);
-                lastError = e;
-            }
-            
-            // Wait 1 second before trying next model
-            await new Promise(r => setTimeout(r, 1000));
-        }
+        const response = chatCompletion.choices[0]?.message?.content || "I'm here to help!";
 
-        if (aiResponse) {
-            res.json({
-                success: true,
-                response: aiResponse,
-                model: 'Hugging Face AI (FREE!)'
-            });
-        } else {
-            res.status(500).json({ 
-                error: 'All models failed',
-                details: lastError?.message || 'Unknown error'
-            });
-        }
-        
+        console.log(`✅ Response received (${response.length} chars)`);
+
+        res.json({
+            success: true,
+            response: response,
+            model: model,
+            type: 'text'
+        });
+
     } catch (error) {
-        console.error('AI Error:', error);
-        res.status(500).json({ error: error.message });
+        console.error('Text AI Error:', error);
+        
+        // Try fallback model
+        try {
+            console.log('🔄 Trying fallback model...');
+            const fallback = await client.chat.completions.create({
+                model: TEXT_MODELS.MISTRAL_7B,
+                messages: [
+                    { role: "system", content: SYSTEM_PROMPT },
+                    { role: "user", content: message }
+                ],
+            });
+            
+            return res.json({
+                success: true,
+                response: fallback.choices[0]?.message?.content,
+                model: 'Mistral-7B (fallback)'
+            });
+        } catch (fallbackError) {
+            res.status(500).json({ error: error.message });
+        }
     }
 });
 
 // =====================================================
-// 🖼️ IMAGE ANALYSIS - with priority models
+// 🖼️ IMAGE ANALYSIS ENDPOINT - ULTIMATE VERSION
 // =====================================================
 app.post('/api/analyze-image', async (req, res) => {
     try {
-        const { prompt, imageUrl } = req.body;
+        const { prompt, imageUrl, model = IMAGE_MODELS.SMARTEST } = req.body;
         
-        if (!prompt || !imageUrl) {
-            return res.status(400).json({ error: 'Prompt and image URL required' });
+        if (!imageUrl) {
+            return res.status(400).json({ error: 'Image URL required' });
         }
 
-        console.log(`🖼️ Analyzing image...`);
+        console.log(`🖼️ Image model: ${model}`);
+        console.log(`📝 Prompt: ${prompt || 'No prompt, generating description...'}`);
 
+        // Download and convert image to base64
         const imageResponse = await fetch(imageUrl);
         if (!imageResponse.ok) {
-            throw new Error('Failed to fetch image');
+            throw new Error('Failed to download image');
         }
         
         const imageBuffer = await imageResponse.arrayBuffer();
         const base64Image = Buffer.from(imageBuffer).toString('base64');
+        const mimeType = imageResponse.headers.get('content-type') || 'image/jpeg';
 
-        // ✅ PRIORITY ORDER for image models
-        const imagePriority = [
-            IMAGE_MODELS.IDEFICS2,    // 1st - best reasoning
-            IMAGE_MODELS.BLIP2,        // 2nd - good caption
-            IMAGE_MODELS.MOONDREAM2,   // 3rd - lightweight
-            IMAGE_MODELS.BLIP_BASE     // last - simple caption
-        ];
-        
-        let answer = null;
-        let lastError = null;
-
-        for (const model of imagePriority) {
-            try {
-                console.log(`🔄 Trying image model: ${model.split('/').pop()}`);
-                
-                const response = await fetch(
-                    `${HF_API_BASE}/${model}`,
-                    {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            ...(HF_TOKEN && { 'Authorization': `Bearer ${HF_TOKEN}` })
-                        },
-                        body: JSON.stringify(
-                            model.includes('blip') 
-                                ? { inputs: base64Image }  // BLIP models
-                                : {                        // Idefics2/Moondream2
-                                    inputs: {
-                                        image: base64Image,
-                                        question: prompt
-                                    }
-                                }
-                        )
-                    }
-                );
-
-                if (response.ok) {
-                    const data = await response.json();
-                    if (model.includes('blip')) {
-                        answer = data[0]?.generated_text;
-                    } else {
-                        answer = data.answer || data[0]?.answer || data.generated_text;
-                    }
-                    console.log(`✅ Image model ${model.split('/').pop()} works!`);
-                    break;
+        // Prepare the message content
+        const content = [
+            {
+                type: "image_url",
+                image_url: {
+                    url: `data:${mimeType};base64,${base64Image}`
                 }
-                
-            } catch (e) {
-                console.log(`❌ Image model error: ${e.message}`);
-                lastError = e;
             }
-            
-            await new Promise(r => setTimeout(r, 1000));
+        ];
+
+        // Add text prompt if provided
+        if (prompt) {
+            content.push({
+                type: "text",
+                text: prompt
+            });
+        } else {
+            content.push({
+                type: "text",
+                text: "Describe this image in detail. What do you see?"
+            });
         }
+
+        const chatCompletion = await client.chat.completions.create({
+            model: model,
+            messages: [
+                {
+                    role: "user",
+                    content: content
+                }
+            ],
+            max_tokens: 500,
+            temperature: 0.7,
+        });
+
+        const response = chatCompletion.choices[0]?.message?.content || "I've analyzed the image!";
+
+        console.log(`✅ Image analysis complete (${response.length} chars)`);
 
         res.json({
             success: true,
-            response: answer || "I've analyzed the image but couldn't generate a detailed description.",
-            model: 'Hugging Face Vision (FREE!)'
+            response: response,
+            model: model,
+            type: 'image'
         });
-        
+
     } catch (error) {
         console.error('Image analysis error:', error);
-        res.status(500).json({ error: error.message });
+        
+        // Try fallback to caption model
+        try {
+            console.log('🔄 Trying caption fallback...');
+            
+            // Download image again
+            const imageResponse = await fetch(imageUrl);
+            const imageBuffer = await imageResponse.arrayBuffer();
+            const base64Image = Buffer.from(imageBuffer).toString('base64');
+
+            const captionResponse = await fetch(
+                `https://router.huggingface.co/hf-inference/models/${IMAGE_MODELS.CAPTION_FAST}`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${HF_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        inputs: base64Image
+                    })
+                }
+            );
+
+            const data = await captionResponse.json();
+            const caption = Array.isArray(data) ? data[0]?.generated_text : data.generated_text;
+
+            let finalResponse = caption || "No caption generated";
+            if (prompt) {
+                finalResponse = `Based on the image: ${caption}\n\nYour question: ${prompt}`;
+            }
+
+            return res.json({
+                success: true,
+                response: finalResponse,
+                model: 'BLIP (caption fallback)'
+            });
+
+        } catch (captionError) {
+            res.status(500).json({ error: error.message });
+        }
     }
 });
 
 // =====================================================
-// 🎯 SMART CHAT - auto-select
+// 🎯 SMART CHAT - Auto-select best model
 // =====================================================
 app.post('/api/smart-chat', async (req, res) => {
     try {
         const { message, imageUrl } = req.body;
         
         if (imageUrl) {
+            // Use image analysis
             const response = await fetch(`http://localhost:${PORT}/api/analyze-image`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: message, imageUrl })
+                body: JSON.stringify({ 
+                    prompt: message, 
+                    imageUrl,
+                    model: IMAGE_MODELS.SMARTEST 
+                })
             });
             const data = await response.json();
             res.json(data);
         } else {
+            // Use text chat
             const response = await fetch(`http://localhost:${PORT}/api/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message })
+                body: JSON.stringify({ 
+                    message,
+                    model: TEXT_MODELS.FASTEST 
+                })
             });
             const data = await response.json();
             res.json(data);
@@ -277,40 +278,70 @@ app.post('/api/smart-chat', async (req, res) => {
 });
 
 // =====================================================
-// 📋 MODEL LIST
+// 📋 MODEL LIST ENDPOINT
 // =====================================================
 app.get('/api/models', (req, res) => {
     res.json({
         success: true,
         text_models: {
-            priority_1: 'Qwen2-72B (Strongest reasoning)',
-            priority_2: 'Llama-3-70B (Stable structured)',
-            priority_3: 'Mixtral-8x22B (Creative long-form)',
-            all: Object.keys(TEXT_MODELS)
+            smartest: {
+                name: "Qwen2-72B-Instruct",
+                description: "🧠 SMARTEST - GPT-4 level (5-10 seconds)",
+                model: TEXT_MODELS.SMARTEST
+            },
+            fastest: {
+                name: "Qwen2-72B:fastest",
+                description: "⚡ FASTEST - 1-2 seconds only!",
+                model: TEXT_MODELS.FASTEST
+            },
+            balanced: {
+                name: "Llama-3-70B",
+                description: "⚖️ BALANCED - 2-3 seconds",
+                model: TEXT_MODELS.BALANCED
+            },
+            all: TEXT_MODELS
         },
         image_models: {
-            priority_1: 'Idefics2 (Best reasoning)',
-            priority_2: 'BLIP2 (Good caption)',
-            priority_3: 'Moondream2 (Lightweight)',
-            all: Object.keys(IMAGE_MODELS)
+            smartest: {
+                name: "Idefics2",
+                description: "🖼️ SMARTEST - Best for detailed Q&A about images",
+                model: IMAGE_MODELS.SMARTEST
+            },
+            fastest: {
+                name: "Moondream2",
+                description: "⚡ FASTEST - 2-3 seconds, with Q&A",
+                model: IMAGE_MODELS.FASTEST
+            },
+            balanced: {
+                name: "BLIP2",
+                description: "⚖️ BALANCED - Good for captions + Q&A",
+                model: IMAGE_MODELS.BALANCED
+            },
+            caption: {
+                name: "BLIP Fast",
+                description: "📝 FASTEST CAPTION - 1-2 seconds, descriptions only",
+                model: IMAGE_MODELS.CAPTION_FAST
+            },
+            all: IMAGE_MODELS
         },
-        note: '🚀 LAHAT LIBRE! May priority fallback system!'
+        note: "🚀 ALL MODELS ARE 100% FREE! Choose: SPEED or INTELLIGENCE?"
     });
 });
 
 // =====================================================
-// 📊 STATUS
+// 📊 STATUS ENDPOINT
 // =====================================================
 app.get('/api/status', (req, res) => {
     res.json({
         success: true,
         status: 'online',
-        api_endpoint: '✅ router.huggingface.co',
-        token: HF_TOKEN ? '✅ Configured' : '⚠️ No token',
+        api: '✅ OpenAI-compatible Hugging Face',
+        token: HF_TOKEN ? '✅ Connected' : '❌ No token',
         text_models_available: Object.keys(TEXT_MODELS).length,
         image_models_available: Object.keys(IMAGE_MODELS).length,
-        priority_system: '✅ Active (auto-fallback)',
-        pricing: '💰 100% FREE!'
+        best_text: "Qwen2-72B-Instruct (🧠 Smartest) / Qwen2-72B:fastest (⚡ Fastest)",
+        best_image: "Idefics2 (🖼️ Best Q&A) / Moondream2 (⚡ Fast Q&A)",
+        price: '💰 100% FREE!'
     });
 });
 
@@ -318,14 +349,16 @@ app.get('/api/status', (req, res) => {
 // 🏥 HEALTH CHECK
 // =====================================================
 app.get('/health', (req, res) => {
-    res.status(200).json({ 
-        status: 'ok', 
-        message: 'Mini Messenger AI is running',
+    res.status(200).json({
+        status: 'ok',
+        message: 'Ultimate Mini Messenger AI is running',
         timestamp: new Date().toISOString()
     });
 });
 
-// Serve HTML files
+// =====================================================
+// 📄 SERVE HTML FILES
+// =====================================================
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'chat.html'));
 });
@@ -345,21 +378,21 @@ app.get('*', (req, res) => {
 // 🚀 START SERVER
 // =====================================================
 app.listen(PORT, () => {
-    console.log('\n' + '='.repeat(60));
-    console.log('🚀 MINI MESSENGER AI - ULTIMATE EDITION');
-    console.log('='.repeat(60));
+    console.log('\n' + '='.repeat(70));
+    console.log('🚀 ULTIMATE MINI MESSENGER AI - BEST MODELS');
+    console.log('='.repeat(70));
     console.log(`📡 Port: ${PORT}`);
-    console.log(`🔗 HF Endpoint: ✅ router.huggingface.co`);
-    console.log(`🔑 Token: ${HF_TOKEN ? '✅ Configured' : '⚠️ No token'}`);
-    console.log('\n📝 TEXT MODELS (Priority Order):');
-    console.log('   1️⃣ Qwen2-72B (Strongest reasoning)');
-    console.log('   2️⃣ Llama-3-70B (Stable structured)');
-    console.log('   3️⃣ Mixtral-8x22B (Creative long-form)');
-    console.log('   4️⃣ DBRX / Command R+ (Strong alternatives)');
-    console.log('\n🖼️ IMAGE MODELS (Priority Order):');
-    console.log('   1️⃣ Idefics2 (Best reasoning)');
-    console.log('   2️⃣ BLIP2 (Good caption)');
-    console.log('   3️⃣ Moondream2 (Lightweight)');
-    console.log('\n💰 100% FREE!');
-    console.log('='.repeat(60) + '\n');
+    console.log(`🌐 URL: http://localhost:${PORT}`);
+    console.log(`🔗 API: router.huggingface.co/v1`);
+    console.log(`🔑 Token: ${HF_TOKEN ? '✅ Connected' : '❌ Missing'}`);
+    console.log('\n' + '📝 TEXT MODELS (CHOOSE YOUR PICK):');
+    console.log(`   🧠 SMARTEST: Qwen2-72B-Instruct (GPT-4 level, 5-10s)`);
+    console.log(`   ⚡ FASTEST:   Qwen2-72B:fastest (1-2s only!)`);
+    console.log(`   ⚖️ BALANCED:  Llama-3-70B (2-3s)`);
+    console.log('\n' + '🖼️ IMAGE MODELS (CHOOSE YOUR PICK):');
+    console.log(`   🥇 BEST Q&A:  Idefics2 (Detailed analysis + questions)`);
+    console.log(`   ⚡ FAST Q&A:  Moondream2 (2-3s, with questions)`);
+    console.log(`   📝 CAPTION:   BLIP Fast (1-2s, descriptions only)`);
+    console.log('\n' + '💰 ALL MODELS ARE 100% FREE!');
+    console.log('='.repeat(70) + '\n');
 });
