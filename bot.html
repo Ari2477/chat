@@ -175,6 +175,9 @@
         const userName = urlParams.get('userName') || 'User';
         const userPfp = urlParams.get('userPfp') || 'https://ui-avatars.com/api/?name=User&background=4f46e5&color=fff';
 
+        // =====================================================
+        // DATA COLLECTIONS - MARAMING MESSAGES!
+        // =====================================================
         const jokes = [
             "Why don't scientists trust atoms? Because they make up everything!",
             "Why did the scarecrow win an award? He was outstanding in his field!",
@@ -296,6 +299,10 @@
         ];
 
         let userNotes = JSON.parse(localStorage.getItem('botNotes')) || [];
+
+        // =====================================================
+        // UPDATED AI FUNCTIONS - WITH BETTER ERROR HANDLING
+        // =====================================================
  
         async function fetchAI(prompt) {
             try {
@@ -431,7 +438,7 @@
                 
                 if (!data.length) return `❌ No synonyms found for "${word}".`;
 
-                return "🔤 Synonyms:\n" + data.map((w,i)=>`${i+1}. ${w.word}`).join("\n");
+                return "🔤 **Synonyms:**\n" + data.map((w,i)=>`${i+1}. ${w.word}`).join("\n");
             } catch {
                 return "❌ Synonym service unavailable.";
             }
@@ -444,7 +451,7 @@
                 
                 if (!data.length) return `❌ No antonyms found for "${word}".`;
 
-                return "🔄 Antonyms:\n" + data.map((w,i)=>`${i+1}. ${w.word}`).join("\n");
+                return "🔄 **Antonyms:**\n" + data.map((w,i)=>`${i+1}. ${w.word}`).join("\n");
             } catch {
                 return "❌ Antonym service unavailable.";
             }
@@ -455,21 +462,21 @@
         }
 
         function getJoke() {
-            return `😂 Joke:\n${getRandomFromArray(jokes)}`;
+            return `😂 **Joke:**\n${getRandomFromArray(jokes)}`;
         }
 
         function getFact() {
-            return `🤔 Did you know?\n${getRandomFromArray(facts)}`;
+            return `🤔 **Did you know?**\n${getRandomFromArray(facts)}`;
         }
 
         function getQuote() {
-            return `💭 [ Quote: ]\n${getRandomFromArray(quotes)}`;
+            return `💭 **Quote:**\n${getRandomFromArray(quotes)}`;
         }
 
         function calculate(expr) {
             try {
                 const result = Function('"use strict";return (' + expr + ')')();
-                return `🧮 [ Result: ] ${expr} = ${result}`;
+                return `🧮 **Result:** ${expr} = ${result}`;
             } catch {
                 return "❌ Invalid math expression!";
             }
@@ -573,7 +580,8 @@
                     
                     showTyping();
 
-                    const response = await smartChat(prompt, imageUrl);
+                    // Use analyzeImage directly for better control
+                    const response = await analyzeImage(prompt, imageUrl);
                     
                     hideTyping();
                     addBotMessage(`🤖 **AI says:**\n${response}`, false);
@@ -706,36 +714,37 @@
 ┃ 🧹 /clear • Clear chat
 ╰━━━━━━━━━━━━━━╯
 
-📸 [ IMAGE: ] Type /ai + question, click 📷`;
+📸 **IMAGE:** Type /ai + question, click 📷`;
         }
 
         function getInfo() {
-            return `🤖 BOT INFORMATION
+            return `🤖 **BOT INFORMATION**
 
 ╭━━━━━━━━━━━━━━╮
 ┃ Mini Assistant
-┃ Version 5.0
-┃ AI: Command R+ (104B)
-┃ Vision: Moondream2
+┃ Version 6.0
+┃ AI: Qwen2-72B (GPT-4 level)
+┃ Vision: Idefics2 (Best image Q&A)
 ╰━━━━━━━━━━━━━━╯
 
-📊 [ STATISTICS: ]
-• Text AI: Command R+ (GPT-4 level)
-• Image AI: Moondream2 (Best visual)
-• Commands: 10+
-• Auto-responses
+📊 **STATISTICS:**
+• Text AI: Qwen2-72B (Fastest & Smartest)
+• Image AI: Idefics2 (Detailed analysis)
+• Commands: 20+
+• Auto-responses: 200+
+• Price: 💯 ABSOLUTELY FREE!
 
-⚙️ [ FEATURES: ]
-• 🤖 Command R+ AI (104B params)
-• 🖼️ Moondream2 Image Analysis
+⚙️ **FEATURES:**
+• 🤖 Qwen2-72B AI (Fastest: 1-2s / Smartest: 5-10s)
+• 🖼️ Idefics2 Image Analysis (with Q&A)
 • 😂 Jokes & Facts
 • 📖 Dictionary
 • 🧮 Calculator
 • 📝 Notes
 • ⏲️ Timer
 
-🔧 [ DEVELOPER: ]
-Created by ARI with ❤️
+🔧 **DEVELOPER:**
+Created by **ARI** with ❤️
 
 💡 **Tip:** Type /ai + question + 📷 for images!`;
         }
@@ -766,7 +775,7 @@ Created by ARI with ❤️
             }
             if (cmd === "/notes") {
                 if (!userNotes.length) return "📭 No notes yet.";
-                let result = "📋 [ YOUR NOTES: ]\n\n";
+                let result = "📋 **YOUR NOTES:**\n\n";
                 userNotes.forEach((note, i) => {
                     result += `${i+1}. ${note.text} (${note.date})\n`;
                 });
