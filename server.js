@@ -12,6 +12,8 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 const HF_TOKEN = process.env.HUGGINGFACE_TOKEN;
 
+const HF_API_BASE = 'https://router.huggingface.co/hf-inference/models';
+
 const TEXT_MODELS = {
     COMMAND_R_PLUS: 'CohereForAI/c4ai-command-r-plus-08-2024',
     MIXTRAL_8x22B: 'mistralai/Mixtral-8x22B-Instruct-v0.1',
@@ -53,7 +55,7 @@ app.post('/api/chat', async (req, res) => {
         console.log(`📝 Question: ${message.substring(0, 100)}...`);
 
         const response = await fetch(
-            `https://api-inference.huggingface.co/models/${model}`,
+            `${HF_API_BASE}/${model}`,
             {
                 method: 'POST',
                 headers: {
@@ -127,7 +129,7 @@ app.post('/api/analyze-image', async (req, res) => {
         const base64Image = Buffer.from(imageBuffer).toString('base64');
 
         const response = await fetch(
-            `https://api-inference.huggingface.co/models/${IMAGE_MODELS.MOONDREAM2}`,
+            `${HF_API_BASE}/${IMAGE_MODELS.MOONDREAM2}`,
             {
                 method: 'POST',
                 headers: {
@@ -152,9 +154,8 @@ app.post('/api/analyze-image', async (req, res) => {
         let answer = data.answer || data[0]?.answer || data.generated_text;
 
         if (!answer) {
-
             const blipRes = await fetch(
-                `https://api-inference.huggingface.co/models/${IMAGE_MODELS.BLIP_BASE}`,
+                `${HF_API_BASE}/${IMAGE_MODELS.BLIP_BASE}`,
                 {
                     method: 'POST',
                     headers: {
@@ -221,6 +222,7 @@ app.get('/api/status', (req, res) => {
     res.json({
         success: true,
         status: 'online',
+        api_endpoint: '✅ Using router.huggingface.co (new)',
         token: HF_TOKEN ? '✅ Configured' : '⚠️ No token (may queue)',
         text_model: 'Command R+ (104B)',
         image_model: 'Moondream2',
@@ -232,6 +234,7 @@ app.get('/health', (req, res) => {
     res.status(200).json({
         status: 'ok',
         message: 'Mini Messenger AI is running',
+        api: '✅ Using new Hugging Face endpoint',
         timestamp: new Date().toISOString()
     });
 });
@@ -252,14 +255,20 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log('\n' + '='.repeat(50));
-    console.log('🚀 MINI MESSENGER AI READY!');
-    console.log('='.repeat(50));
+    console.log('\n' + '='.repeat(60));
+    console.log('🚀 MINI MESSENGER AI - HUGGING FACE');
+    console.log('='.repeat(60));
     console.log(`📡 Port: ${PORT}`);
     console.log(`🌐 URL: http://localhost:${PORT}`);
+    console.log(`🔗 HF Endpoint: ✅ router.huggingface.co (NEW!)`);
     console.log(`🤖 Text AI: Command R+ (104B params)`);
     console.log(`🖼️ Image AI: Moondream2`);
     console.log(`💰 Price: ABSOLUTELY FREE!`);
-    console.log(`🔑 Token: ${HF_TOKEN ? '✅ OK' : '⚠️ No token'}`);
-    console.log('='.repeat(50) + '\n');
+    console.log(`🔑 Token: ${HF_TOKEN ? '✅ Configured' : '⚠️ No token'}`);
+    console.log('='.repeat(60) + '\n');
+    
+    if (!HF_TOKEN) {
+        console.log('💡 TIP: Get free token at https://huggingface.co/settings/tokens');
+        console.log('   Mas mabilis response pag may token!\n');
+    }
 });
