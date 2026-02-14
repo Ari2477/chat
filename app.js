@@ -573,7 +573,7 @@ async function unpinMessage() {
     }
 }
 
-// ✅ SIMPLIFIED: listenToGCMessages - gaya ng sa PM, simple lang!
+// ✅ FIXED: Hindi na magkakadikit ang messages!
 function listenToGCMessages() {
     if (unsubscribeGC) unsubscribeGC();
     
@@ -587,82 +587,65 @@ function listenToGCMessages() {
         .collection('messages')
         .orderBy('timestamp', 'asc')
         .onSnapshot((snapshot) => {
-
-            snapshot.docChanges().forEach((change) => {
-                const message = change.doc.data();
-                const messageId = change.doc.id;
+            
+            // I-collect lahat ng messages para ma-sort nang tama
+            const allMessages = [];
+            const userIds = new Set();
+            
+            snapshot.docs.forEach(doc => {
+                const msg = doc.data();
+                allMessages.push({
+                    id: doc.id,
+                    ...msg,
+                    timestamp: msg.timestamp?.toDate().getTime() || 0
+                });
                 
-                if (change.type === 'added') {
-                    if (window.displayedGCMessageIds.has(messageId)) {
-                        console.log('Skipping duplicate GC message:', messageId);
-                        return;
-                    }
-                    
-                    window.displayedGCMessageIds.add(messageId);
-
-                    if (message.senderId === currentUser?.uid) {
-                        appendGCMessage(message, messagesContainer, {}, messageId);
-                    } else {
-                        db.collection('users').doc(message.senderId).get()
-                            .then((userDoc) => {
-                                const userMap = {};
-                                if (userDoc.exists) {
-                                    userMap[message.senderId] = userDoc.data();
-                                }
-                                appendGCMessage(message, messagesContainer, userMap, messageId);
-                            })
-                            .catch(error => {
-                                console.error('Error fetching user:', error);
-                                appendGCMessage(message, messagesContainer, {}, messageId);
-                            });
-                    }
-                }
-                
-                if (change.type === 'modified') {
-                    const existingMsg = document.getElementById(`msg-${messageId}`);
-                    if (existingMsg) {
-                        existingMsg.remove();
-                        window.displayedGCMessageIds.delete(messageId);
-
-                        if (message.senderId === currentUser?.uid) {
-                            appendGCMessage(message, messagesContainer, {}, messageId);
-                        } else {
-                            db.collection('users').doc(message.senderId).get()
-                                .then((userDoc) => {
-                                    const userMap = {};
-                                    if (userDoc.exists) {
-                                        userMap[message.senderId] = userDoc.data();
-                                    }
-                                    appendGCMessage(message, messagesContainer, userMap, messageId);
-                                });
-                        }
-                    }
-                }
-                
-                if (change.type === 'removed') {
-                    const existingMsg = document.getElementById(`msg-${messageId}`);
-                    if (existingMsg) {
-                        existingMsg.remove();
-                        window.displayedGCMessageIds.delete(messageId);
-                    }
+                if (msg.senderId && msg.senderId !== currentUser?.uid) {
+                    userIds.add(msg.senderId);
                 }
             });
             
-            if (snapshot.docChanges().length > 0) {
-                const lastChange = snapshot.docChanges()[snapshot.docChanges().length - 1];
-                if (lastChange.type === 'added' && lastChange.doc.data().senderId === currentUser?.uid) {
-                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                } else {
-                    const isNearBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight < 100;
-                    if (isNearBottom) {
-                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                    }
-                }
-            }
+            // SORT PARA SURE NA TAMA ANG ORDER!
+            allMessages.sort((a, b) => a.timestamp - b.timestamp);
             
-            if (messagesContainer.children.length === 0) {
-                messagesContainer.innerHTML = '<div class="no-messages">👋 No messages yet. Say hello!</div>';
-            }
+            // Kunin lahat ng user data (isang batch lang)
+            Promise.all(Array.from(userIds).map(userId => 
+                db.collection('users').doc(userId).get()
+            )).then(userDocs => {
+                const userMap = {};
+                userDocs.forEach(doc => {
+                    if (doc.exists) userMap[doc.id] = doc.data();
+                });
+                
+                // I-clear at i-render lahat ng messages sa tamang order
+                messagesContainer.innerHTML = '';
+                window.displayedGCMessageIds.clear();
+                
+                allMessages.forEach(msg => {
+                    if (window.displayedGCMessageIds.has(msg.id)) return;
+                    
+                    window.displayedGCMessageIds.add(msg.id);
+                    
+                    if (msg.senderId === currentUser?.uid) {
+                        appendGCMessage(msg, messagesContainer, {}, msg.id);
+                    } else {
+                        appendGCMessage(msg, messagesContainer, userMap, msg.id);
+                    }
+                });
+                
+                // Scroll to bottom
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }).catch(error => {
+                console.error('Error fetching users:', error);
+                // Fallback: render without user data
+                messagesContainer.innerHTML = '';
+                window.displayedGCMessageIds.clear();
+                
+                allMessages.forEach(msg => {
+                    window.displayedGCMessageIds.add(msg.id);
+                    appendGCMessage(msg, messagesContainer, {}, msg.id);
+                });
+            });
             
         }, (error) => {
             console.error('Message listener error:', error);
@@ -670,12 +653,13 @@ function listenToGCMessages() {
         });
 }
 
-// ✅ SIMPLIFIED: appendGCMessage - gaya ng sa PM, direct append lang
+// ✅ FIXED: Bawat message may sariling avatar at name!
 function appendGCMessage(message, container, userMap = {}, messageId) {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${message.senderId === currentUser?.uid ? 'sent' : 'received'}`;
-    messageDiv.id = `msg-${messageId}`;
+    const messageWrapper = document.createElement('div');
+    messageWrapper.className = 'message-wrapper';
+    messageWrapper.id = `msg-${messageId}`;
 
+    // Get sender info
     let senderName = message.senderName || 'Unknown';
     let senderPhoto = message.senderPhoto || '';
 
@@ -684,31 +668,28 @@ function appendGCMessage(message, container, userMap = {}, messageId) {
         senderPhoto = userMap[message.senderId].photoURL || senderPhoto;
     }
 
+    // Avatar
     const firstLetter = senderName.charAt(0).toUpperCase();
     const fallbackAvatar = `https://ui-avatars.com/api/?name=${firstLetter}&background=${message.senderId === currentUser?.uid ? '4f46e5' : '64748b'}&color=fff&size=100&bold=true`;
-
     const avatarUrl = senderPhoto || fallbackAvatar;
     
+    // Time
     const time = message.timestamp ? 
-        new Date(message.timestamp.toDate()).toLocaleTimeString('en-US', {
+        new Date(message.timestamp).toLocaleTimeString('en-US', {
             hour: 'numeric',
             minute: '2-digit',
             hour12: true
         }) : 'Just now';
 
+    // Content
     let contentHtml = '';
-    
     if (message.type === 'image') {
         contentHtml = `<img src="${escapeHTML(message.imageUrl)}" class="message-image" alt="Shared image" onclick="openImage('${escapeHTML(message.imageUrl)}')">`;
     } else if (message.type === 'voice') {
         contentHtml = `
             <div class="voice-message" onclick='playVoiceMessage(\`${escapeHTML(message.audioData)}\`, "${messageId}", ${JSON.stringify(message.waveformData || [])})'>
-                <div class="voice-play-icon">
-                    <i class="fas fa-play"></i>
-                </div>
-                <div class="voice-waveform-small">
-                    ${generateWaveformBars()}
-                </div>
+                <div class="voice-play-icon"><i class="fas fa-play"></i></div>
+                <div class="voice-waveform-small">${generateWaveformBars()}</div>
                 <span class="voice-duration">${formatTime(message.duration || 0)}</span>
             </div>
         `;
@@ -716,12 +697,11 @@ function appendGCMessage(message, container, userMap = {}, messageId) {
         contentHtml = `<div class="message-text">${formatMessageText(message.text || '')}</div>`;
     }
 
+    // Reactions
     let reactionsHtml = '';
     if (message.reactions) {
         const reactionCounts = {};
-        Object.values(message.reactions).forEach(r => {
-            reactionCounts[r] = (reactionCounts[r] || 0) + 1;
-        });
+        Object.values(message.reactions).forEach(r => reactionCounts[r] = (reactionCounts[r] || 0) + 1);
         
         reactionsHtml = '<div class="message-reactions">';
         Object.entries(reactionCounts).forEach(([reaction, count]) => {
@@ -730,7 +710,8 @@ function appendGCMessage(message, container, userMap = {}, messageId) {
         reactionsHtml += '</div>';
     }
     
-    messageDiv.innerHTML = `
+    // ✅ BAWAT MESSAGE MAY SARILING STRUCTURE - hindi nagdidikit!
+    messageWrapper.innerHTML = `
         <div class="message-avatar">
             <img src="${escapeHTML(avatarUrl)}" 
                  alt="${escapeHTML(senderName)}" 
@@ -739,29 +720,24 @@ function appendGCMessage(message, container, userMap = {}, messageId) {
         </div>
         <div class="message-content">
             <div class="message-sender">${escapeHTML(message.senderId === currentUser?.uid ? 'You' : senderName)}</div>
-            ${contentHtml}
+            <div class="message-bubble ${message.senderId === currentUser?.uid ? 'sent' : 'received'}">
+                ${contentHtml}
+            </div>
             ${reactionsHtml}
             <div class="message-footer">
                 <span class="message-time">${time}</span>
                 <div class="message-actions">
-                    <button onclick="showReactionPicker('${messageId}', true)" class="action-btn" title="React">
-                        <i class="fas fa-smile"></i>
-                    </button>
-                    <button onclick="showForwardModal('${messageId}', '${escapeHTML(message.text || '')}', '${message.type || 'text'}', '${message.imageUrl || ''}')" class="action-btn" title="Forward">
-                        <i class="fas fa-share"></i>
-                    </button>
+                    <button onclick="showReactionPicker('${messageId}', true)" class="action-btn" title="React"><i class="fas fa-smile"></i></button>
+                    <button onclick="showForwardModal('${messageId}', '${escapeHTML(message.text || '')}', '${message.type || 'text'}', '${message.imageUrl || ''}')" class="action-btn" title="Forward"><i class="fas fa-share"></i></button>
                     ${message.senderId === currentUser?.uid ? `
-                        <button onclick="pinMessage('${messageId}', '${escapeHTML(message.text || '')}')" class="action-btn" title="Pin">
-                            <i class="fas fa-thumbtack"></i>
-                        </button>
+                        <button onclick="pinMessage('${messageId}', '${escapeHTML(message.text || '')}')" class="action-btn" title="Pin"><i class="fas fa-thumbtack"></i></button>
                     ` : ''}
                 </div>
             </div>
         </div>
     `;
     
-    // ✅ Simple append - gaya ng sa PM
-    container.appendChild(messageDiv);
+    container.appendChild(messageWrapper);
 }
 
 async function uploadImageMessage(isGC = true) {
@@ -1679,7 +1655,9 @@ async function markMessagesAsRead(senderId) {
             
             await batch.commit();
             
+            
             updateUserUnreadBadge(senderId, 0);
+            
             
             const saved = localStorage.getItem('messenger_unread');
             if (saved) {
@@ -1688,6 +1666,7 @@ async function markMessagesAsRead(senderId) {
                 localStorage.setItem('messenger_unread', JSON.stringify(unreadData));
             }
             
+        
             const totalUnread = getTotalUnreadCount();
             document.title = totalUnread > 0 ? `(${totalUnread}) Mini Messenger` : 'Mini Messenger';
         }
