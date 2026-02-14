@@ -457,7 +457,7 @@ async function initializeGroupChat() {
     }
     
     loadGCInfo();
-    listenToGCMessages();
+    listenToGCMessages(); 
     listenToGCMembers();
     listenToPinnedMessage();
 }
@@ -580,21 +580,27 @@ function listenToGCMessages() {
     if (!messagesContainer) return;
 
     messagesContainer.innerHTML = '';
+    window.displayedGCMessageIds.clear();
+    window.gcMessagesLoaded = false;
     
     unsubscribeGC = db.collection('groupChats')
         .doc(GROUP_CHAT_ID)
         .collection('messages')
-        .orderBy('timestamp', 'asc')
+        .orderBy('timestamp', 'asc')  
         .onSnapshot((snapshot) => {
+
+            if (snapshot.empty) {
+                messagesContainer.innerHTML = '<div class="no-messages">👋 No messages yet. Say hello!</div>';
+                return;
+            }
 
             snapshot.docChanges().forEach((change) => {
                 const message = change.doc.data();
                 const messageId = change.doc.id;
                 
                 if (change.type === 'added') {
-                    if (window.displayedGCMessageIds.has(messageId)) {
-                        console.log('Skipping duplicate GC message:', messageId);
-                        return;
+                    if (document.getElementById(`msg-${messageId}`)) {
+                        return; 
                     }
                     
                     window.displayedGCMessageIds.add(messageId);
@@ -608,11 +614,15 @@ function listenToGCMessages() {
                                 if (userDoc.exists) {
                                     userMap[message.senderId] = userDoc.data();
                                 }
-                                appendGCMessage(message, messagesContainer, userMap, messageId);
+                                if (!document.getElementById(`msg-${messageId}`)) {
+                                    appendGCMessage(message, messagesContainer, userMap, messageId);
+                                }
                             })
                             .catch(error => {
                                 console.error('Error fetching user:', error);
-                                appendGCMessage(message, messagesContainer, {}, messageId);
+                                if (!document.getElementById(`msg-${messageId}`)) {
+                                    appendGCMessage(message, messagesContainer, {}, messageId);
+                                }
                             });
                     }
                 }
@@ -646,26 +656,25 @@ function listenToGCMessages() {
                     }
                 }
             });
-      
+
             if (snapshot.docChanges().length > 0) {
                 const lastChange = snapshot.docChanges()[snapshot.docChanges().length - 1];
-                if (lastChange.type === 'added' && lastChange.doc.data().senderId === currentUser?.uid) {
-                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                } else {
-                    const isNearBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight < 100;
-                    if (isNearBottom) {
-                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                
+                if (lastChange.type === 'added') {
+                    const isOwnMessage = lastChange.doc.data().senderId === currentUser?.uid;
+                    const isNearBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight < 150;
+                    
+                    if (isOwnMessage || isNearBottom) {
+                        setTimeout(() => {
+                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                        }, 100);
                     }
                 }
             }
             
-            if (messagesContainer.children.length === 0) {
-                messagesContainer.innerHTML = '<div class="no-messages">👋 No messages yet. Say hello!</div>';
-            }
-            
         }, (error) => {
-            console.error('Message listener error:', error);
-            showToast('Reconnecting to chat...', 'info');
+            console.error('❌ GC Message listener error:', error);
+            showToast('Reconnecting to group chat...', 'info');
         });
 }
 
@@ -1350,7 +1359,7 @@ async function openPrivateChat(user) {
     if (usersList) usersList.classList.add('hidden');
     if (pmChatArea) pmChatArea.classList.remove('hidden');
     
-    listenToPMMessages(user.id);
+    listenToPMMessages(user.id); 
     listenToTypingIndicator(user.id);
 }
 
@@ -1376,27 +1385,32 @@ function listenToPMMessages(otherUserId) {
     if (!messagesContainer) return;
 
     messagesContainer.innerHTML = '';
+    window.displayedPMMessageIds.clear();
+    window.pmMessagesLoaded = false;
     
     const chatId = [currentUser.uid, otherUserId].sort().join('_');
     
     unsubscribePM = db.collection('privateChats')
         .doc(chatId)
         .collection('messages')
-        .orderBy('timestamp', 'asc')
+        .orderBy('timestamp', 'asc')  
         .onSnapshot((snapshot) => {
+
+            if (snapshot.empty) {
+                messagesContainer.innerHTML = '<div class="no-messages">💬 No messages yet. Say hi!</div>';
+                return;
+            }
 
             snapshot.docChanges().forEach((change) => {
                 const message = change.doc.data();
                 const messageId = change.doc.id;
                 
                 if (change.type === 'added') {
-                    if (window.displayedPMMessageIds.has(messageId)) {
-                        console.log('Skipping duplicate PM message:', messageId);
-                        return;
+                    if (document.getElementById(`pm-msg-${messageId}`)) {
+                        return; 
                     }
                     
                     window.displayedPMMessageIds.add(messageId);
-
                     appendPMMessage(message, messagesContainer, messageId);
                 }
                 
@@ -1419,21 +1433,20 @@ function listenToPMMessages(otherUserId) {
                     }
                 }
             });
-            
+
             if (snapshot.docChanges().length > 0) {
                 const lastChange = snapshot.docChanges()[snapshot.docChanges().length - 1];
-                if (lastChange.type === 'added' && lastChange.doc.data().senderId === currentUser?.uid) {
-                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                } else {
-                    const isNearBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight < 100;
-                    if (isNearBottom) {
-                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                
+                if (lastChange.type === 'added') {
+                    const isOwnMessage = lastChange.doc.data().senderId === currentUser?.uid;
+                    const isNearBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight < 150;
+                    
+                    if (isOwnMessage || isNearBottom) {
+                        setTimeout(() => {
+                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                        }, 100);
                     }
                 }
-            }
-
-            if (messagesContainer.children.length === 0) {
-                messagesContainer.innerHTML = '<div class="no-messages">💬 No messages yet. Say hi!</div>';
             }
             
             if (currentPMUser?.id === otherUserId) {
