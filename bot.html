@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mini Assistant - AI Powered</title>
+    <title>Mini Assistant - Ultimate AI</title>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
@@ -161,7 +161,9 @@
 
     <script>       
         const API_CONFIG = {
-            openrouter: '/api/chat',  
+            chat: '/api/chat',                    
+            analyze: '/api/analyze-image',        
+            smart: '/api/smart-chat',              
             imgbb: "https://api.imgbb.com/1/upload",
             imgbbKey: "87b58d438e0cbe5226c1df0a8071621e",
             dictionary: "https://api.dictionaryapi.dev/api/v2/entries/en",
@@ -173,7 +175,6 @@
         const userName = urlParams.get('userName') || 'User';
         const userPfp = urlParams.get('userPfp') || 'https://ui-avatars.com/api/?name=User&background=4f46e5&color=fff';
 
-        
         const jokes = [
             "Why don't scientists trust atoms? Because they make up everything!",
             "Why did the scarecrow win an award? He was outstanding in his field!",
@@ -184,12 +185,7 @@
             "Why can't you give Elsa a balloon? Because she will let it go!",
             "What do you call a sleeping bull? A bulldozer!",
             "Why did the coffee file a police report? It got mugged!",
-            "What do you call a fish with no eyes? A fsh!",
-            "Why don't skeletons fight each other? They don't have the guts!",
-            "What do you call a pig that does karate? A pork chop!",
-            "Why did the bicycle fall over? Because it was two-tired!",
-            "How does a penguin build its house? Igloos it together!",
-            "Why did the golfer bring two pairs of pants? In case he got a hole in one!"
+            "What do you call a fish with no eyes? A fsh!"
         ];
 
         const facts = [
@@ -202,12 +198,7 @@
             "A cloud can weigh around a million pounds.",
             "There's a species of jellyfish that's immortal.",
             "The shortest war in history lasted 38 minutes.",
-            "Cows have best friends and get stressed when separated.",
-            "A group of flamingos is called a 'flamboyance'!",
-            "The world's oldest known living tree is over 5,000 years old.",
-            "Humans share 60% of their DNA with bananas.",
-            "A single strand of spaghetti is called a 'spaghetto'.",
-            "The nose can remember 50,000 different scents."
+            "Cows have best friends and get stressed when separated."
         ];
 
         const quotes = [
@@ -220,12 +211,7 @@
             "Everything you've ever wanted is on the other side of fear. - George Addair",
             "The only limit to our realization of tomorrow will be our doubts of today. - Franklin D. Roosevelt",
             "Don't watch the clock; do what it does. Keep going. - Sam Levenson",
-            "The future depends on what you do today. - Mahatma Gandhi",
-            "You miss 100% of the shots you don't take. - Wayne Gretzky",
-            "The best time to plant a tree was 20 years ago. The second best time is now.",
-            "Happiness is not something ready made. It comes from your own actions. - Dalai Lama",
-            "Your time is limited, don't waste it living someone else's life. - Steve Jobs",
-            "The journey of a thousand miles begins with one step. - Lao Tzu"
+            "The future depends on what you do today. - Mahatma Gandhi"
         ];
 
         const compliments = [
@@ -310,17 +296,42 @@
         ];
 
         let userNotes = JSON.parse(localStorage.getItem('botNotes')) || [];
-
-
-        async function fetchOpenRouter(prompt, imageUrl = "") {
+ 
+        async function fetchAI(prompt) {
             try {
-                const response = await fetch(API_CONFIG.openrouter, {
+                const response = await fetch(API_CONFIG.chat, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        message: prompt,
+                        message: prompt
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.error) {
+                    return "❌ " + data.error;
+                }
+                
+                return data.response || "I'm here to help!";
+                
+            } catch (err) {
+                console.error("AI Error:", err);
+                return "❌ AI service unavailable. Please try again.";
+            }
+        }
+ 
+        async function analyzeImage(prompt, imageUrl) {
+            try {
+                const response = await fetch(API_CONFIG.analyze, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        prompt: prompt,
                         imageUrl: imageUrl
                     })
                 });
@@ -331,14 +342,40 @@
                     return "❌ " + data.error;
                 }
                 
-                return data.response || "I received your message!";
+                return data.response || "I've analyzed the image!";
                 
             } catch (err) {
-                console.error("OpenRouter Error:", err);
-                return "❌ AI service unavailable. Please try again.";
+                console.error("Image Analysis Error:", err);
+                return "❌ Image analysis failed. Please try again.";
             }
         }
 
+        async function smartChat(message, imageUrl = "") {
+            try {
+                const response = await fetch(API_CONFIG.smart, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        imageUrl: imageUrl
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.error) {
+                    return "❌ " + data.error;
+                }
+                
+                return data.response || "I'm here to help!";
+                
+            } catch (err) {
+                console.error("Smart Chat Error:", err);
+                return "❌ Service unavailable. Please try again.";
+            }
+        }
 
         async function uploadImage(file) {
             try {
@@ -361,7 +398,6 @@
                 throw new Error("Image upload failed: " + err.message);
             }
         }
-
 
         async function defineWord(word) {
             try {
@@ -388,7 +424,6 @@
             }
         }
 
-
         async function getSynonyms(word) {
             try {
                 const response = await fetch(`${API_CONFIG.datamuse}?rel_syn=${encodeURIComponent(word)}&max=10`);
@@ -396,7 +431,7 @@
                 
                 if (!data.length) return `❌ No synonyms found for "${word}".`;
 
-                return "🔤 [ Synonyms: ]\n" + data.map((w,i)=>`${i+1}. ${w.word}`).join("\n");
+                return "🔤 Synonyms:\n" + data.map((w,i)=>`${i+1}. ${w.word}`).join("\n");
             } catch {
                 return "❌ Synonym service unavailable.";
             }
@@ -409,23 +444,22 @@
                 
                 if (!data.length) return `❌ No antonyms found for "${word}".`;
 
-                return "🔄 [ Antonyms: ]\n" + data.map((w,i)=>`${i+1}. ${w.word}`).join("\n");
+                return "🔄 Antonyms:\n" + data.map((w,i)=>`${i+1}. ${w.word}`).join("\n");
             } catch {
                 return "❌ Antonym service unavailable.";
             }
         }
-
 
         function getRandomFromArray(arr) {
             return arr[Math.floor(Math.random() * arr.length)];
         }
 
         function getJoke() {
-            return `😂 [ Joke: ]\n${getRandomFromArray(jokes)}`;
+            return `😂 Joke:\n${getRandomFromArray(jokes)}`;
         }
 
         function getFact() {
-            return `🤔 [ Did you know? ]\n${getRandomFromArray(facts)}`;
+            return `🤔 Did you know?\n${getRandomFromArray(facts)}`;
         }
 
         function getQuote() {
@@ -441,56 +475,45 @@
             }
         }
 
-
         function getAutoResponse(message) {
             const lower = message.toLowerCase().trim();
 
-            
             if (lower.match(/^(hello|hi|hey|hola|kamusta|musta)/)) {
                 return getRandomFromArray(greetings);
             }
 
-        
             if (lower.match(/^(bye|goodbye|see you|cya|ttyl|paalam)/)) {
                 return getRandomFromArray(farewells);
             }
 
-        
             if (lower.match(/thank|thanks|salamat|ty|thank you/)) {
                 return getRandomFromArray(thanks);
             }
 
-    
-            if (lower.match(/creator|who made you|your creator|who is your master|ari|sino gumagawa sayo?/)) {
+            if (lower.match(/creator|who made you|your creator|who is your master|ari|sino gumagawa sayo/)) {
                 return getRandomFromArray(creatorInfo);
             }
 
-    
             if (lower.match(/who are you|what are you|your name|introduce/)) {
                 return getRandomFromArray(aboutBot);
             }
 
-    
             if (lower.match(/love|miss you|i like you|you're cute|i love you/)) {
                 return getRandomFromArray(loveMessages);
             }
 
-        
             if (lower.match(/good bot|you're great|nice|awesome|cool/)) {
                 return getRandomFromArray(compliments);
             }
 
-        
             if (lower.match(/how are you|how do you do|how's it going/)) {
                 return "I'm doing great! Thanks for asking! 😊 How about you?";
             }
 
-    
             if (lower.match(/what'?s up|sup|what's happening/)) {
                 return "Not much, just waiting for your messages! 🌟 What's up with you?";
             }
 
-        
             if (lower.match(/how old are you|your age/)) {
                 return "I'm ageless! But I was born when ARI coded me! 🎂";
             }
@@ -510,7 +533,6 @@
 
             return getRandomFromArray(defaultResponses);
         }
-
 
         async function handleImageUpload() {
             const input = document.getElementById('botMessageInput');
@@ -550,11 +572,11 @@
                     addUserMessageWithImage(prompt, imageUrl);
                     
                     showTyping();
-                    
-                    const response = await fetchOpenRouter(prompt, imageUrl);
+
+                    const response = await smartChat(prompt, imageUrl);
                     
                     hideTyping();
-                    addBotMessage(`🤖 [ AI says: ]\n${response}`, false);
+                    addBotMessage(`🤖 **AI says:**\n${response}`, false);
                     
                     input.value = '';
                     
@@ -566,7 +588,6 @@
             
             fileInput.click();
         }
-
 
         function addBotMessage(text, isUser = false) {
             const container = document.getElementById('botMessages');
@@ -650,7 +671,6 @@
             if (typing) typing.remove();
         }
 
-
         function getHelp() {
             return `╭────────────────────╮
 │   🤖 **COMMANDS**   │
@@ -694,18 +714,20 @@
 
 ╭━━━━━━━━━━━━━━╮
 ┃ Mini Assistant
-┃ Version 4.0
-┃ AI: GPT-4O-MINI
+┃ Version 5.0
+┃ AI: Command R+ (104B)
+┃ Vision: Moondream2
 ╰━━━━━━━━━━━━━━╯
 
 📊 [ STATISTICS: ]
+• Text AI: Command R+ (GPT-4 level)
+• Image AI: Moondream2 (Best visual)
 • Commands: 10+
-• Auto-responses: 200+
-• Image support: ✅
-• Dictionary: ✅
+• Auto-responses
 
 ⚙️ [ FEATURES: ]
-• 🤖 GPT-4O-MINI AI
+• 🤖 Command R+ AI (104B params)
+• 🖼️ Moondream2 Image Analysis
 • 😂 Jokes & Facts
 • 📖 Dictionary
 • 🧮 Calculator
@@ -715,7 +737,7 @@
 🔧 [ DEVELOPER: ]
 Created by ARI with ❤️
 
-💡 Tip: Type /ai + question + 📷 for images!`;
+💡 **Tip:** Type /ai + question + 📷 for images!`;
         }
 
         async function processCommand(msg) {
@@ -768,8 +790,8 @@ Created by ARI with ❤️
             if (cmd === "/antonym" && args) return await getAntonyms(args);
 
             if (cmd === "/ai" && args) {
-                const res = await fetchOpenRouter(args);
-                return "🤖 [ AI says: ]\n" + res;
+                const res = await fetchAI(args);
+                return `🤖 **AI says:**\n${res}`;
             }
             if (cmd === "/ai" && !args) {
                 return "❌ Add a question. Example: /ai what is love?";
@@ -777,7 +799,6 @@ Created by ARI with ❤️
 
             return null;
         }
-
 
         async function sendMessage() {
             const input = document.getElementById("botMessageInput");
