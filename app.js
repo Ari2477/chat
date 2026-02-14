@@ -573,6 +573,7 @@ async function unpinMessage() {
     }
 }
 
+// ✅ GC MESSAGES - FIXED with sorting at walang avatar!
 function listenToGCMessages() {
     if (unsubscribeGC) unsubscribeGC();
     
@@ -652,28 +653,20 @@ function listenToGCMessages() {
         });
 }
 
+// ✅ GC MESSAGES - walang avatar!
 function appendGCMessage(message, container, userMap = {}, messageId) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${message.senderId === currentUser?.uid ? 'sent' : 'received'}`;
     messageDiv.id = `msg-${messageId}`;
 
     let senderName = message.senderName || 'Unknown';
-    let senderPhoto = message.senderPhoto || '';
-    let senderId = message.senderId;
 
     if (message.senderId !== currentUser?.uid && userMap[message.senderId]) {
         senderName = userMap[message.senderId].name || senderName;
-        senderPhoto = userMap[message.senderId].photoURL || senderPhoto;
-        senderId = message.senderId;
     }
-
-    const firstLetter = senderName.charAt(0).toUpperCase();
-    const fallbackAvatar = `https://ui-avatars.com/api/?name=${firstLetter}&background=${message.senderId === currentUser?.uid ? '4f46e5' : '64748b'}&color=fff&size=100&bold=true`;
-
-    const avatarUrl = senderPhoto || fallbackAvatar;
     
     const time = message.timestamp ? 
-        new Date(message.timestamp.toDate()).toLocaleTimeString('en-US', {
+        new Date(message.timestamp).toLocaleTimeString('en-US', {
             hour: 'numeric',
             minute: '2-digit',
             hour12: true
@@ -713,13 +706,8 @@ function appendGCMessage(message, container, userMap = {}, messageId) {
         reactionsHtml += '</div>';
     }
     
+    // ✅ WALANG AVATAR!
     messageDiv.innerHTML = `
-        <div class="message-avatar">
-            <img src="${escapeHTML(avatarUrl)}" 
-                 alt="${escapeHTML(senderName)}" 
-                 loading="lazy"
-                 onerror="this.onerror=null; this.src='${escapeHTML(fallbackAvatar)}';">
-        </div>
         <div class="message-content">
             <div class="message-sender">${escapeHTML(message.senderId === currentUser?.uid ? 'You' : senderName)}</div>
             ${contentHtml}
