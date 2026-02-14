@@ -1,7 +1,7 @@
 {
   "name": "mini-messenger",
-  "version": "2.0.0",
-  "description": "A powerful real-time chat application with AI integration using OpenRouter GPT-4o-mini",
+  "version": "5.0.0",
+  "description": "Mini Messenger with SOTA AI Models from Hugging Face - 100% FREE! Features Command R+ (104B), Mixtral 8x22B, Llama 3, Moondream2 for images",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -14,9 +14,16 @@
     "firebase",
     "real-time",
     "ai",
-    "openrouter",
-    "gpt-4o-mini",
-    "artificial-intelligence"
+    "huggingface",
+    "command-r-plus",
+    "mixtral",
+    "llama-3",
+    "moondream2",
+    "artificial-intelligence",
+    "free-ai",
+    "open-source",
+    "gpt-4-level",
+    "image-analysis"
   ],
   "author": "ARI",
   "license": "MIT",
