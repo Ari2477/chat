@@ -573,7 +573,7 @@ async function unpinMessage() {
     }
 }
 
-// ✅ FIXED: listenToGCMessages - Tamang order na ng messages
+// ✅ SIMPLIFIED: listenToGCMessages - gaya ng sa PM, simple lang!
 function listenToGCMessages() {
     if (unsubscribeGC) unsubscribeGC();
     
@@ -588,19 +588,34 @@ function listenToGCMessages() {
         .orderBy('timestamp', 'asc')
         .onSnapshot((snapshot) => {
 
-            // I-process muna lahat ng changes para maiwasan ang duplicate/out of order
-            const processedMessages = [];
-            
             snapshot.docChanges().forEach((change) => {
                 const message = change.doc.data();
                 const messageId = change.doc.id;
                 
                 if (change.type === 'added') {
-                    processedMessages.push({
-                        message,
-                        messageId,
-                        type: 'added'
-                    });
+                    if (window.displayedGCMessageIds.has(messageId)) {
+                        console.log('Skipping duplicate GC message:', messageId);
+                        return;
+                    }
+                    
+                    window.displayedGCMessageIds.add(messageId);
+
+                    if (message.senderId === currentUser?.uid) {
+                        appendGCMessage(message, messagesContainer, {}, messageId);
+                    } else {
+                        db.collection('users').doc(message.senderId).get()
+                            .then((userDoc) => {
+                                const userMap = {};
+                                if (userDoc.exists) {
+                                    userMap[message.senderId] = userDoc.data();
+                                }
+                                appendGCMessage(message, messagesContainer, userMap, messageId);
+                            })
+                            .catch(error => {
+                                console.error('Error fetching user:', error);
+                                appendGCMessage(message, messagesContainer, {}, messageId);
+                            });
+                    }
                 }
                 
                 if (change.type === 'modified') {
@@ -608,12 +623,20 @@ function listenToGCMessages() {
                     if (existingMsg) {
                         existingMsg.remove();
                         window.displayedGCMessageIds.delete(messageId);
+
+                        if (message.senderId === currentUser?.uid) {
+                            appendGCMessage(message, messagesContainer, {}, messageId);
+                        } else {
+                            db.collection('users').doc(message.senderId).get()
+                                .then((userDoc) => {
+                                    const userMap = {};
+                                    if (userDoc.exists) {
+                                        userMap[message.senderId] = userDoc.data();
+                                    }
+                                    appendGCMessage(message, messagesContainer, userMap, messageId);
+                                });
+                        }
                     }
-                    processedMessages.push({
-                        message,
-                        messageId,
-                        type: 'added'
-                    });
                 }
                 
                 if (change.type === 'removed') {
@@ -625,41 +648,6 @@ function listenToGCMessages() {
                 }
             });
             
-            // I-sort ang processed messages ayon sa timestamp
-            processedMessages.sort((a, b) => {
-                const timeA = a.message.timestamp ? a.message.timestamp.toDate().getTime() : 0;
-                const timeB = b.message.timestamp ? b.message.timestamp.toDate().getTime() : 0;
-                return timeA - timeB;
-            });
-            
-            // I-process ang bawat message sa tamang order
-            processedMessages.forEach(({ message, messageId }) => {
-                if (window.displayedGCMessageIds.has(messageId)) {
-                    return;
-                }
-                
-                window.displayedGCMessageIds.add(messageId);
-
-                if (message.senderId === currentUser?.uid) {
-                    appendGCMessage(message, messagesContainer, {}, messageId);
-                } else {
-                    db.collection('users').doc(message.senderId).get()
-                        .then((userDoc) => {
-                            const userMap = {};
-                            if (userDoc.exists) {
-                                userMap[message.senderId] = userDoc.data();
-                            }
-                            // I-insert sa tamang position based sa timestamp
-                            insertGCMessageInOrder(message, messagesContainer, userMap, messageId);
-                        })
-                        .catch(error => {
-                            console.error('Error fetching user:', error);
-                            insertGCMessageInOrder(message, messagesContainer, {}, messageId);
-                        });
-                }
-            });
-            
-            // Auto-scroll logic
             if (snapshot.docChanges().length > 0) {
                 const lastChange = snapshot.docChanges()[snapshot.docChanges().length - 1];
                 if (lastChange.type === 'added' && lastChange.doc.data().senderId === currentUser?.uid) {
@@ -682,60 +670,18 @@ function listenToGCMessages() {
         });
 }
 
-// ✅ NEW FUNCTION: I-insert ang GC message sa tamang position based sa timestamp
-function insertGCMessageInOrder(message, container, userMap = {}, messageId) {
-    // Create message element
-    const messageDiv = createGCMessageElement(message, userMap, messageId);
-    
-    // Get timestamp ng bagong message
-    const newTimestamp = message.timestamp ? message.timestamp.toDate().getTime() : Date.now();
-    
-    // Hanapin ang tamang position
-    const messages = container.children;
-    let inserted = false;
-    
-    for (let i = 0; i < messages.length; i++) {
-        const existingMsgId = messages[i].id.replace('msg-', '');
-        
-        // Kunin ang timestamp mula sa existing message (kung may data-timestamp attribute)
-        let existingTimestamp = messages[i].dataset.timestamp;
-        
-        if (!existingTimestamp) {
-            // Fallback: hanapin sa window.displayedGCMessageTimestamps kung meron
-            existingTimestamp = window.displayedGCMessageTimestamps?.[existingMsgId];
-        }
-        
-        if (existingTimestamp && newTimestamp < parseInt(existingTimestamp)) {
-            // Mas luma ang bagong message, dapat nasa itaas
-            container.insertBefore(messageDiv, messages[i]);
-            inserted = true;
-            break;
-        }
-    }
-    
-    // Kung walang mas lumang message na nahanap, i-append sa dulo
-    if (!inserted) {
-        container.appendChild(messageDiv);
-    }
-    
-    // Store timestamp sa element para sa future sorting
-    messageDiv.dataset.timestamp = newTimestamp;
-}
-
-// ✅ NEW FUNCTION: Create GC message element (reusable)
-function createGCMessageElement(message, userMap = {}, messageId) {
+// ✅ SIMPLIFIED: appendGCMessage - gaya ng sa PM, direct append lang
+function appendGCMessage(message, container, userMap = {}, messageId) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${message.senderId === currentUser?.uid ? 'sent' : 'received'}`;
     messageDiv.id = `msg-${messageId}`;
 
     let senderName = message.senderName || 'Unknown';
     let senderPhoto = message.senderPhoto || '';
-    let senderId = message.senderId;
 
     if (message.senderId !== currentUser?.uid && userMap[message.senderId]) {
         senderName = userMap[message.senderId].name || senderName;
         senderPhoto = userMap[message.senderId].photoURL || senderPhoto;
-        senderId = message.senderId;
     }
 
     const firstLetter = senderName.charAt(0).toUpperCase();
@@ -814,12 +760,7 @@ function createGCMessageElement(message, userMap = {}, messageId) {
         </div>
     `;
     
-    return messageDiv;
-}
-
-// Keep original appendGCMessage for backward compatibility
-function appendGCMessage(message, container, userMap = {}, messageId) {
-    const messageDiv = createGCMessageElement(message, userMap, messageId);
+    // ✅ Simple append - gaya ng sa PM
     container.appendChild(messageDiv);
 }
 
@@ -1738,9 +1679,7 @@ async function markMessagesAsRead(senderId) {
             
             await batch.commit();
             
-            
             updateUserUnreadBadge(senderId, 0);
-            
             
             const saved = localStorage.getItem('messenger_unread');
             if (saved) {
@@ -1749,7 +1688,6 @@ async function markMessagesAsRead(senderId) {
                 localStorage.setItem('messenger_unread', JSON.stringify(unreadData));
             }
             
-        
             const totalUnread = getTotalUnreadCount();
             document.title = totalUnread > 0 ? `(${totalUnread}) Mini Messenger` : 'Mini Messenger';
         }
