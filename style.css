@@ -4691,7 +4691,7 @@ body.light-mode .bot-message-wrapper:not(.user) .bot-message-content::before {
     height: 100vh;
     max-width: 100%;
     border-radius: 0;
-    padding: 20px;
+    padding: 0; 
     display: flex;
     flex-direction: column;
     position: fixed;
@@ -4701,41 +4701,49 @@ body.light-mode .bot-message-wrapper:not(.user) .bot-message-content::before {
     bottom: 0;
     margin: 0;
     border: none;
+    overflow: hidden; 
 }
 
 .call-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    padding: 10px 0;
+    padding: 12px 20px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent);
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
 }
 
 .call-user-info {
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 12px;
 }
 
 .call-user-info img {
-    width: 60px;
-    height: 60px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
-    border: 3px solid var(--primary);
+    border: 2px solid var(--primary);
     object-fit: cover;
-    box-shadow: 0 0 20px rgba(79, 70, 229, 0.3);
+    box-shadow: 0 0 15px rgba(79, 70, 229, 0.3);
 }
 
 .call-user-info h3 {
-    font-size: 24px;
+    font-size: 20px;
     color: white;
-    margin-bottom: 5px;
-    font-weight: 700;
+    margin-bottom: 2px;
+    font-weight: 600;
 }
 
 #call-status {
-    font-size: 14px;
-    color: var(--text-muted);
+    font-size: 12px;
+    color: rgba(255,255,255,0.8);
     display: flex;
     align-items: center;
     gap: 5px;
@@ -4755,7 +4763,7 @@ body.light-mode .bot-message-wrapper:not(.user) .bot-message-content::before {
     width: 44px;
     height: 44px;
     border: none;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(239, 68, 68, 0.2);
     color: white;
     border-radius: 50%;
     cursor: pointer;
@@ -4766,55 +4774,28 @@ body.light-mode .bot-message-wrapper:not(.user) .bot-message-content::before {
     transition: all 0.3s ease;
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
     position: relative;
     overflow: hidden;
-}
-
-.call-header > button::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    border-radius: 50%;
-    background: rgba(239, 68, 68, 0.3);
-    transform: translate(-50%, -50%);
-    transition: width 0.4s ease, height 0.4s ease;
-}
-
-.call-header > button:hover::before {
-    width: 100%;
-    height: 100%;
+    z-index: 31;
 }
 
 .call-header > button:hover {
     background: #ef4444;
+    transform: scale(1.1);
     border-color: #ef4444;
-    transform: rotate(90deg) scale(1.1);
-    box-shadow: 0 0 25px rgba(239, 68, 68, 0.5);
-}
-
-.call-header > button i {
-    position: relative;
-    z-index: 2;
-    filter: drop-shadow(0 2px 5px rgba(0,0,0,0.3));
+    box-shadow: 0 0 25px rgba(239, 68, 68, 0.6);
 }
 
 .video-container {
     position: relative;
-    flex: 1 1 auto; 
+    flex: 1 1 auto;
     width: 100%;
-    height: 70vh; 
-    min-height: 500px; 
-    max-height: 80vh; 
+    height: 100%; 
+    min-height: 0; 
     background: #000;
-    border-radius: 20px;
     overflow: hidden;
-    margin-bottom: 20px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
 #remote-video {
@@ -4822,10 +4803,12 @@ body.light-mode .bot-message-wrapper:not(.user) .bot-message-content::before {
     height: 100%;
     object-fit: cover; 
     background: #1a1b26;
+    display: block;
 }
+
 #local-video {
     position: absolute;
-    bottom: 20px;
+    bottom: 100px; 
     right: 20px;
     width: 140px;
     height: 200px;
@@ -4833,9 +4816,10 @@ body.light-mode .bot-message-wrapper:not(.user) .bot-message-content::before {
     border-radius: 12px;
     border: 3px solid var(--primary);
     background: #2a2b36;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
     transition: all 0.3s ease;
     cursor: pointer;
+    z-index: 20;
 }
 
 #local-video:hover {
@@ -4849,17 +4833,15 @@ body.light-mode .bot-message-wrapper:not(.user) .bot-message-content::before {
     align-items: center;
     justify-content: center;
     flex: 1;
-    min-height: 300px;
-    margin-bottom: 20px;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 30px;
+    min-height: 0;
+    background: rgba(0, 0, 0, 0.3);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
 }
 
 .caller-avatar img {
-    width: 150px;
-    height: 150px;
+    width: 120px;
+    height: 120px;
     border-radius: 50%;
     border: 4px solid var(--primary);
     animation: pulse 2s infinite;
@@ -4882,37 +4864,52 @@ body.light-mode .bot-message-wrapper:not(.user) .bot-message-content::before {
     animation: wave 1s infinite;
 }
 
-.call-wave span:nth-child(2) { animation-delay: 0.1s; height: 45px; }
-.call-wave span:nth-child(3) { animation-delay: 0.2s; height: 60px; }
-.call-wave span:nth-child(4) { animation-delay: 0.3s; height: 45px; }
-.call-wave span:nth-child(5) { animation-delay: 0.4s; height: 30px; }
-
-@keyframes wave {
-    0%, 100% { transform: scaleY(0.8); opacity: 0.8; }
-    50% { transform: scaleY(1.2); opacity: 1; }
+.call-duration {
+    position: absolute;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 25;
+    text-align: center;
+    font-size: 16px;
+    color: white;
+    font-family: monospace;
+    font-weight: 600;
+    background: rgba(0,0,0,0.4);
+    padding: 6px 16px;
+    border-radius: 30px;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    border: 1px solid rgba(255,255,255,0.1);
+    letter-spacing: 1px;
 }
 
 .call-controls {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
     justify-content: center;
-    gap: 25px;
-    margin-top: auto;
-    padding: 20px 0;
-    background: rgba(0, 0, 0, 0.3);
+    gap: 20px;
+    padding: 15px 25px;
+    background: rgba(0, 0, 0, 0.5);
     border-radius: 60px;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    margin-bottom: 10px;
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    z-index: 30;
 }
 
 .call-control-btn {
-    width: 60px;
-    height: 60px;
+    width: 52px;
+    height: 52px;
     border: none;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.15);
     color: white;
-    font-size: 24px;
+    font-size: 22px;
     cursor: pointer;
     transition: all 0.3s ease;
     backdrop-filter: blur(5px);
@@ -4921,36 +4918,27 @@ body.light-mode .bot-message-wrapper:not(.user) .bot-message-content::before {
     align-items: center;
     justify-content: center;
     border: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
 }
 
 .call-control-btn:hover {
-    transform: scale(1.15) translateY(-5px);
+    transform: scale(1.1) translateY(-3px);
     background: rgba(255, 255, 255, 0.25);
     border-color: rgba(255, 255, 255, 0.4);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
 }
 
 .call-control-btn.end-call {
     background: #ef4444;
     border-color: #ef4444;
+    width: 58px;
+    height: 58px;
 }
 
 .call-control-btn.end-call:hover {
     background: #dc2626;
-    transform: scale(1.15) translateY(-5px) rotate(10deg);
-    box-shadow: 0 0 30px rgba(239, 68, 68, 0.6);
-}
-
-.call-duration {
-    text-align: center;
-    margin-top: 10px;
-    font-size: 18px;
-    color: white;
-    font-family: monospace;
-    font-weight: 600;
-    text-shadow: 0 2px 10px rgba(0,0,0,0.3);
-    letter-spacing: 2px;
+    transform: scale(1.15) translateY(-3px);
+    box-shadow: 0 0 30px rgba(239, 68, 68, 0.7);
 }
 
 .incoming-modal .modal-content {
@@ -4961,83 +4949,26 @@ body.light-mode .bot-message-wrapper:not(.user) .bot-message-content::before {
     width: 90%;
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
     border: 1px solid rgba(255,255,255,0.1);
+    position: relative;
+    z-index: 1000;
 }
 
-.incoming-call {
-    text-align: center;
+@keyframes pulse {
+    0%, 100% { opacity: 0.8; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.05); }
 }
 
-.incoming-call img {
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    border: 4px solid var(--primary);
-    margin-bottom: 20px;
-    animation: pulse 1.5s infinite;
-    object-fit: cover;
-    box-shadow: 0 0 30px rgba(79, 70, 229, 0.4);
-}
-
-.incoming-call h3 {
-    font-size: 24px;
-    color: white;
-    margin-bottom: 8px;
-    font-weight: 700;
-}
-
-.incoming-call p {
-    color: var(--text-muted);
-    margin-bottom: 25px;
-    font-size: 16px;
-}
-
-.incoming-actions {
-    display: flex;
-    gap: 20px;
-    justify-content: center;
-}
-
-.accept-btn, .decline-btn {
-    padding: 14px 30px;
-    border: none;
-    border-radius: 40px;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 130px;
-    justify-content: center;
-}
-
-.accept-btn {
-    background: #22c55e;
-    color: white;
-    box-shadow: 0 5px 20px rgba(34, 197, 94, 0.3);
-}
-
-.accept-btn:hover {
-    background: #16a34a;
-    transform: scale(1.08) translateY(-3px);
-    box-shadow: 0 10px 30px rgba(34, 197, 94, 0.4);
-}
-
-.decline-btn {
-    background: #ef4444;
-    color: white;
-    box-shadow: 0 5px 20px rgba(239, 68, 68, 0.3);
-}
-
-.decline-btn:hover {
-    background: #dc2626;
-    transform: scale(1.08) translateY(-3px) rotate(-2deg);
-    box-shadow: 0 10px 30px rgba(239, 68, 68, 0.4);
+@keyframes wave {
+    0%, 100% { transform: scaleY(0.8); opacity: 0.8; }
+    50% { transform: scaleY(1.2); opacity: 1; }
 }
 
 body.light-mode .call-modal .modal-content {
     background: #f0f2f5;
+}
+
+body.light-mode .call-header {
+    background: linear-gradient(to bottom, rgba(255,255,255,0.7), transparent);
 }
 
 body.light-mode .call-user-info h3 {
@@ -5048,10 +4979,15 @@ body.light-mode #call-status {
     color: #64748b;
 }
 
-body.light-mode .call-header > button {
-    background: rgba(0, 0, 0, 0.05);
+body.light-mode .call-duration {
+    background: rgba(255,255,255,0.8);
     color: #0f172a;
-    border-color: rgba(0, 0, 0, 0.1);
+    border-color: rgba(0,0,0,0.1);
+}
+
+body.light-mode .call-controls {
+    background: rgba(255, 255, 255, 0.7);
+    border-color: rgba(255,255,255,0.3);
 }
 
 body.light-mode .call-control-btn {
@@ -5064,79 +5000,66 @@ body.light-mode .call-control-btn:hover {
     background: rgba(0, 0, 0, 0.15);
 }
 
-body.light-mode .call-duration {
-    color: #0f172a;
-    text-shadow: none;
-}
-
-body.light-mode .incoming-modal .modal-content {
-    background: linear-gradient(145deg, #ffffff, #f8fafc);
-    border-color: rgba(0,0,0,0.1);
-}
-
-body.light-mode .incoming-call h3 {
-    color: #0f172a;
-}
-
-.pm-call-btn, .pm-video-btn {
-    background: transparent;
-    border: none;
-    font-size: 18px;
-    color: var(--text-muted);
-    cursor: pointer;
-    width: 38px;
-    height: 38px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    transition: all 0.25s ease;
-    position: relative;
-    overflow: hidden;
-    flex-shrink: 0;
-}
-
-.pm-call-btn:hover {
-    background: rgba(34, 197, 94, 0.1);
-    color: #22c55e;
-}
-
-.pm-video-btn:hover {
-    background: rgba(79, 70, 229, 0.1);
-    color: var(--primary);
-}
-
-@media (min-width: 768px) {
-    .pm-call-btn, .pm-video-btn {
-        width: 42px;
-        height: 42px;
+@media (max-width: 768px) {
+    .call-controls {
+        gap: 12px;
+        padding: 12px 18px;
+    }
+    
+    .call-control-btn {
+        width: 46px;
+        height: 46px;
         font-size: 20px;
     }
-}
-
-@media (max-width: 767px) {
-    .pm-call-btn, .pm-video-btn {
-        width: 36px;
-        height: 36px;
+    
+    .call-control-btn.end-call {
+        width: 52px;
+        height: 52px;
+    }
+    
+    #local-video {
+        width: 100px;
+        height: 140px;
+        bottom: 80px;
+    }
+    
+    .call-user-info img {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .call-user-info h3 {
+        font-size: 18px;
+    }
+    
+    .call-header > button {
+        width: 40px;
+        height: 40px;
         font-size: 18px;
     }
 }
 
-#call-screen {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    margin: 0;
-    padding: 0;
-}
-
-.video-container {
-    flex: 1;
-    min-height: 0; 
-    margin-bottom: 0 !important;
-}
-
-.call-controls {
-    flex-shrink: 0;
-    margin-top: auto; 
+@media (max-width: 480px) {
+    #local-video {
+        width: 80px;
+        height: 120px;
+        bottom: 70px;
+        right: 10px;
+    }
+    
+    .call-controls {
+        gap: 8px;
+        padding: 10px 15px;
+    }
+    
+    .call-control-btn {
+        width: 42px;
+        height: 42px;
+        font-size: 18px;
+    }
+    
+    .call-control-btn.end-call {
+        width: 48px;
+        height: 48px;
+    }
 }
