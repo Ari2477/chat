@@ -4685,7 +4685,6 @@ body.light-mode .bot-message-wrapper:not(.user) .bot-message-content::before {
 }
 
 
-/* ===== CALL FEATURE: Call Modal Styles - FULL SCREEN ===== */
 .call-modal .modal-content {
     background: #1a1b26;
     width: 100vw;
@@ -4752,7 +4751,6 @@ body.light-mode .bot-message-wrapper:not(.user) .bot-message-content::before {
     animation: pulse 1.5s infinite;
 }
 
-/* DESIGNED X BUTTON - eto yung pinalitan ko ng design */
 .call-header > button {
     width: 44px;
     height: 44px;
@@ -4805,11 +4803,13 @@ body.light-mode .bot-message-wrapper:not(.user) .bot-message-content::before {
     filter: drop-shadow(0 2px 5px rgba(0,0,0,0.3));
 }
 
-/* Video container - FULL SCREEN ADJUSTMENT */
 .video-container {
     position: relative;
-    flex: 1;
+    flex: 1 1 auto; 
     width: 100%;
+    height: 70vh; 
+    min-height: 500px; 
+    max-height: 80vh; 
     background: #000;
     border-radius: 20px;
     overflow: hidden;
@@ -4820,9 +4820,9 @@ body.light-mode .bot-message-wrapper:not(.user) .bot-message-content::before {
 #remote-video {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: cover; 
+    background: #1a1b26;
 }
-
 #local-video {
     position: absolute;
     bottom: 20px;
@@ -4843,7 +4843,6 @@ body.light-mode .bot-message-wrapper:not(.user) .bot-message-content::before {
     border-color: var(--primary-light);
 }
 
-/* Audio container - FULL SCREEN */
 .audio-container {
     display: flex;
     flex-direction: column;
@@ -4893,7 +4892,6 @@ body.light-mode .bot-message-wrapper:not(.user) .bot-message-content::before {
     50% { transform: scaleY(1.2); opacity: 1; }
 }
 
-/* Call controls - BOTTOM CENTER */
 .call-controls {
     display: flex;
     justify-content: center;
@@ -4955,7 +4953,6 @@ body.light-mode .bot-message-wrapper:not(.user) .bot-message-content::before {
     letter-spacing: 2px;
 }
 
-/* Incoming call modal - di na kailangan full screen */
 .incoming-modal .modal-content {
     background: linear-gradient(145deg, #1a1b26, #2a2b36);
     border-radius: 30px;
@@ -5039,7 +5036,6 @@ body.light-mode .bot-message-wrapper:not(.user) .bot-message-content::before {
     box-shadow: 0 10px 30px rgba(239, 68, 68, 0.4);
 }
 
-/* Light mode adjustments */
 body.light-mode .call-modal .modal-content {
     background: #f0f2f5;
 }
