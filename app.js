@@ -30,6 +30,29 @@ let audioPlayer = null;
 let isPlaying = false;
 let currentVoiceMessageId = null;
 
+// ========== CALL FEATURE: Call state variables ==========
+let localStream = null;
+let remoteStream = null;
+let peerConnection = null;
+let callActive = false;
+let callStartTime = null;
+let callTimer = null;
+let currentCallType = null; // 'audio' or 'video'
+let currentCallId = null;
+let incomingCallData = null;
+let callRingtone = null;
+
+// ICE servers for STUN/TURN
+const iceServers = {
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        { urls: 'stun:stun4.l.google.com:19302' }
+    ]
+};
+
 function initVoicePlayer() {
     audioPlayer = document.getElementById('voice-audio-player');
     if (!audioPlayer) return;
@@ -421,6 +444,10 @@ async function initializeApp() {
 
         initVoicePlayer();
         
+        // ========== CALL FEATURE: Initialize call UI and listeners ==========
+        initCallUI();
+        listenForIncomingCalls();
+        
         console.log('✅ App initialized successfully');
         showToast('✅ Connected to chat!', 'success');
         
@@ -429,6 +456,560 @@ async function initializeApp() {
         showToast('Failed to initialize. Refreshing...', 'error');
         setTimeout(() => window.location.reload(), 2000);
     }
+}
+
+// ========== CALL FEATURE: Initialize call UI elements ==========
+function initCallUI() {
+    // Add call buttons to header if not already present
+    const headerActions = document.querySelector('.header-actions');
+    if (headerActions && !document.querySelector('.call-btn')) {
+        const audioCallBtn = document.createElement('button');
+        audioCallBtn.className = 'call-btn';
+        audioCallBtn.setAttribute('onclick', 'startAudioCall()');
+        audioCallBtn.setAttribute('title', 'Audio call');
+        audioCallBtn.innerHTML = '<i class="fas fa-phone"></i>';
+        headerActions.insertBefore(audioCallBtn, headerActions.firstChild);
+
+        const videoCallBtn = document.createElement('button');
+        videoCallBtn.className = 'video-btn';
+        videoCallBtn.setAttribute('onclick', 'startVideoCall()');
+        videoCallBtn.setAttribute('title', 'Video call');
+        videoCallBtn.innerHTML = '<i class="fas fa-video"></i>';
+        headerActions.insertBefore(videoCallBtn, headerActions.firstChild);
+    }
+
+    // Add call buttons to PM header
+    const pmActions = document.querySelector('.pm-actions');
+    if (pmActions && !document.querySelector('.pm-call-btn')) {
+        const audioCallBtn = document.createElement('button');
+        audioCallBtn.className = 'pm-call-btn';
+        audioCallBtn.setAttribute('onclick', 'startAudioCall()');
+        audioCallBtn.setAttribute('title', 'Audio call');
+        audioCallBtn.innerHTML = '<i class="fas fa-phone"></i>';
+        pmActions.insertBefore(audioCallBtn, pmActions.firstChild);
+
+        const videoCallBtn = document.createElement('button');
+        videoCallBtn.className = 'pm-video-btn';
+        videoCallBtn.setAttribute('onclick', 'startVideoCall()');
+        videoCallBtn.setAttribute('title', 'Video call');
+        videoCallBtn.innerHTML = '<i class="fas fa-video"></i>';
+        pmActions.insertBefore(videoCallBtn, pmActions.firstChild);
+    }
+
+    // Create call modal if not exists
+    if (!document.getElementById('call-modal')) {
+        const callModal = document.createElement('div');
+        callModal.id = 'call-modal';
+        callModal.className = 'modal call-modal';
+        callModal.innerHTML = `
+            <div class="modal-content call-content">
+                <div class="call-header">
+                    <div class="call-user-info">
+                        <img id="call-user-pfp" src="" alt="">
+                        <div>
+                            <h3 id="call-user-name">Calling...</h3>
+                            <span id="call-status">Ringing</span>
+                        </div>
+                    </div>
+                    <button onclick="endCall()"><i class="fas fa-times"></i></button>
+                </div>
+                
+                <div class="video-container" id="video-container" style="display: none;">
+                    <video id="remote-video" autoplay playsinline></video>
+                    <video id="local-video" autoplay playsinline muted></video>
+                </div>
+                
+                <div class="audio-container" id="audio-container">
+                    <div class="caller-avatar">
+                        <img id="caller-avatar" src="" alt="">
+                    </div>
+                    <div class="call-wave">
+                        <span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                </div>
+                
+                <div class="call-controls">
+                    <button onclick="toggleMute()" id="mute-btn" class="call-control-btn">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <button onclick="toggleVideo()" id="video-btn" class="call-control-btn">
+                        <i class="fas fa-video"></i>
+                    </button>
+                    <button onclick="toggleSpeaker()" id="speaker-btn" class="call-control-btn">
+                        <i class="fas fa-volume-up"></i>
+                    </button>
+                    <button onclick="endCall()" class="call-control-btn end-call">
+                        <i class="fas fa-phone-slash"></i>
+                    </button>
+                </div>
+                
+                <div class="call-duration" id="call-duration">00:00</div>
+            </div>
+        `;
+        document.body.appendChild(callModal);
+    }
+
+    // Create incoming call modal if not exists
+    if (!document.getElementById('incoming-call-modal')) {
+        const incomingModal = document.createElement('div');
+        incomingModal.id = 'incoming-call-modal';
+        incomingModal.className = 'modal incoming-modal';
+        incomingModal.innerHTML = `
+            <div class="modal-content incoming-content">
+                <div class="incoming-call">
+                    <img id="incoming-caller-pfp" src="" alt="">
+                    <h3 id="incoming-caller-name">Incoming Call...</h3>
+                    <p id="incoming-call-type">Video call</p>
+                    <div class="incoming-actions">
+                        <button onclick="acceptCall()" class="accept-btn">
+                            <i class="fas fa-phone"></i> Accept
+                        </button>
+                        <button onclick="declineCall()" class="decline-btn">
+                            <i class="fas fa-phone-slash"></i> Decline
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(incomingModal);
+    }
+}
+
+// ========== CALL FEATURE: Start audio call ==========
+function startAudioCall() {
+    if (!currentPMUser) {
+        showToast('Select a user first to call', 'error');
+        return;
+    }
+    currentCallType = 'audio';
+    initializeCall();
+}
+
+// ========== CALL FEATURE: Start video call ==========
+function startVideoCall() {
+    if (!currentPMUser) {
+        showToast('Select a user first to call', 'error');
+        return;
+    }
+    currentCallType = 'video';
+    initializeCall();
+}
+
+// ========== CALL FEATURE: Initialize call ==========
+async function initializeCall() {
+    try {
+        // Get user media
+        const constraints = {
+            audio: true,
+            video: currentCallType === 'video'
+        };
+        
+        localStream = await navigator.mediaDevices.getUserMedia(constraints);
+        
+        // Show appropriate UI
+        if (currentCallType === 'video') {
+            document.getElementById('local-video').srcObject = localStream;
+            document.getElementById('video-container').style.display = 'block';
+            document.getElementById('audio-container').style.display = 'none';
+            document.getElementById('video-btn').style.display = 'flex';
+        } else {
+            document.getElementById('video-container').style.display = 'none';
+            document.getElementById('audio-container').style.display = 'flex';
+            document.getElementById('video-btn').style.display = 'none';
+        }
+        
+        // Update call modal with user info
+        document.getElementById('call-user-name').innerText = currentPMUser.name || 'User';
+        document.getElementById('call-user-pfp').src = currentPMUser.photoURL || `https://ui-avatars.com/api/?name=${(currentPMUser.name || 'U').charAt(0)}&background=4f46e5&color=fff`;
+        document.getElementById('caller-avatar').src = currentPMUser.photoURL || `https://ui-avatars.com/api/?name=${(currentPMUser.name || 'U').charAt(0)}&background=4f46e5&color=fff`;
+        document.getElementById('call-status').innerText = 'Calling...';
+        
+        // Show call modal
+        document.getElementById('call-modal').classList.add('active');
+        
+        // Create peer connection
+        peerConnection = new RTCPeerConnection(iceServers);
+        
+        // Add local stream tracks to peer connection
+        localStream.getTracks().forEach(track => {
+            peerConnection.addTrack(track, localStream);
+        });
+        
+        // Handle remote stream
+        peerConnection.ontrack = event => {
+            remoteStream = event.streams[0];
+            if (currentCallType === 'video') {
+                document.getElementById('remote-video').srcObject = remoteStream;
+            }
+            document.getElementById('call-status').innerText = 'Connected';
+        };
+        
+        // Handle ICE candidates
+        peerConnection.onicecandidate = event => {
+            if (event.candidate) {
+                sendCallCandidate(event.candidate);
+            }
+        };
+        
+        peerConnection.oniceconnectionstatechange = () => {
+            console.log('ICE Connection State:', peerConnection.iceConnectionState);
+            if (peerConnection.iceConnectionState === 'disconnected' || 
+                peerConnection.iceConnectionState === 'failed') {
+                showToast('Call disconnected', 'error');
+                endCall();
+            }
+        };
+        
+        // Create offer
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        
+        // Create call document in Firestore
+        const callId = `${currentUser.uid}_${currentPMUser.id}_${Date.now()}`;
+        currentCallId = callId;
+        
+        await db.collection('calls').doc(callId).set({
+            offer: {
+                type: offer.type,
+                sdp: offer.sdp
+            },
+            callerId: currentUser.uid,
+            callerName: currentUser.displayName || 'User',
+            callerPhoto: currentUser.photoURL || '',
+            receiverId: currentPMUser.id,
+            receiverName: currentPMUser.name,
+            receiverPhoto: currentPMUser.photoURL,
+            type: currentCallType,
+            status: 'ringing',
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        // Listen for answer
+        listenForCallAnswer(callId);
+        
+        // Start call timer
+        startCallTimer();
+        callActive = true;
+        
+    } catch (error) {
+        console.error('Error starting call:', error);
+        showToast('Could not access camera/microphone', 'error');
+        endCall();
+    }
+}
+
+// ========== CALL FEATURE: Send ICE candidate ==========
+async function sendCallCandidate(candidate) {
+    if (!currentCallId) return;
+    
+    try {
+        await db.collection('calls').doc(currentCallId).update({
+            [`candidates.${currentUser.uid}`]: firebase.firestore.FieldValue.arrayUnion({
+                candidate: candidate.candidate,
+                sdpMid: candidate.sdpMid,
+                sdpMLineIndex: candidate.sdpMLineIndex
+            })
+        });
+    } catch (error) {
+        console.error('Error sending candidate:', error);
+    }
+}
+
+// ========== CALL FEATURE: Listen for call answer ==========
+function listenForCallAnswer(callId) {
+    db.collection('calls').doc(callId).onSnapshot(snapshot => {
+        const data = snapshot.data();
+        if (!data) return;
+        
+        // Handle answer
+        if (data.answer && !peerConnection.currentRemoteDescription) {
+            const answer = new RTCSessionDescription({
+                type: data.answer.type,
+                sdp: data.answer.sdp
+            });
+            peerConnection.setRemoteDescription(answer)
+                .then(() => {
+                    document.getElementById('call-status').innerText = 'Connected';
+                })
+                .catch(error => console.error('Error setting remote description:', error));
+        }
+        
+        // Handle candidates
+        if (data.candidates && data.candidates[currentPMUser.id]) {
+            data.candidates[currentPMUser.id].forEach(candidate => {
+                if (peerConnection.remoteDescription) {
+                    peerConnection.addIceCandidate(new RTCIceCandidate(candidate))
+                        .catch(error => console.error('Error adding ICE candidate:', error));
+                }
+            });
+        }
+        
+        // Handle call end
+        if (data.status === 'ended' || data.status === 'declined') {
+            if (callActive) {
+                showToast(`Call ${data.status}`, 'info');
+                endCall();
+            }
+        }
+    });
+}
+
+// ========== CALL FEATURE: Listen for incoming calls ==========
+function listenForIncomingCalls() {
+    if (!currentUser) return;
+    
+    db.collection('calls')
+        .where('receiverId', '==', currentUser.uid)
+        .where('status', '==', 'ringing')
+        .onSnapshot(snapshot => {
+            snapshot.docChanges().forEach(change => {
+                if (change.type === 'added') {
+                    const callData = change.doc.data();
+                    
+                    // Don't show if we're already in a call
+                    if (callActive) {
+                        db.collection('calls').doc(change.doc.id).update({
+                            status: 'busy'
+                        });
+                        return;
+                    }
+                    
+                    incomingCallData = {
+                        callId: change.doc.id,
+                        ...callData
+                    };
+                    
+                    // Show incoming call modal
+                    document.getElementById('incoming-caller-name').innerText = callData.callerName || 'User';
+                    document.getElementById('incoming-caller-pfp').src = callData.callerPhoto || `https://ui-avatars.com/api/?name=${(callData.callerName || 'U').charAt(0)}&background=4f46e5&color=fff`;
+                    document.getElementById('incoming-call-type').innerText = callData.type === 'video' ? 'Video call' : 'Audio call';
+                    
+                    // Play ringtone
+                    playRingtone();
+                    
+                    document.getElementById('incoming-call-modal').classList.add('active');
+                }
+            });
+        });
+}
+
+// ========== CALL FEATURE: Play ringtone ==========
+function playRingtone() {
+    stopRingtone();
+    callRingtone = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3');
+    callRingtone.loop = true;
+    callRingtone.play().catch(e => console.log('Ringtone play failed:', e));
+}
+
+// ========== CALL FEATURE: Stop ringtone ==========
+function stopRingtone() {
+    if (callRingtone) {
+        callRingtone.pause();
+        callRingtone = null;
+    }
+}
+
+// ========== CALL FEATURE: Accept incoming call ==========
+async function acceptCall() {
+    if (!incomingCallData) return;
+    
+    stopRingtone();
+    document.getElementById('incoming-call-modal').classList.remove('active');
+    
+    currentCallType = incomingCallData.type;
+    currentCallId = incomingCallData.callId;
+    
+    try {
+        // Get user media
+        const constraints = {
+            audio: true,
+            video: currentCallType === 'video'
+        };
+        
+        localStream = await navigator.mediaDevices.getUserMedia(constraints);
+        
+        // Show appropriate UI
+        if (currentCallType === 'video') {
+            document.getElementById('local-video').srcObject = localStream;
+            document.getElementById('video-container').style.display = 'block';
+            document.getElementById('audio-container').style.display = 'none';
+            document.getElementById('video-btn').style.display = 'flex';
+        } else {
+            document.getElementById('video-container').style.display = 'none';
+            document.getElementById('audio-container').style.display = 'flex';
+            document.getElementById('video-btn').style.display = 'none';
+        }
+        
+        // Update call modal
+        document.getElementById('call-user-name').innerText = incomingCallData.callerName || 'User';
+        document.getElementById('call-user-pfp').src = incomingCallData.callerPhoto || `https://ui-avatars.com/api/?name=${(incomingCallData.callerName || 'U').charAt(0)}&background=4f46e5&color=fff`;
+        document.getElementById('caller-avatar').src = incomingCallData.callerPhoto || `https://ui-avatars.com/api/?name=${(incomingCallData.callerName || 'U').charAt(0)}&background=4f46e5&color=fff`;
+        document.getElementById('call-status').innerText = 'Connecting...';
+        
+        document.getElementById('call-modal').classList.add('active');
+        
+        // Create peer connection
+        peerConnection = new RTCPeerConnection(iceServers);
+        
+        // Add local stream
+        localStream.getTracks().forEach(track => {
+            peerConnection.addTrack(track, localStream);
+        });
+        
+        // Handle remote stream
+        peerConnection.ontrack = event => {
+            remoteStream = event.streams[0];
+            if (currentCallType === 'video') {
+                document.getElementById('remote-video').srcObject = remoteStream;
+            }
+            document.getElementById('call-status').innerText = 'Connected';
+        };
+        
+        // Handle ICE candidates
+        peerConnection.onicecandidate = event => {
+            if (event.candidate) {
+                sendCallCandidate(event.candidate);
+            }
+        };
+        
+        // Set remote description from offer
+        const offer = new RTCSessionDescription({
+            type: incomingCallData.offer.type,
+            sdp: incomingCallData.offer.sdp
+        });
+        
+        await peerConnection.setRemoteDescription(offer);
+        
+        // Create answer
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+        
+        // Send answer to Firestore
+        await db.collection('calls').doc(currentCallId).update({
+            answer: {
+                type: answer.type,
+                sdp: answer.sdp
+            },
+            status: 'connected',
+            acceptedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        startCallTimer();
+        callActive = true;
+        
+    } catch (error) {
+        console.error('Error accepting call:', error);
+        showToast('Failed to accept call', 'error');
+        endCall();
+    }
+}
+
+// ========== CALL FEATURE: Decline incoming call ==========
+async function declineCall() {
+    stopRingtone();
+    document.getElementById('incoming-call-modal').classList.remove('active');
+    
+    if (incomingCallData) {
+        await db.collection('calls').doc(incomingCallData.callId).update({
+            status: 'declined',
+            endedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    }
+    
+    incomingCallData = null;
+    showToast('Call declined', 'info');
+}
+
+// ========== CALL FEATURE: End call ==========
+async function endCall() {
+    // Stop all tracks
+    if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+    }
+    
+    // Close peer connection
+    if (peerConnection) {
+        peerConnection.close();
+        peerConnection = null;
+    }
+    
+    // Stop timer
+    if (callTimer) {
+        clearInterval(callTimer);
+        callTimer = null;
+    }
+    
+    // Hide modals
+    document.getElementById('call-modal').classList.remove('active');
+    document.getElementById('incoming-call-modal').classList.remove('active');
+    
+    // Stop ringtone
+    stopRingtone();
+    
+    // Update call status in Firestore
+    if (currentCallId) {
+        await db.collection('calls').doc(currentCallId).update({
+            status: 'ended',
+            endedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        currentCallId = null;
+    }
+    
+    callActive = false;
+    incomingCallData = null;
+    showToast('Call ended', 'info');
+}
+
+// ========== CALL FEATURE: Start call timer ==========
+function startCallTimer() {
+    callStartTime = Date.now();
+    callTimer = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - callStartTime) / 1000);
+        const minutes = Math.floor(elapsed / 60);
+        const seconds = elapsed % 60;
+        document.getElementById('call-duration').innerText = 
+            `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }, 1000);
+}
+
+// ========== CALL FEATURE: Toggle mute ==========
+function toggleMute() {
+    if (localStream) {
+        const audioTrack = localStream.getAudioTracks()[0];
+        if (audioTrack) {
+            audioTrack.enabled = !audioTrack.enabled;
+            const btn = document.getElementById('mute-btn');
+            if (audioTrack.enabled) {
+                btn.innerHTML = '<i class="fas fa-microphone"></i>';
+            } else {
+                btn.innerHTML = '<i class="fas fa-microphone-slash"></i>';
+            }
+        }
+    }
+}
+
+// ========== CALL FEATURE: Toggle video ==========
+function toggleVideo() {
+    if (localStream && currentCallType === 'video') {
+        const videoTrack = localStream.getVideoTracks()[0];
+        if (videoTrack) {
+            videoTrack.enabled = !videoTrack.enabled;
+            const btn = document.getElementById('video-btn');
+            if (videoTrack.enabled) {
+                btn.innerHTML = '<i class="fas fa-video"></i>';
+            } else {
+                btn.innerHTML = '<i class="fas fa-video-slash"></i>';
+            }
+        }
+    }
+}
+
+// ========== CALL FEATURE: Toggle speaker ==========
+function toggleSpeaker() {
+    // This is handled by browser's default audio output
+    // You can implement audio output device selection if needed
+    showToast('Speaker toggled', 'info');
 }
 
 async function initializeGroupChat() {
