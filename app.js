@@ -746,7 +746,7 @@ function listenForIncomingCalls() {
 
 function playRingtone() {
     stopRingtone();
-    callRingtone = new Audio('./sounds/messenger_call.mp3');
+    callRingtone = new Audio('./sounds/messenger_video_call.mp3');
     callRingtone.loop = true;
     callRingtone.play().catch(e => console.log('Ringtone play failed:', e));
 }
