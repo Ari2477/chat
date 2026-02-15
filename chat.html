@@ -26,13 +26,6 @@
                     </div>
                 </div>
                 <div class="header-actions">
-                    <!-- CALL FEATURE: Audio and Video call buttons -->
-                    <button onclick="startAudioCall()" class="call-btn" title="Audio call">
-                        <i class="fas fa-phone"></i>
-                    </button>
-                    <button onclick="startVideoCall()" class="video-btn" title="Video call">
-                        <i class="fas fa-video"></i>
-                    </button>
                     <button onclick="toggleSearch()" class="search-btn" title="Search messages">
                         <i class="fas fa-search"></i>
                     </button>
@@ -116,7 +109,6 @@
                             </div>
                         </div>
                         <div class="pm-actions">
-                            <!-- CALL FEATURE: Call buttons in PM header -->
                             <button onclick="startAudioCall()" class="pm-call-btn" title="Audio call">
                                 <i class="fas fa-phone"></i>
                             </button>
@@ -168,7 +160,6 @@
                     <div id="sidebar-users-list" class="sidebar-users-list"></div>
                 </div>
 
-                <!-- Bot Section -->
                 <div class="sidebar-section">
                     <h4><i class="fas fa-robot"></i> Chat Bot</h4>
                     <div class="bot-card" onclick="openBotChat()">
@@ -319,7 +310,6 @@
             </div>
         </div>
 
-        <!-- ===== CALL FEATURE: Voice recording indicator ===== -->
         <div id="voice-recording-indicator" class="voice-recording hidden">
             <i class="fas fa-microphone"></i>
             <span class="voice-timer">0:00</span>
@@ -328,10 +318,8 @@
             </button>
         </div>
 
-        <!-- ===== CALL FEATURE: Audio player ===== -->
         <audio id="voice-audio-player" style="display: none;"></audio>
 
-        <!-- ===== CALL FEATURE: Call Modal ===== -->
         <div id="call-modal" class="modal call-modal">
             <div class="modal-content call-content">
                 <div class="call-header">
@@ -344,14 +332,12 @@
                     </div>
                     <button onclick="endCall()"><i class="fas fa-times"></i></button>
                 </div>
-                
-                <!-- Video container -->
+
                 <div class="video-container" id="video-container" style="display: none;">
                     <video id="remote-video" autoplay playsinline></video>
                     <video id="local-video" autoplay playsinline muted></video>
                 </div>
                 
-                <!-- Audio only container -->
                 <div class="audio-container" id="audio-container">
                     <div class="caller-avatar">
                         <img id="caller-avatar" src="" alt="">
@@ -360,8 +346,7 @@
                         <span></span><span></span><span></span><span></span><span></span>
                     </div>
                 </div>
-                
-                <!-- Call controls -->
+
                 <div class="call-controls">
                     <button onclick="toggleMute()" id="mute-btn" class="call-control-btn">
                         <i class="fas fa-microphone"></i>
@@ -376,13 +361,11 @@
                         <i class="fas fa-phone-slash"></i>
                     </button>
                 </div>
-                
-                <!-- Call duration -->
+
                 <div class="call-duration" id="call-duration">00:00</div>
             </div>
         </div>
 
-        <!-- ===== CALL FEATURE: Incoming call modal ===== -->
         <div id="incoming-call-modal" class="modal incoming-modal">
             <div class="modal-content incoming-content">
                 <div class="incoming-call">
@@ -407,10 +390,8 @@
     <script src="app.js"></script>
     <script>
         function openBotChat() {
-            // Get current user data from localStorage or Firebase
             const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-            
-            // Redirect to bot.html with user data as URL parameters
+
             window.location.href = `bot.html?userId=${currentUser.uid || ''}&userName=${encodeURIComponent(currentUser.displayName || 'User')}&userPfp=${encodeURIComponent(currentUser.photoURL || '')}`;
         }
     </script>
