@@ -587,7 +587,6 @@ function listenToGCMessages() {
         .orderBy('timestamp', 'asc')
         .onSnapshot((snapshot) => {
             
-            // I-collect lahat ng messages para ma-sort nang tama
             const allMessages = [];
             const userIds = new Set();
             
@@ -604,10 +603,8 @@ function listenToGCMessages() {
                 }
             });
             
-            // SORT PARA SURE NA TAMA ANG ORDER!
             allMessages.sort((a, b) => a.timestamp - b.timestamp);
             
-            // Kunin lahat ng user data (isang batch lang)
             Promise.all(Array.from(userIds).map(userId => 
                 db.collection('users').doc(userId).get()
             )).then(userDocs => {
@@ -616,7 +613,6 @@ function listenToGCMessages() {
                     if (doc.exists) userMap[doc.id] = doc.data();
                 });
                 
-                // I-clear at i-render lahat ng messages sa tamang order
                 messagesContainer.innerHTML = '';
                 window.displayedGCMessageIds.clear();
                 
@@ -632,11 +628,10 @@ function listenToGCMessages() {
                     }
                 });
                 
-                // Scroll to bottom
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
             }).catch(error => {
                 console.error('Error fetching users:', error);
-                // Fallback: render without user data
+                
                 messagesContainer.innerHTML = '';
                 window.displayedGCMessageIds.clear();
                 
