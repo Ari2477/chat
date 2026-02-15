@@ -4701,6 +4701,7 @@ body.light-mode .bot-message-wrapper:not(.user) .bot-message-content::before {
     right: 0;
     bottom: 0;
     margin: 0;
+    border: none;
 }
 
 .call-header {
@@ -4751,7 +4752,7 @@ body.light-mode .bot-message-wrapper:not(.user) .bot-message-content::before {
     animation: pulse 1.5s infinite;
 }
 
-/* DESIGNED X BUTTON */
+/* DESIGNED X BUTTON - eto yung pinalitan ko ng design */
 .call-header > button {
     width: 44px;
     height: 44px;
@@ -5079,4 +5080,48 @@ body.light-mode .incoming-modal .modal-content {
 
 body.light-mode .incoming-call h3 {
     color: #0f172a;
+}
+
+.pm-call-btn, .pm-video-btn {
+    background: transparent;
+    border: none;
+    font-size: 18px;
+    color: var(--text-muted);
+    cursor: pointer;
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.25s ease;
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.pm-call-btn:hover {
+    background: rgba(34, 197, 94, 0.1);
+    color: #22c55e;
+}
+
+.pm-video-btn:hover {
+    background: rgba(79, 70, 229, 0.1);
+    color: var(--primary);
+}
+
+@media (min-width: 768px) {
+    .pm-call-btn, .pm-video-btn {
+        width: 42px;
+        height: 42px;
+        font-size: 20px;
+    }
+}
+
+@media (max-width: 767px) {
+    .pm-call-btn, .pm-video-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 18px;
+    }
 }
