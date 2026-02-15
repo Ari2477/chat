@@ -5121,3 +5121,22 @@ body.light-mode .incoming-call h3 {
         font-size: 18px;
     }
 }
+
+#call-screen {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.video-container {
+    flex: 1;
+    min-height: 0; 
+    margin-bottom: 0 !important;
+}
+
+.call-controls {
+    flex-shrink: 0;
+    margin-top: auto; 
+}
