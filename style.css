@@ -5065,3 +5065,272 @@ body.light-mode .call-control-btn:hover {
 }
 
 
+
+/* ===== INCOMING CALL MODAL - SOBRANG GANDA ===== */
+#incoming-call-modal.incoming-modal {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    z-index: 3000;
+    align-items: center;
+    justify-content: center;
+    animation: callFadeIn 0.4s ease;
+}
+
+#incoming-call-modal.incoming-modal.active {
+    display: flex;
+}
+
+@keyframes callFadeIn {
+    from { opacity: 0; transform: scale(1.1); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+#incoming-call-modal .modal-content.incoming-content {
+    background: rgba(26, 27, 38, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 40px;
+    width: 85%;
+    max-width: 320px;
+    padding: 30px 20px 25px;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+    animation: cardPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes cardPop {
+    0% { transform: scale(0.9); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+#incoming-call-modal .incoming-call {
+    text-align: center;
+}
+
+#incoming-call-modal .incoming-call img {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    margin: 0 auto 15px;
+    border: 3px solid var(--primary);
+    box-shadow: 0 10px 30px rgba(79, 70, 229, 0.4);
+    animation: avatarPulse 2s infinite;
+}
+
+@keyframes avatarPulse {
+    0% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.5); }
+    70% { box-shadow: 0 0 0 15px rgba(79, 70, 229, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); }
+}
+
+#incoming-call-modal .incoming-call h3 {
+    font-size: 24px;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 5px;
+    letter-spacing: -0.5px;
+}
+
+#incoming-call-modal #incoming-call-type {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--text-muted);
+    font-size: 16px;
+    margin-bottom: 10px;
+}
+
+#incoming-call-modal #incoming-call-type::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    background: #4ade80;
+    border-radius: 50%;
+    animation: dotPulse 1.5s infinite;
+}
+
+@keyframes dotPulse {
+    0% { opacity: 0.5; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.2); }
+    100% { opacity: 0.5; transform: scale(1); }
+}
+
+/* ===== MAGANDANG ACCEPT AT DECLINE BUTTONS ===== */
+#incoming-call-modal .incoming-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+/* ACCEPT BUTTON - SOBRANG GANDA */
+#incoming-call-modal .accept-btn {
+    background: linear-gradient(145deg, #22c55e, #16a34a);
+    border: none;
+    color: white;
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 10px 25px rgba(34, 197, 94, 0.4);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    font-size: 0; /* Hide text */
+}
+
+#incoming-call-modal .accept-btn i {
+    font-size: 28px;
+    filter: drop-shadow(0 2px 5px rgba(0,0,0,0.2));
+    margin-bottom: 2px;
+}
+
+#incoming-call-modal .accept-btn::after {
+    content: "Accept";
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+}
+
+#incoming-call-modal .accept-btn:hover {
+    transform: scale(1.1) rotate(5deg);
+    box-shadow: 0 15px 35px rgba(34, 197, 94, 0.6);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+#incoming-call-modal .accept-btn:active {
+    transform: scale(0.95);
+}
+
+/* DECLINE BUTTON - SOBRANG GANDA */
+#incoming-call-modal .decline-btn {
+    background: linear-gradient(145deg, #ef4444, #dc2626);
+    border: none;
+    color: white;
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    font-size: 0; /* Hide text */
+}
+
+#incoming-call-modal .decline-btn i {
+    font-size: 28px;
+    filter: drop-shadow(0 2px 5px rgba(0,0,0,0.2));
+    margin-bottom: 2px;
+}
+
+#incoming-call-modal .decline-btn::after {
+    content: "Decline";
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+}
+
+#incoming-call-modal .decline-btn:hover {
+    transform: scale(1.1) rotate(-5deg);
+    box-shadow: 0 15px 35px rgba(239, 68, 68, 0.6);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+#incoming-call-modal .decline-btn:active {
+    transform: scale(0.95);
+}
+
+/* LIGHT MODE SUPPORT */
+body.light-mode #incoming-call-modal .modal-content.incoming-content {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(20px);
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+body.light-mode #incoming-call-modal .incoming-call h3 {
+    color: #0f172a;
+}
+
+/* Call buttons sa PM header - para tumugma */
+.pm-call-btn, .pm-video-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.pm-call-btn:hover {
+    background: rgba(34, 197, 94, 0.1);
+    color: #22c55e;
+    transform: scale(1.1);
+}
+
+.pm-video-btn:hover {
+    background: rgba(79, 70, 229, 0.1);
+    color: var(--primary);
+    transform: scale(1.1);
+}
+
+/* Active call modal - para sa ongoing call */
+#call-modal.call-modal .modal-content.call-content {
+    background: rgba(26, 27, 38, 0.7);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 30px;
+    padding: 20px;
+}
+
+#call-modal .call-control-btn {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#call-modal .call-control-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
+}
+
+#call-modal .call-control-btn.end-call {
+    background: #ef4444;
+    box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
+}
+
+#call-modal .call-control-btn.end-call:hover {
+    background: #dc2626;
+    transform: scale(1.1) rotate(10deg);
+}
